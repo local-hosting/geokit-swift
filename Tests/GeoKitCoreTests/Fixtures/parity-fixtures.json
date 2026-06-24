@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "description": "Shared parity fixtures — generated from @corio-platforms/geokit",
+  "coordinates": {
+    "nyc": {
+      "latitude": 40.7128,
+      "longitude": -74.006
+    },
+    "la": {
+      "latitude": 34.0522,
+      "longitude": -118.2437
+    },
+    "nearNyc": {
+      "latitude": 40.713,
+      "longitude": -74.0062
+    }
+  },
+  "bounds": {
+    "nycPair": {
+      "points": [
+        {
+          "latitude": 40.7128,
+          "longitude": -74.006
+        },
+        {
+          "latitude": 40.758,
+          "longitude": -73.9855
+        }
+      ],
+      "expected": [
+        -74.006,
+        40.7128,
+        -73.9855,
+        40.758
+      ]
+    },
+    "centerFromBounds": {
+      "bounds": [
+        -74.006,
+        40.7128,
+        -73.9855,
+        40.758
+      ],
+      "center": {
+        "latitude": 40.7354,
+        "longitude": -73.99575
+      }
+    },
+    "centerAndZoom": {
+      "bounds": [
+        -74.1,
+        40.6,
+        -73.9,
+        40.8
+      ],
+      "expected": {
+        "latitude": 40.7,
+        "longitude": -74,
+        "zoom": 12
+      }
+    }
+  },
+  "distance": {
+    "nycToLaMeters": {
+      "from": "nyc",
+      "to": "la",
+      "minMeters": 3900000,
+      "maxMeters": 4000000
+    },
+    "samePointMeters": {
+      "from": "nyc",
+      "to": "nyc",
+      "expectedMeters": 0
+    },
+    "nearbyWithin1km": {
+      "from": "nyc",
+      "to": "nearNyc",
+      "thresholdMeters": 1000,
+      "expectedWithin": true
+    }
+  },
+  "bearing": {
+    "east": {
+      "from": {
+        "latitude": 0,
+        "longitude": 0
+      },
+      "to": {
+        "latitude": 0,
+        "longitude": 1
+      },
+      "expectedDegrees": 90,
+      "toleranceDegrees": 1
+    },
+    "north": {
+      "from": {
+        "latitude": 0,
+        "longitude": 0
+      },
+      "to": {
+        "latitude": 1,
+        "longitude": 0
+      },
+      "expectedDegrees": 0,
+      "toleranceDegrees": 1
+    }
+  },
+  "h3": {
+    "nycRes9": {
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "resolution": 9,
+      "expectedCell": "892a1072893ffff"
+    }
+  },
+  "validation": {
+    "valid": {
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "expected": true
+    },
+    "invalidLatitude": {
+      "latitude": 91,
+      "longitude": -74.006,
+      "expected": false
+    }
+  }
+}
