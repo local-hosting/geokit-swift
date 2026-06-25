@@ -15,12 +15,14 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", exact: "11.25.0"),
+        .package(url: "https://github.com/mapbox/turf-swift.git", from: "4.0.0"),
         .package(url: "https://github.com/pawelmajcher/SwiftyH3.git", "0.5.0"..<"0.6.0"),
     ],
     targets: [
         .target(
             name: "GeoKitCore",
             dependencies: [
+                .product(name: "Turf", package: "turf-swift"),
                 .product(name: "SwiftyH3", package: "SwiftyH3"),
             ]
         ),

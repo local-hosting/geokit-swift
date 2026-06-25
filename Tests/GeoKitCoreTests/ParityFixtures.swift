@@ -158,6 +158,167 @@ struct ParityFixtures: Decodable {
         let validation: GeohashValidationFixture
     }
 
+
+    struct TurfPolygonFixture: Decodable {
+        let type: String
+        let coordinates: [[[Double]]]
+
+        var polygon: GeoJSONPolygon {
+            GeoJSONPolygon(coordinates: coordinates)
+        }
+    }
+
+    struct TurfPointFixture: Decodable {
+        let latitude: Double
+        let longitude: Double
+
+        var latLon: LatLon { LatLon(latitude: latitude, longitude: longitude) }
+    }
+
+    struct TurfContainmentPointFixture: Decodable {
+        let point: TurfPointFixture
+        let polygon: TurfPolygonFixture
+        let expected: Bool
+    }
+
+    struct TurfContainmentBoundsPointFixture: Decodable {
+        let bounds: [Double]
+        let point: TurfPointFixture
+        let expected: Bool
+    }
+
+    struct TurfContainmentBoundsFixture: Decodable {
+        let outer: [Double]
+        let inner: [Double]
+        let expected: Bool
+    }
+
+    struct TurfContainmentIntersectFixture: Decodable {
+        let bounds1: [Double]
+        let bounds2: [Double]
+        let expected: Bool
+    }
+
+    struct TurfContainmentSection: Decodable {
+        let pointInside: TurfContainmentPointFixture
+        let pointOutside: TurfContainmentPointFixture
+        let boundsContainsPoint: TurfContainmentBoundsPointFixture
+        let boundsContainsBounds: TurfContainmentBoundsFixture
+        let boundsIntersects: TurfContainmentIntersectFixture
+    }
+
+    struct TurfCentroidExpected: Decodable {
+        let latitude: Double
+        let longitude: Double
+    }
+
+    struct TurfCentroidPolygonFixture: Decodable {
+        let polygon: TurfPolygonFixture
+        let expected: TurfCentroidExpected
+        let tolerance: Double
+    }
+
+    struct TurfCentroidPointsFixture: Decodable {
+        let points: [TurfPointFixture]
+        let expected: TurfCentroidExpected
+        let tolerance: Double
+    }
+
+    struct TurfCentroidSection: Decodable {
+        let polygon: TurfCentroidPolygonFixture
+        let points: TurfCentroidPointsFixture
+    }
+
+    struct TurfAreaPolygonFixture: Decodable {
+        let polygon: TurfPolygonFixture
+        let expectedM2: Double
+        let toleranceM2: Double
+    }
+
+    struct TurfAreaBoundsFixture: Decodable {
+        let bounds: [Double]
+        let expectedM2: Double
+        let toleranceM2: Double
+    }
+
+    struct TurfAreaSection: Decodable {
+        let polygonM2: TurfAreaPolygonFixture
+        let boundsM2: TurfAreaBoundsFixture
+    }
+
+    struct TurfLengthLineFixture: Decodable {
+        let coordinates: [TurfPointFixture]
+        let expectedMeters: Double
+        let toleranceMeters: Double
+    }
+
+    struct TurfLengthPerimeterFixture: Decodable {
+        let polygon: TurfPolygonFixture
+        let expectedMeters: Double
+        let toleranceMeters: Double
+    }
+
+    struct TurfLengthSection: Decodable {
+        let lineMeters: TurfLengthLineFixture
+        let perimeterMeters: TurfLengthPerimeterFixture
+    }
+
+    struct TurfBufferPointFixture: Decodable {
+        let point: TurfPointFixture
+        let radiusMeters: Double
+        let steps: Int
+        let expectedRingCount: Int
+        let expectedAreaM2: Double
+        let areaToleranceM2: Double
+    }
+
+    struct TurfBufferSection: Decodable {
+        let point1km: TurfBufferPointFixture
+    }
+
+    struct TurfDMSExpected: Decodable {
+        let degrees: Int
+        let minutes: Int
+        let seconds: Double
+        let direction: String
+    }
+
+    struct TurfDMSFixture: Decodable {
+        let decimal: Double
+        let isLongitude: Bool
+        let expected: TurfDMSExpected
+    }
+
+    struct TurfConversionsSection: Decodable {
+        let nycLatitudeDms: TurfDMSFixture
+        let nycLongitudeDms: TurfDMSFixture
+    }
+
+    struct TurfBoundsGeoBboxFixture: Decodable {
+        let bounds: [Double]
+        let expectedFirstPoint: TurfPointFixture
+    }
+
+    struct TurfBoundsGeoGeometryFixture: Decodable {
+        let polygon: TurfPolygonFixture
+        let expected: [Double]
+    }
+
+    struct TurfBoundsGeoSection: Decodable {
+        let bboxToPolygon: TurfBoundsGeoBboxFixture
+        let geometryBounds: TurfBoundsGeoGeometryFixture
+    }
+
+    struct TurfSection: Decodable {
+        let containment: TurfContainmentSection
+        let centroid: TurfCentroidSection
+        let area: TurfAreaSection
+        let length: TurfLengthSection
+        let buffer: TurfBufferSection
+        let conversions: TurfConversionsSection
+        let boundsGeo: TurfBoundsGeoSection
+    }
+
     struct GeoJSONSection: Decodable {
         let pointCoordinates: [Double]
         let expectedFeatureId: String
@@ -189,6 +350,7 @@ struct ParityFixtures: Decodable {
     let validation: [String: ValidationFixture]
     let geohash: GeohashSection
     let geojson: GeoJSONSection
+    let turf: TurfSection
 
     struct BoundsSection: Decodable {
         let nycPair: BoundsPairFixture

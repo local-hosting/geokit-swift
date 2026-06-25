@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "description": "Shared parity fixtures — generated from @corio-platforms/geokit",
   "coordinates": {
     "nyc": {
@@ -202,6 +202,352 @@
         "dr70"
       ]
     },
+    "turf": {
+      "containment": {
+        "pointInside": {
+          "point": {
+            "latitude": 40.705,
+            "longitude": -74.005
+          },
+          "polygon": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -74.01,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.7
+                ]
+              ]
+            ]
+          },
+          "expected": true
+        },
+        "pointOutside": {
+          "point": {
+            "latitude": 40.5,
+            "longitude": -74.5
+          },
+          "polygon": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -74.01,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.7
+                ]
+              ]
+            ]
+          },
+          "expected": false
+        },
+        "boundsContainsPoint": {
+          "bounds": [
+            -74.1,
+            40.6,
+            -73.9,
+            40.8
+          ],
+          "point": {
+            "latitude": 40.7128,
+            "longitude": -74.006
+          },
+          "expected": true
+        },
+        "boundsContainsBounds": {
+          "outer": [
+            -75,
+            40,
+            -73,
+            41
+          ],
+          "inner": [
+            -74.1,
+            40.6,
+            -73.9,
+            40.8
+          ],
+          "expected": true
+        },
+        "boundsIntersects": {
+          "bounds1": [
+            -74.1,
+            40.6,
+            -73.9,
+            40.8
+          ],
+          "bounds2": [
+            -74,
+            40.7,
+            -73.8,
+            40.9
+          ],
+          "expected": true
+        }
+      },
+      "centroid": {
+        "polygon": {
+          "polygon": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -74.01,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.7
+                ]
+              ]
+            ]
+          },
+          "expected": {
+            "latitude": 40.705000000000005,
+            "longitude": -74.005
+          },
+          "tolerance": 0.0001
+        },
+        "points": {
+          "points": [
+            {
+              "latitude": 40.7128,
+              "longitude": -74.006
+            },
+            {
+              "latitude": 40.758,
+              "longitude": -73.9855
+            },
+            {
+              "latitude": 40.7354,
+              "longitude": -73.99575
+            }
+          ],
+          "expected": {
+            "latitude": 40.7354,
+            "longitude": -73.99575
+          },
+          "tolerance": 0.0001
+        }
+      },
+      "area": {
+        "polygonM2": {
+          "polygon": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -74.01,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.7
+                ]
+              ]
+            ]
+          },
+          "expectedM2": 937313.1490226078,
+          "toleranceM2": 5000
+        },
+        "boundsM2": {
+          "bounds": [
+            -74.1,
+            40.6,
+            -73.9,
+            40.8
+          ],
+          "expectedM2": 374953215.52824056,
+          "toleranceM2": 2000000
+        }
+      },
+      "length": {
+        "lineMeters": {
+          "coordinates": [
+            {
+              "latitude": 40.7128,
+              "longitude": -74.006
+            },
+            {
+              "latitude": 40.758,
+              "longitude": -73.9855
+            }
+          ],
+          "expectedMeters": 5314.530813267061,
+          "toleranceMeters": 5
+        },
+        "perimeterMeters": {
+          "polygon": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -74.01,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.7
+                ]
+              ]
+            ]
+          },
+          "expectedMeters": 3909.7912036892412,
+          "toleranceMeters": 5
+        }
+      },
+      "buffer": {
+        "point1km": {
+          "point": {
+            "latitude": 40.7128,
+            "longitude": -74.006
+          },
+          "radiusMeters": 1000,
+          "steps": 64,
+          "expectedRingCount": 65,
+          "expectedAreaM2": 3141277.244485269,
+          "areaToleranceM2": 50000
+        }
+      },
+      "conversions": {
+        "nycLatitudeDms": {
+          "decimal": 40.7128,
+          "isLongitude": false,
+          "expected": {
+            "degrees": 40,
+            "minutes": 42,
+            "seconds": 46.08000000000516,
+            "direction": "N"
+          }
+        },
+        "nycLongitudeDms": {
+          "decimal": -74.006,
+          "isLongitude": true,
+          "expected": {
+            "degrees": 74,
+            "minutes": 0,
+            "seconds": 21.60000000000082,
+            "direction": "W"
+          }
+        }
+      },
+      "boundsGeo": {
+        "bboxToPolygon": {
+          "bounds": [
+            -74.1,
+            40.6,
+            -73.9,
+            40.8
+          ],
+          "expectedFirstPoint": {
+            "latitude": 40.6,
+            "longitude": -74.1
+          }
+        },
+        "geometryBounds": {
+          "polygon": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -74.01,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.7
+                ],
+                [
+                  -74,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.71
+                ],
+                [
+                  -74.01,
+                  40.7
+                ]
+              ]
+            ]
+          },
+          "expected": [
+            -74.01,
+            40.7,
+            -74,
+            40.71
+          ]
+        }
+      }
+    },
     "validation": {
       "validHash": "dr5r",
       "invalidHash": "invalid!",
@@ -234,6 +580,352 @@
       ]
     ],
     "expectedClosedRingCount": 5
+  },
+  "turf": {
+    "containment": {
+      "pointInside": {
+        "point": {
+          "latitude": 40.705,
+          "longitude": -74.005
+        },
+        "polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.01,
+                40.7
+              ],
+              [
+                -74,
+                40.7
+              ],
+              [
+                -74,
+                40.71
+              ],
+              [
+                -74.01,
+                40.71
+              ],
+              [
+                -74.01,
+                40.7
+              ]
+            ]
+          ]
+        },
+        "expected": true
+      },
+      "pointOutside": {
+        "point": {
+          "latitude": 40.5,
+          "longitude": -74.5
+        },
+        "polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.01,
+                40.7
+              ],
+              [
+                -74,
+                40.7
+              ],
+              [
+                -74,
+                40.71
+              ],
+              [
+                -74.01,
+                40.71
+              ],
+              [
+                -74.01,
+                40.7
+              ]
+            ]
+          ]
+        },
+        "expected": false
+      },
+      "boundsContainsPoint": {
+        "bounds": [
+          -74.1,
+          40.6,
+          -73.9,
+          40.8
+        ],
+        "point": {
+          "latitude": 40.7128,
+          "longitude": -74.006
+        },
+        "expected": true
+      },
+      "boundsContainsBounds": {
+        "outer": [
+          -75,
+          40,
+          -73,
+          41
+        ],
+        "inner": [
+          -74.1,
+          40.6,
+          -73.9,
+          40.8
+        ],
+        "expected": true
+      },
+      "boundsIntersects": {
+        "bounds1": [
+          -74.1,
+          40.6,
+          -73.9,
+          40.8
+        ],
+        "bounds2": [
+          -74,
+          40.7,
+          -73.8,
+          40.9
+        ],
+        "expected": true
+      }
+    },
+    "centroid": {
+      "polygon": {
+        "polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.01,
+                40.7
+              ],
+              [
+                -74,
+                40.7
+              ],
+              [
+                -74,
+                40.71
+              ],
+              [
+                -74.01,
+                40.71
+              ],
+              [
+                -74.01,
+                40.7
+              ]
+            ]
+          ]
+        },
+        "expected": {
+          "latitude": 40.705000000000005,
+          "longitude": -74.005
+        },
+        "tolerance": 0.0001
+      },
+      "points": {
+        "points": [
+          {
+            "latitude": 40.7128,
+            "longitude": -74.006
+          },
+          {
+            "latitude": 40.758,
+            "longitude": -73.9855
+          },
+          {
+            "latitude": 40.7354,
+            "longitude": -73.99575
+          }
+        ],
+        "expected": {
+          "latitude": 40.7354,
+          "longitude": -73.99575
+        },
+        "tolerance": 0.0001
+      }
+    },
+    "area": {
+      "polygonM2": {
+        "polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.01,
+                40.7
+              ],
+              [
+                -74,
+                40.7
+              ],
+              [
+                -74,
+                40.71
+              ],
+              [
+                -74.01,
+                40.71
+              ],
+              [
+                -74.01,
+                40.7
+              ]
+            ]
+          ]
+        },
+        "expectedM2": 937313.1490226078,
+        "toleranceM2": 5000
+      },
+      "boundsM2": {
+        "bounds": [
+          -74.1,
+          40.6,
+          -73.9,
+          40.8
+        ],
+        "expectedM2": 374953215.52824056,
+        "toleranceM2": 2000000
+      }
+    },
+    "length": {
+      "lineMeters": {
+        "coordinates": [
+          {
+            "latitude": 40.7128,
+            "longitude": -74.006
+          },
+          {
+            "latitude": 40.758,
+            "longitude": -73.9855
+          }
+        ],
+        "expectedMeters": 5314.530813267061,
+        "toleranceMeters": 5
+      },
+      "perimeterMeters": {
+        "polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.01,
+                40.7
+              ],
+              [
+                -74,
+                40.7
+              ],
+              [
+                -74,
+                40.71
+              ],
+              [
+                -74.01,
+                40.71
+              ],
+              [
+                -74.01,
+                40.7
+              ]
+            ]
+          ]
+        },
+        "expectedMeters": 3909.7912036892412,
+        "toleranceMeters": 5
+      }
+    },
+    "buffer": {
+      "point1km": {
+        "point": {
+          "latitude": 40.7128,
+          "longitude": -74.006
+        },
+        "radiusMeters": 1000,
+        "steps": 64,
+        "expectedRingCount": 65,
+        "expectedAreaM2": 3141277.244485269,
+        "areaToleranceM2": 50000
+      }
+    },
+    "conversions": {
+      "nycLatitudeDms": {
+        "decimal": 40.7128,
+        "isLongitude": false,
+        "expected": {
+          "degrees": 40,
+          "minutes": 42,
+          "seconds": 46.08000000000516,
+          "direction": "N"
+        }
+      },
+      "nycLongitudeDms": {
+        "decimal": -74.006,
+        "isLongitude": true,
+        "expected": {
+          "degrees": 74,
+          "minutes": 0,
+          "seconds": 21.60000000000082,
+          "direction": "W"
+        }
+      }
+    },
+    "boundsGeo": {
+      "bboxToPolygon": {
+        "bounds": [
+          -74.1,
+          40.6,
+          -73.9,
+          40.8
+        ],
+        "expectedFirstPoint": {
+          "latitude": 40.6,
+          "longitude": -74.1
+        }
+      },
+      "geometryBounds": {
+        "polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.01,
+                40.7
+              ],
+              [
+                -74,
+                40.7
+              ],
+              [
+                -74,
+                40.71
+              ],
+              [
+                -74.01,
+                40.71
+              ],
+              [
+                -74.01,
+                40.7
+              ]
+            ]
+          ]
+        },
+        "expected": [
+          -74.01,
+          40.7,
+          -74,
+          40.71
+        ]
+      }
+    }
   },
   "validation": {
     "valid": {

@@ -13,4 +13,13 @@ public enum GeoKitConstants {
     public static let degreesToRadians = Double.pi / 180.0
     public static let radiansToDegrees = 180.0 / Double.pi
     public static let degreesInCircle = 360.0
+
+    public static let metersToKilometers = 1_000.0
+    public static let metersToMiles = 1_609.34
+    public static let squareMetersToSquareKilometers = 1_000_000.0
+    public static let squareMetersToSquareMiles = 2_589_988.110336
+    public static let squareMetersToAcres = 4_046.8564224
+    public static let secondsPerMinute = 60.0
+    public static let secondsPerDegree = 3_600.0
+    public static let defaultBufferSteps = 64
 }
