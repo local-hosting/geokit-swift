@@ -45,7 +45,7 @@ Swift GeoKitCore depends on [turf-swift](https://github.com/mapbox/turf-swift) f
 
 ## Tier 3 — Node-only (out of scope)
 
-CDN choropleth, MCP map tools, provider registry, full Turf suite (union/difference/simplify/clustering).
+CDN choropleth, MCP map tools, provider registry (Mapbox + Apple Maps), full Turf suite (union/difference/simplify/clustering).
 
 ## Known differences
 
@@ -55,3 +55,14 @@ CDN choropleth, MCP map tools, provider registry, full Turf suite (union/differe
 - GeoJSON repair omits Turf-backed sliver/area filters; ring close + dedupe parity is covered.
 - Point buffers use Turf Swift circle (`vertices + 1` ring); Node `@turf/buffer` on points produces a denser ring.
 - Line/polygon buffers require Node geokit until turf-swift adds turf-buffer.
+
+## Map provider switching (Swift)
+
+| Node | Swift |
+|------|-------|
+| `MapStaticProviderId` (`maptiler` \| `mapbox`) | `MapProviderId` (`mapbox` \| `apple`) |
+| `configure({ maptiler, mapbox })` | `GeoKitMapProviderRegistry.configure(provider:mapbox:apple:)` |
+| `GEOKIT_MAP_PROVIDER` / `MAP_PROVIDER` env | Same keys + `Info.plist` `GEOKIT_MAP_PROVIDER` |
+| `provider="mapbox"` on map element | `MapContentRequest.mapProviderId` per map |
+
+Apple Maps uses MapKit (`GeoKitMapKitMapContent`); Mapbox uses MapboxMaps (`GeoKitMapboxMapContent`). Default remains **mapbox** for backward compatibility.

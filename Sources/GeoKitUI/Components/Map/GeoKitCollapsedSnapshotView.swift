@@ -26,7 +26,7 @@ struct GeoKitCollapsedSnapshotView: View {
             .frame(width: size.width, height: size.height)
             .onAppear { refreshSnapshot(size: size) }
             .onChange(of: size) { _, newSize in refreshSnapshot(size: newSize) }
-            .onChange(of: request.contentID) { _, _ in
+            .onChange(of: request.id) { _, _ in
                 lastCacheKey = nil
                 refreshSnapshot(size: size)
             }
@@ -78,7 +78,7 @@ struct GeoKitCollapsedSnapshotView: View {
         let pitch = camera?.pitch.map { String(format: "%.1f", $0) } ?? "0"
         let w = Int(size.width.rounded())
         let h = Int(size.height.rounded())
-        return "\(request.contentID)|\(lat),\(lon)|z\(zoom)|b\(bearing)|p\(pitch)|\(w)x\(h)"
+        return "\(request.id)|\(lat),\(lon)|z\(zoom)|b\(bearing)|p\(pitch)|\(w)x\(h)"
     }
 }
 

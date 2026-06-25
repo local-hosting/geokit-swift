@@ -8,11 +8,11 @@ import SwiftUI
 
 public enum GeoKitRegister {
     public static let version = "0.1.0"
-    private static var didPrepareMapbox = false
+    private static var didPrepareProvider = false
 
     @MainActor
     public static func registerMapContent() {
-        prepareMapboxIfNeeded()
+        prepareProviderIfNeeded()
         #if canImport(SwiftUI)
         GeoKitRuntime.mapContent = { request in
             AnyView(GeoKitMapContent(request: request))
@@ -22,11 +22,14 @@ public enum GeoKitRegister {
     }
 
     @MainActor
-    private static func prepareMapboxIfNeeded() {
-        guard !didPrepareMapbox else { return }
-        didPrepareMapbox = true
-        fputs("[GeoKitRegister] prepareMapbox — Mapbox loads inside GeoKit.framework\n", stderr)
-        GeoKitMapBootstrap.prepareMapbox()
+    private static func prepareProviderIfNeeded() {
+        guard !didPrepareProvider else { return }
+        didPrepareProvider = true
+        let provider = GeoKitMapProviderRegistry.defaultProvider
+        fputs("[GeoKitRegister] prepare provider=\(provider.rawValue)\n", stderr)
+        #if os(iOS)
+        GeoKitMapBootstrap.prepare(provider: provider)
+        #endif
     }
 }
 

@@ -1,9 +1,21 @@
-import MapboxMaps
 import SwiftUI
 
+/// Provider-agnostic callout tail anchor (decoupled from Mapbox `ViewAnnotationAnchor`).
+public enum GeoKitCalloutAnchor: Sendable, Equatable {
+    case topLeft
+    case top
+    case topRight
+    case bottomLeft
+    case bottom
+    case bottomRight
+    case left
+    case right
+    case center
+}
+
 extension View {
-    func callout(
-        anchor: ViewAnnotationAnchor,
+    func geoKitCallout(
+        anchor: GeoKitCalloutAnchor,
         color: Color,
         borderColor: Color,
         tailSize: Double = 8.0,
@@ -22,7 +34,7 @@ extension View {
 }
 
 private struct GeoKitCalloutViewModifier: ViewModifier {
-    var anchor: ViewAnnotationAnchor
+    var anchor: GeoKitCalloutAnchor
     var color: Color
     var borderColor: Color
     var tailSize: Double
@@ -42,7 +54,7 @@ private struct GeoKitCalloutViewModifier: ViewModifier {
 }
 
 private struct GeoKitCalloutShape: Shape {
-    var anchor: ViewAnnotationAnchor
+    var anchor: GeoKitCalloutAnchor
     var tailSize: CGFloat
     var cornerRadius: CGFloat
 
@@ -62,7 +74,7 @@ private extension UIBezierPath {
         size: CGSize,
         tailSize: CGFloat,
         cornerRadius: CGFloat,
-        anchor: ViewAnnotationAnchor
+        anchor: GeoKitCalloutAnchor
     ) -> UIBezierPath {
         let rect = CGRect(origin: .zero, size: size)
         let bubbleRect = rect.insetBy(dx: tailSize, dy: tailSize)
@@ -91,7 +103,7 @@ private extension UIBezierPath {
             tailPoints = [CGPoint(x: 0, y: h / 2), CGPoint(x: p, y: h / 2 - p), CGPoint(x: p, y: h / 2 + p)]
         case .right:
             tailPoints = [CGPoint(x: w, y: h / 2), CGPoint(x: w - p, y: h / 2 - p), CGPoint(x: w - p, y: h / 2 + p)]
-        default:
+        case .center:
             tailPoints = [CGPoint(x: w / 2, y: h), CGPoint(x: w / 2 - p, y: h - p), CGPoint(x: w / 2 + p, y: h - p)]
         }
 
@@ -107,3 +119,37 @@ private extension UIBezierPath {
         return path
     }
 }
+
+#if canImport(MapboxMaps)
+import MapboxMaps
+
+extension GeoKitCalloutAnchor {
+    init(_ anchor: ViewAnnotationAnchor) {
+        switch anchor {
+        case .topLeft: self = .topLeft
+        case .top: self = .top
+        case .topRight: self = .topRight
+        case .bottomLeft: self = .bottomLeft
+        case .bottom: self = .bottom
+        case .bottomRight: self = .bottomRight
+        case .left: self = .left
+        case .right: self = .right
+        default: self = .center
+        }
+    }
+
+    var mapboxAnchor: ViewAnnotationAnchor {
+        switch self {
+        case .topLeft: return .topLeft
+        case .top: return .top
+        case .topRight: return .topRight
+        case .bottomLeft: return .bottomLeft
+        case .bottom: return .bottom
+        case .bottomRight: return .bottomRight
+        case .left: return .left
+        case .right: return .right
+        case .center: return .center
+        }
+    }
+}
+#endif

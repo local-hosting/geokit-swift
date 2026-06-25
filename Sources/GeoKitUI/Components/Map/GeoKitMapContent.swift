@@ -1,20 +1,9 @@
-import CoreLocation
 import GeoKitContract
-import MapboxMaps
 import SwiftUI
 
-/// Top-level map view for placeholder, snapshot, and live Mapbox rendering phases.
+/// Top-level map view — routes to Mapbox or Apple Maps based on provider registry / request override.
 public struct GeoKitMapContent: View {
     let request: MapContentRequest
-
-    @State private var viewport: Viewport = .idle
-    @State private var collapsedSnapshot: UIImage?
-    @State private var zoomLevel: Float = 12
-    @State private var currentZoom: CGFloat = 12
-    @State private var isPlusEnabled = true
-    @State private var isMinusEnabled = true
-    @State private var liveCameraState: CameraState?
-    @State private var selectedPinId: UUID?
 
     public init(request: MapContentRequest) {
         self.request = request
@@ -22,61 +11,33 @@ public struct GeoKitMapContent: View {
 
     public var body: some View {
         Group {
-            switch request.phase {
-            case .placeholder:
-                placeholderContent
-            case .snapshot:
-                GeoKitCollapsedSnapshotView(
-                    request: request,
-                    viewport: $viewport,
-                    snapshot: $collapsedSnapshot
-                )
-            case .live:
-                GeoKitMapSurface(
-                    request: request,
-                    viewport: $viewport,
-                    zoomLevel: $zoomLevel,
-                    currentZoom: $currentZoom,
-                    isPlusEnabled: $isPlusEnabled,
-                    isMinusEnabled: $isMinusEnabled,
-                    liveCameraState: $liveCameraState,
-                    selectedPinId: selectedPinId,
-                    onPinTap: { pin, _ in selectedPinId = pin.id },
-                    onPinInteractionBegan: {},
-                    frozenSnapshot: collapsedSnapshot
-                )
+            switch GeoKitMapProviderRegistry.resolve(for: request) {
+            case .mapbox:
+                GeoKitMapboxMapContent(request: request)
+            case .apple:
+                #if os(iOS)
+                GeoKitMapKitMapContent(request: request)
+                #else
+                unsupportedProviderFallback
+                #endif
             }
         }
-        .onAppear {
-            if case .idle = viewport {
-                viewport = GeoKitMapViewport.initial(
-                    coordinates: request.pins.map(\.coordinate),
-                    preferredZoom: request.preferredZoom
-                )
-            }
-        }
-        .accessibilityIdentifier("geokit-map-content-\(request.contentID)")
+        .accessibilityIdentifier("geokit-map-content-\(request.id)")
     }
 
-    private var placeholderContent: some View {
+    private var unsupportedProviderFallback: some View {
         ZStack {
             GeoKitMapTheme.placeholderBackground
-            Text(request.title)
+            Text("Apple Maps is only available on iOS")
                 .font(GeoKitMapTheme.placeholderTitleFont)
                 .foregroundStyle(.secondary)
         }
     }
 }
 
-private extension MapPin {
-    var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-}
-
 /// Host-driven map content that resolves placeholder / snapshot / live from stack policy.
 public struct GeoKitMapContentWithLifecycle: View {
-    let contentID: String
+    let id: String
     let policy: MapStagePolicy
     let lifecycle: MapLifecycleState
     let isExpanded: Bool
@@ -85,9 +46,10 @@ public struct GeoKitMapContentWithLifecycle: View {
     let preferredZoom: Double
     let pins: [MapPin]
     let showUserPuck: Bool
+    let mapProviderId: MapProviderId?
 
     public init(
-        contentID: String,
+        id: String,
         policy: MapStagePolicy,
         lifecycle: MapLifecycleState,
         isExpanded: Bool,
@@ -95,9 +57,10 @@ public struct GeoKitMapContentWithLifecycle: View {
         mapStyleURI: String = "",
         preferredZoom: Double = 12,
         pins: [MapPin] = [],
-        showUserPuck: Bool = false
+        showUserPuck: Bool = false,
+        mapProviderId: MapProviderId? = nil
     ) {
-        self.contentID = contentID
+        self.id = id
         self.policy = policy
         self.lifecycle = lifecycle
         self.isExpanded = isExpanded
@@ -106,12 +69,13 @@ public struct GeoKitMapContentWithLifecycle: View {
         self.preferredZoom = preferredZoom
         self.pins = pins
         self.showUserPuck = showUserPuck
+        self.mapProviderId = mapProviderId
     }
 
     public var body: some View {
         GeoKitMapContent(
             request: MapContentRequestBuilder.make(
-                contentID: contentID,
+                id: id,
                 policy: policy,
                 lifecycle: lifecycle,
                 isExpanded: isExpanded,
@@ -119,11 +83,11 @@ public struct GeoKitMapContentWithLifecycle: View {
                 mapStyleURI: mapStyleURI,
                 preferredZoom: preferredZoom,
                 pins: pins,
-                showUserPuck: showUserPuck
+                showUserPuck: showUserPuck,
+                mapProviderId: mapProviderId
             )
         )
         .environment(\.geokitMapSurfaceReady, lifecycle.isSurfaceReady)
         .environment(\.geokitMapIsTransitioning, lifecycle.isTransitioning)
     }
 }
-

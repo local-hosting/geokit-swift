@@ -49,14 +49,14 @@ final class MapContentPhaseResolverTests: XCTestCase {
 
     func testRequestBuilderUsesResolvedPhase() {
         let request = MapContentRequestBuilder.make(
-            contentID: "card-1",
+            id: "card-1",
             policy: MapStagePolicy(stage: .center, isExpanded: false),
             lifecycle: MapLifecycleState(hasSnapshot: true, isStyleReady: true, isSurfaceReady: true),
             isExpanded: false,
             title: "Map"
         )
         XCTAssertEqual(request.phase, .live)
-        XCTAssertEqual(request.contentID, "card-1")
+        XCTAssertEqual(request.id, "card-1")
     }
 
     func testMaxActiveMapsMatchesNodeBudget() {

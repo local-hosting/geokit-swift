@@ -92,3 +92,24 @@ yarn --cwd ../geokit export:parity-fixtures
 
 - Node geokit: `../geokit` (corio monorepo nested repo)
 - Plan: Swift GeoKit package migration phases (Places stack-first shell → map content → offline)
+
+## Map provider switching
+
+Mirrors `@geokit/ui` provider selection:
+
+```swift
+import GeoKitContract
+
+// Global default (before registerMapContent)
+GeoKitMapProviderRegistry.configure(provider: .apple, apple: .init(mapStyle: .standard))
+
+// Per-map override
+MapContentRequest(
+    id: "card-1",
+    phase: .live,
+    isExpanded: true,
+    mapProviderId: .mapbox
+)
+```
+
+Environment / Info.plist: `GEOKIT_MAP_PROVIDER=apple` or `mapbox` (aliases: `mapkit`, `apple-maps`).

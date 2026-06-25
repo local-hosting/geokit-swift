@@ -2,7 +2,7 @@ import Foundation
 
 public enum MapContentRequestBuilder {
     public static func make(
-        contentID: String,
+        id: String,
         policy: MapStagePolicy,
         lifecycle: MapLifecycleState,
         isExpanded: Bool,
@@ -10,17 +10,19 @@ public enum MapContentRequestBuilder {
         mapStyleURI: String = "",
         preferredZoom: Double = 12,
         pins: [MapPin] = [],
-        showUserPuck: Bool = false
+        showUserPuck: Bool = false,
+        mapProviderId: MapProviderId? = nil
     ) -> MapContentRequest {
         MapContentRequest(
-            contentID: contentID,
+            id: id,
             phase: MapContentPhaseResolver.resolve(MapLifecycleInput(policy: policy, lifecycle: lifecycle)),
             isExpanded: isExpanded,
             title: title,
             mapStyleURI: mapStyleURI,
             preferredZoom: preferredZoom,
             pins: pins,
-            showUserPuck: showUserPuck
+            showUserPuck: showUserPuck,
+            mapProviderId: mapProviderId
         )
     }
 }

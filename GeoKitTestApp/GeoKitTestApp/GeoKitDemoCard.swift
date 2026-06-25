@@ -17,7 +17,7 @@ final class GeoKitDemoCard: AXCardModel {
 
     func mapRequest(isExpanded: Bool) -> MapContentRequest {
         MapContentRequest(
-            contentID: id,
+            id: id,
             phase: isExpanded ? .live : .snapshot,
             isExpanded: isExpanded,
             title: title,

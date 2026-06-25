@@ -7,7 +7,6 @@
 
 import GeoKitContract
 import SwiftUI
-import MapboxMaps
 
 enum PinStyle {
     case primary
@@ -150,8 +149,8 @@ struct GeoKitPlacePinView: View {
                 }
                 .padding(PinCalloutLayout.contentPadding)
                 .foregroundColor(.white)
-                .callout(
-                    anchor: tap.selectedAnchor?.anchor ?? .center,
+                .geoKitCallout(
+                    anchor: tap.selectedAnchor ?? .center,
                     color: color,
                     borderColor: .white,
                     tailSize: PinCalloutLayout.tailSize,
@@ -246,8 +245,8 @@ struct GeoKitPlacePinView: View {
             )
             .padding(PinCalloutLayout.contentPadding)
             .foregroundColor(isEmphasized ? .white : color)
-            .callout(
-                anchor: tap.selectedAnchor?.anchor ?? .center,
+            .geoKitCallout(
+                anchor: tap.selectedAnchor ?? .center,
                 color: isEmphasized ? color : (selected ? color : .white),
                 borderColor: isEmphasized ? .white : (selected ? .white : color),
                 tailSize: PinCalloutLayout.tailSize,
