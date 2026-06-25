@@ -73,3 +73,57 @@ private extension MapPin {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
+
+/// Host-driven map content that resolves placeholder / snapshot / live from stack policy.
+public struct GeoKitMapContentWithLifecycle: View {
+    let contentID: String
+    let policy: MapStagePolicy
+    let lifecycle: MapLifecycleState
+    let isExpanded: Bool
+    let title: String
+    let mapStyleURI: String
+    let preferredZoom: Double
+    let pins: [MapPin]
+    let showUserPuck: Bool
+
+    public init(
+        contentID: String,
+        policy: MapStagePolicy,
+        lifecycle: MapLifecycleState,
+        isExpanded: Bool,
+        title: String = "",
+        mapStyleURI: String = "",
+        preferredZoom: Double = 12,
+        pins: [MapPin] = [],
+        showUserPuck: Bool = false
+    ) {
+        self.contentID = contentID
+        self.policy = policy
+        self.lifecycle = lifecycle
+        self.isExpanded = isExpanded
+        self.title = title
+        self.mapStyleURI = mapStyleURI
+        self.preferredZoom = preferredZoom
+        self.pins = pins
+        self.showUserPuck = showUserPuck
+    }
+
+    public var body: some View {
+        GeoKitMapContent(
+            request: MapContentRequestBuilder.make(
+                contentID: contentID,
+                policy: policy,
+                lifecycle: lifecycle,
+                isExpanded: isExpanded,
+                title: title,
+                mapStyleURI: mapStyleURI,
+                preferredZoom: preferredZoom,
+                pins: pins,
+                showUserPuck: showUserPuck
+            )
+        )
+        .environment(\.geokitMapSurfaceReady, lifecycle.isSurfaceReady)
+        .environment(\.geokitMapIsTransitioning, lifecycle.isTransitioning)
+    }
+}
+

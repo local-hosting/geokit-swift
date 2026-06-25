@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 3,
   "description": "Shared parity fixtures — generated from @corio-platforms/geokit",
   "coordinates": {
     "nyc": {
@@ -103,6 +103,25 @@
       },
       "expectedDegrees": 0,
       "toleranceDegrees": 1
+    },
+    "midpointNycLa": {
+      "from": "nyc",
+      "to": "la",
+      "expected": {
+        "latitude": 39.51030756575701,
+        "longitude": -97.16013188872246
+      },
+      "toleranceDegrees": 0.0001
+    },
+    "destination1kmEast": {
+      "from": "nyc",
+      "distanceMeters": 1000,
+      "bearingDegrees": 90,
+      "expected": {
+        "latitude": 40.712799392649444,
+        "longitude": -73.99413543746913
+      },
+      "toleranceDegrees": 0.0001
     }
   },
   "h3": {
@@ -111,7 +130,110 @@
       "longitude": -74.006,
       "resolution": 9,
       "expectedCell": "892a1072893ffff"
+    },
+    "parentRes8": {
+      "cell": "892a1072893ffff",
+      "resolution": 8,
+      "expectedParent": "882a107289fffff"
+    },
+    "childrenRes10": {
+      "cell": "892a1072893ffff",
+      "resolution": 10,
+      "expectedChildCount": 7
+    },
+    "neighborsK1": {
+      "cell": "892a1072893ffff",
+      "k": 1,
+      "expectedCount": 7,
+      "containsCenter": true,
+      "ringNeighborAreNeighbors": true
+    },
+    "metricsRes9": {
+      "resolution": 9,
+      "expectedEdgeLengthMeters": 200.7861476,
+      "expectedCellAreaM2": 105332.5134272069,
+      "edgeLengthToleranceMeters": 0.001,
+      "cellAreaToleranceM2": 0.001
     }
+  },
+  "geohash": {
+    "encodeNycRes9": {
+      "from": "nyc",
+      "precision": 9,
+      "expectedHash": "dr5regw3p"
+    },
+    "decodeRes9": {
+      "hash": "dr5regw3p",
+      "expected": {
+        "latitude": 40.712779,
+        "longitude": -74.005988
+      },
+      "tolerance": 0.0001
+    },
+    "boundsRes5": {
+      "hash": "dr5r",
+      "expected": [
+        -74.1796875,
+        40.60546875,
+        -73.828125,
+        40.78125
+      ]
+    },
+    "neighborsRes5": {
+      "hash": "dr5r",
+      "expected": {
+        "n": "dr72",
+        "ne": "dr78",
+        "e": "dr5x",
+        "se": "dr5w",
+        "s": "dr5q",
+        "sw": "dr5n",
+        "w": "dr5p",
+        "nw": "dr70"
+      },
+      "expectedArray": [
+        "dr72",
+        "dr78",
+        "dr5x",
+        "dr5w",
+        "dr5q",
+        "dr5n",
+        "dr5p",
+        "dr70"
+      ]
+    },
+    "validation": {
+      "validHash": "dr5r",
+      "invalidHash": "invalid!",
+      "validExpected": true,
+      "invalidExpected": false
+    }
+  },
+  "geojson": {
+    "pointCoordinates": [
+      -74.006,
+      40.7128
+    ],
+    "expectedFeatureId": "123",
+    "openRingCoordinates": [
+      [
+        -74,
+        40
+      ],
+      [
+        -73,
+        40
+      ],
+      [
+        -73,
+        41
+      ],
+      [
+        -74,
+        41
+      ]
+    ],
+    "expectedClosedRingCount": 5
   },
   "validation": {
     "valid": {

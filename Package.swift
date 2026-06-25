@@ -5,6 +5,7 @@ let package = Package(
     name: "GeoKit",
     platforms: [
         .iOS(.v17),
+        .macOS(.v10_15),
     ],
     products: [
         .library(name: "GeoKitCore", targets: ["GeoKitCore"]),
@@ -47,6 +48,10 @@ let package = Package(
             name: "GeoKitCoreTests",
             dependencies: ["GeoKitCore"],
             resources: [.process("Fixtures")]
+        ),
+        .testTarget(
+            name: "GeoKitContractTests",
+            dependencies: ["GeoKitContract"]
         ),
     ]
 )

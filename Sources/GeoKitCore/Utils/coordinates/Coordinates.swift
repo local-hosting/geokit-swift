@@ -6,9 +6,19 @@ public enum Coordinates {
         LatLon(latitude: latitude, longitude: longitude)
     }
 
+    /// Convert GeoJSON `[lon, lat]` pairs to `[lat, lon]`.
+    public static func toLatLonArray(_ points: [(longitude: Double, latitude: Double)]) -> [LatLon] {
+        points.map { LatLon(latitude: $0.latitude, longitude: $0.longitude) }
+    }
+
     /// Convert `[lat, lon]` to GeoJSON `[lon, lat]`.
     public static func toLonLat(_ coordinate: LatLon) -> (longitude: Double, latitude: Double) {
         (coordinate.longitude, coordinate.latitude)
+    }
+
+    /// Convert `[lat, lon]` pairs to GeoJSON `[lon, lat]`.
+    public static func toLonLatArray(_ points: [LatLon]) -> [(longitude: Double, latitude: Double)] {
+        points.map { (longitude: $0.longitude, latitude: $0.latitude) }
     }
 
     /// Validate that coordinates are finite numbers within valid geographic ranges.

@@ -16,4 +16,14 @@ final class CoordinatesTests: XCTestCase {
         let restored = Coordinates.toLatLon(longitude: lonLat.longitude, latitude: lonLat.latitude)
         XCTAssertEqual(restored, original)
     }
+
+    func testArrayConversionsRoundTrip() {
+        let points = [
+            LatLon(latitude: 40.7128, longitude: -74.006),
+            LatLon(latitude: 34.0522, longitude: -118.2437),
+        ]
+        let lonLatPoints = Coordinates.toLonLatArray(points)
+        let restored = Coordinates.toLatLonArray(lonLatPoints)
+        XCTAssertEqual(restored, points)
+    }
 }

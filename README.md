@@ -21,7 +21,7 @@ Sources/
   GeoKitCore/
     Constants/
     Types/
-    Utils/{bounds,bearing,coordinates,distance,h3}/
+    Utils/{bounds,bearing,coordinates,distance,h3,geohash,geojson}/
   GeoKitContract/
     Runtime/
     Types/
@@ -34,11 +34,17 @@ Sources/
     Register/
 Tests/
   GeoKitCoreTests/
-    Utils/{bounds,bearing,coordinates,distance,h3}/
+    Utils/{bounds,bearing,coordinates,distance,h3,geohash,geojson}/
     Fixtures/
 ```
 
-## Phase 1 (current)
+## Phase 2 (current)
+
+- GeoKitCore geohash + GeoJSON validation/repair
+- GeoKitContract map lifecycle phase resolver
+- GeoKitUI `GeoKitMapContentWithLifecycle` for placeholder / snapshot / live
+
+## Phase 1
 
 - GeoKitCore geo calculators with shared JSON fixtures vs Node geokit
 - GeoKitContract lazy-load registration surface
@@ -55,7 +61,12 @@ let meters = Distance.haversineMeters(
     from: LatLon(latitude: 40.7128, longitude: -74.006),
     to: LatLon(latitude: 34.0522, longitude: -118.2437)
 )
+let mid = Bearing.midpoint(
+    from: LatLon(latitude: 40.7128, longitude: -74.006),
+    to: LatLon(latitude: 34.0522, longitude: -118.2437)
+)
 let cell = try H3.coordinatesToCell(LatLon(latitude: 40.7128, longitude: -74.006), resolution: 9)
+let parent = try H3.parent(of: cell, resolution: 8)
 ```
 
 Host apps link **GeoKitContract** only; `dlopen` GeoKit.framework after the map host paints, then call `GeoKitRegister.registerMapContent()`.
