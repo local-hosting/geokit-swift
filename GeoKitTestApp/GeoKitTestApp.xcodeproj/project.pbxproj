@@ -12,10 +12,13 @@
 		GKTA003 /* GeoKitDemoDeck.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA103 /* GeoKitDemoDeck.swift */; };
 		GKTA004 /* GeoKitDemoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA104 /* GeoKitDemoCard.swift */; };
 		GKTA005 /* GeoKitDemoConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA105 /* GeoKitDemoConstants.swift */; };
+		GKTA00B /* GeoKitDemoMediaCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA109 /* GeoKitDemoMediaCoordinator.swift */; };
+
 		GKTA006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = GKTA106 /* Assets.xcassets */; };
 		GKTA007 /* AccordDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP02 /* AccordDesignSystem */; };
 		GKTA008 /* GeoKit in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP03 /* GeoKit */; };
 		GKTA009 /* GeoKitContract in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP04 /* GeoKitContract */; };
+		GKTA00C /* GeoKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP07 /* GeoKitUI */; };
 		GKTA00A /* GeoKit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP03 /* GeoKit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -38,6 +41,7 @@
 		GKTA102 /* GeoKitDemoRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoRootView.swift; sourceTree = "<group>"; };
 		GKTA103 /* GeoKitDemoDeck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoDeck.swift; sourceTree = "<group>"; };
 		GKTA104 /* GeoKitDemoCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCard.swift; sourceTree = "<group>"; };
+		GKTA109 /* GeoKitDemoMediaCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoMediaCoordinator.swift; sourceTree = "<group>"; };
 		GKTA105 /* GeoKitDemoConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoConstants.swift; sourceTree = "<group>"; };
 		GKTA106 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		GKTA107 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -52,6 +56,7 @@
 				GKTA007 /* AccordDesignSystem in Frameworks */,
 				GKTA008 /* GeoKit in Frameworks */,
 				GKTA009 /* GeoKitContract in Frameworks */,
+				GKTA00C /* GeoKitUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +79,7 @@
 				GKTA103 /* GeoKitDemoDeck.swift */,
 				GKTA104 /* GeoKitDemoCard.swift */,
 				GKTA105 /* GeoKitDemoConstants.swift */,
+				GKTA109 /* GeoKitDemoMediaCoordinator.swift */,
 				GKTA106 /* Assets.xcassets */,
 				GKTA107 /* Info.plist */,
 			);
@@ -109,6 +115,7 @@
 				GKTAP02 /* AccordDesignSystem */,
 				GKTAP03 /* GeoKit */,
 				GKTAP04 /* GeoKitContract */,
+				GKTAP07 /* GeoKitUI */,
 			);
 			productName = GeoKitTestApp;
 			productReference = GKTA108 /* GeoKitTestApp.app */;
@@ -122,7 +129,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					GKTA501 = {
 						CreatedOnToolsVersion = 26.0;
@@ -139,8 +146,8 @@
 			);
 			mainGroup = GKTA401;
 			packageReferences = (
-				GKTAP01 /* XCLocalSwiftPackageReference "geokit-swift" */,
-				GKTAP05 /* XCLocalSwiftPackageReference "design-system" */,
+				GKTAP01 /* XCLocalSwiftPackageReference ".." */,
+				GKTAP05 /* XCLocalSwiftPackageReference "../../../../GitHub/places/Packages/design-system" */,
 			);
 			productRefGroup = GKTA403 /* Products */;
 			projectDirPath = "";
@@ -171,6 +178,7 @@
 				GKTA002 /* GeoKitDemoRootView.swift in Sources */,
 				GKTA003 /* GeoKitDemoDeck.swift in Sources */,
 				GKTA004 /* GeoKitDemoCard.swift in Sources */,
+				GKTA00B /* GeoKitDemoMediaCoordinator.swift in Sources */,
 				GKTA005 /* GeoKitDemoConstants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -184,19 +192,48 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = TYLC4CYMK4;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -208,13 +245,41 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = TYLC4CYMK4;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -241,7 +306,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fm.accord.geokit-test;
+				PRODUCT_BUNDLE_IDENTIFIER = "fm.accord.geokit-test";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -270,7 +335,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fm.accord.geokit-test;
+				PRODUCT_BUNDLE_IDENTIFIER = "fm.accord.geokit-test";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -302,11 +367,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		GKTAP01 /* XCLocalSwiftPackageReference "geokit-swift" */ = {
+		GKTAP01 /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ..;
 		};
-		GKTAP05 /* XCLocalSwiftPackageReference "design-system" */ = {
+		GKTAP05 /* XCLocalSwiftPackageReference "../../../../GitHub/places/Packages/design-system" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../../../GitHub/places/Packages/design-system";
 		};
@@ -315,18 +380,23 @@
 /* Begin XCSwiftPackageProductDependency section */
 		GKTAP02 /* AccordDesignSystem */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = GKTAP05 /* XCLocalSwiftPackageReference "design-system" */;
+			package = GKTAP05 /* XCLocalSwiftPackageReference "../../../../GitHub/places/Packages/design-system" */;
 			productName = AccordDesignSystem;
 		};
 		GKTAP03 /* GeoKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = GKTAP01 /* XCLocalSwiftPackageReference "geokit-swift" */;
+			package = GKTAP01 /* XCLocalSwiftPackageReference ".." */;
 			productName = GeoKit;
 		};
 		GKTAP04 /* GeoKitContract */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = GKTAP01 /* XCLocalSwiftPackageReference "geokit-swift" */;
+			package = GKTAP01 /* XCLocalSwiftPackageReference ".." */;
 			productName = GeoKitContract;
+		};
+		GKTAP07 /* GeoKitUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = GKTAP01 /* XCLocalSwiftPackageReference ".." */;
+			productName = GeoKitUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

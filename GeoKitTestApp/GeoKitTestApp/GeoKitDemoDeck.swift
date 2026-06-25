@@ -9,6 +9,8 @@ final class GeoKitDemoDeck: AXCardCollectionModel<GeoKitDemoCard> {
         cards = Self.sampleCards
     }
 
+    static let sampleCardCount = 6
+
     private static let sampleCards: [GeoKitDemoCard] = [
         GeoKitDemoCard(
             id: "nyc",

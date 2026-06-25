@@ -17,3 +17,7 @@ xcodebuild -project GeoKitTestApp.xcodeproj -scheme GeoKitTestApp \
 ```
 
 Mapbox token: `GeoKitTestApp/Info.plist` (`MBXAccessToken`).
+
+## Map provider picker
+
+Use the **Mapbox / Apple** segmented control (top-right) to switch map providers at runtime without rebuilding.
