@@ -18,20 +18,26 @@ struct GeoKitMapKitMapSurface: View {
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
 
     @State private var mapReady = false
+    @State private var reportedCameraFrame: MapCameraFrame?
 
     var body: some View {
         GeometryReader { geo in
             mapBody(size: geo.size)
         }
         .clipped()
-        .preference(key: GeoKitLiveRenderingKey.self, value: true)
+    }
+
+
+    private func syncMapReady(for size: CGSize) {
+        let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
+        mapReady = canMount
     }
 
     @ViewBuilder
     private func mapBody(size: CGSize) -> some View {
-        let validSize = Self.isValidMapLayoutSize(size)
-        let canMount = validSize && mapSurfaceReady
-        let showMap = mapReady && canMount
+        let validSize = MapSurfaceMountPolicy.isValidLayoutSize(size)
+        let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
+        let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
         let showFrozen = isTransitioning && frozenSnapshot != nil
 
         ZStack {
@@ -47,22 +53,25 @@ struct GeoKitMapKitMapSurface: View {
             }
         }
         .frame(width: size.width, height: size.height)
-        .onChange(of: canMount) { _, shouldMount in
-            if shouldMount {
-                guard !mapReady else { return }
-                DispatchQueue.main.async { mapReady = true }
-            } else {
-                mapReady = false
-            }
+        .onChange(of: size) { _, newSize in
+            syncMapReady(for: newSize)
+        }
+        .onChange(of: mapSurfaceReady) { _, _ in
+            syncMapReady(for: size)
         }
         .onAppear {
-            guard canMount else { return }
-            DispatchQueue.main.async { mapReady = true }
+            syncMapReady(for: size)
         }
+        .onDisappear {
+            mapReady = false
+        }
+        .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
+        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !showFrozen)
+        .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozen)
     }
 
     private func liveMap(size: CGSize) -> some View {
-        Map(position: $position, interactionModes: request.isExpanded ? .all : []) {
+        Map(position: $position, interactionModes: request.mapAcceptsUserInteraction ? .all : []) {
             if request.showUserPuck {
                 UserAnnotation()
             }
@@ -77,14 +86,16 @@ struct GeoKitMapKitMapSurface: View {
                 fromDistance: camera.distance,
                 latitude: camera.centerCoordinate.latitude
             )
-            DispatchQueue.main.async {
-                zoomLevel = Float(zoom)
-            }
+            zoomLevel = Float(zoom)
+            reportedCameraFrame = GeoKitMapKitCamera.frame(from: camera)
         }
-        .allowsHitTesting(request.isExpanded)
-        .geokitIgnoresSafeArea(when: request.isExpanded)
+        .onMapCameraChange(frequency: .onEnd) { context in
+            reportedCameraFrame = GeoKitMapKitCamera.frame(from: context.camera)
+        }
+        .allowsHitTesting(request.mapAcceptsUserInteraction)
+        .geokitIgnoresSafeArea(when: request.mapAcceptsUserInteraction)
         .mapSurfaceTouchShield(
-            isActive: request.isExpanded,
+            isActive: request.mapAcceptsUserInteraction,
             onBegan: onPinInteractionBegan,
             onEnded: onPinInteractionEnded
         )
@@ -112,9 +123,6 @@ struct GeoKitMapKitMapSurface: View {
         }
     }
 
-    private static func isValidMapLayoutSize(_ size: CGSize) -> Bool {
-        size.width >= GeoKitMapLayout.minMapSize && size.height >= GeoKitMapLayout.minMapSize
-    }
 }
 
 private extension GeoKitContract.MapPin {

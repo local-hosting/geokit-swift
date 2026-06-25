@@ -15,13 +15,39 @@ struct GeoKitMapKitMapContent: View {
     var body: some View {
         phaseContent
             .onAppear {
-                if case .automatic = position {
-                    position = GeoKitMapKitCamera.initialPosition(
-                        coordinates: request.pins.map(\.coordinate),
-                        preferredZoom: request.preferredZoom
-                    )
-                }
+                seedPositionIfNeeded()
             }
+            .onChange(of: request.mapProviderId) { _, _ in
+                resetForProviderChange()
+            }
+            .onChange(of: request.cameraFrame) { _, frame in
+                guard let frame else { return }
+                position = GeoKitMapKitCamera.from(frame)
+            }
+    }
+
+
+    private func resetForProviderChange() {
+        position = .automatic
+        collapsedSnapshot = nil
+        selectedPinId = nil
+        seedPositionIfNeeded()
+    }
+
+    private func seedPositionIfNeeded() {
+        guard case .automatic = position else { return }
+        applyCameraFrame(request.cameraFrame)
+    }
+
+    private func applyCameraFrame(_ frame: MapCameraFrame?) {
+        if let frame {
+            position = GeoKitMapKitCamera.from(frame)
+        } else {
+            position = GeoKitMapKitCamera.initialPosition(
+                coordinates: request.pins.map(\.coordinate),
+                preferredZoom: request.preferredZoom
+            )
+        }
     }
 
     @ViewBuilder

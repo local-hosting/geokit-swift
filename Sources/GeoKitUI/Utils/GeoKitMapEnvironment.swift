@@ -1,3 +1,4 @@
+import GeoKitContract
 import SwiftUI
 
 /// Hosts may read this preference to skip rasterization (e.g. `drawingGroup`) while a live Mapbox surface is mounted.
@@ -6,6 +7,35 @@ public struct GeoKitLiveRenderingKey: PreferenceKey {
 
     public static func reduce(value: inout Bool, nextValue: () -> Bool) {
         value = value || nextValue()
+    }
+}
+
+/// When true, the map has visible raster content (snapshot or live frame) for the host to observe.
+public struct GeoKitMapRenderedKey: PreferenceKey {
+    public static var defaultValue = false
+
+    public static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
+/// When true, the map owns pan/zoom gestures; host chrome should defer competing drag handlers.
+public struct GeoKitMapInteractiveGesturesKey: PreferenceKey {
+    public static var defaultValue = false
+
+    public static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
+/// Latest provider-neutral camera frame from a live map surface — hosts may persist across provider switches.
+public struct GeoKitMapCameraFrameKey: PreferenceKey {
+    public static var defaultValue: MapCameraFrame? = nil
+
+    public static func reduce(value: inout MapCameraFrame?, nextValue: () -> MapCameraFrame?) {
+        if let next = nextValue() {
+            value = next
+        }
     }
 }
 

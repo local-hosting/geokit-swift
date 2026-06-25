@@ -1,5 +1,6 @@
 #if os(iOS)
 import CoreLocation
+import GeoKitContract
 import MapboxMaps
 
 enum GeoKitMapViewport {
@@ -13,11 +14,52 @@ enum GeoKitMapViewport {
             return .idle
         }
         let center = centerCoordinate(from: coordinates) ?? focus
-        return .camera(
+        return viewport(
             center: center,
             zoom: preferredZoom,
             bearing: 0,
             pitch: collapsedPitch
+        )
+    }
+
+    static func from(_ frame: MapCameraFrame) -> Viewport {
+        viewport(
+            center: CLLocationCoordinate2D(latitude: frame.centerLatitude, longitude: frame.centerLongitude),
+            zoom: frame.zoom,
+            bearing: frame.bearing,
+            pitch: frame.pitch
+        )
+    }
+
+    static func frame(from viewport: Viewport) -> MapCameraFrame? {
+        guard let camera = viewport.camera,
+              let center = camera.center,
+              let zoom = camera.zoom,
+              let bearing = camera.bearing,
+              let pitch = camera.pitch
+        else {
+            return nil
+        }
+        return MapCameraFrame(
+            centerLatitude: center.latitude,
+            centerLongitude: center.longitude,
+            zoom: zoom,
+            bearing: bearing,
+            pitch: pitch
+        )
+    }
+
+    private static func viewport(
+        center: CLLocationCoordinate2D,
+        zoom: Double,
+        bearing: Double,
+        pitch: Double
+    ) -> Viewport {
+        .camera(
+            center: center,
+            zoom: zoom,
+            bearing: bearing,
+            pitch: pitch
         )
     }
 

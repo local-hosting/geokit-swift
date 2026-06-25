@@ -15,12 +15,45 @@ enum GeoKitMapKitCamera {
             return .automatic
         }
         let center = centerCoordinate(from: coordinates) ?? focus
-        return .camera(
+        return position(
+            center: center,
+            zoom: preferredZoom,
+            bearing: 0,
+            pitch: collapsedPitch
+        )
+    }
+
+    static func from(_ frame: MapCameraFrame) -> MapCameraPosition {
+        position(
+            center: CLLocationCoordinate2D(latitude: frame.centerLatitude, longitude: frame.centerLongitude),
+            zoom: frame.zoom,
+            bearing: frame.bearing,
+            pitch: frame.pitch
+        )
+    }
+
+    static func frame(from camera: MapCamera) -> MapCameraFrame {
+        MapCameraFrame(
+            centerLatitude: camera.centerCoordinate.latitude,
+            centerLongitude: camera.centerCoordinate.longitude,
+            zoom: zoom(fromDistance: camera.distance, latitude: camera.centerCoordinate.latitude),
+            bearing: camera.heading,
+            pitch: camera.pitch
+        )
+    }
+
+    private static func position(
+        center: CLLocationCoordinate2D,
+        zoom: Double,
+        bearing: Double,
+        pitch: Double
+    ) -> MapCameraPosition {
+        .camera(
             MapCamera(
                 centerCoordinate: center,
-                distance: distanceMeters(forZoom: preferredZoom, latitude: center.latitude),
-                heading: 0,
-                pitch: collapsedPitch
+                distance: distanceMeters(forZoom: zoom, latitude: center.latitude),
+                heading: bearing,
+                pitch: pitch
             )
         )
     }

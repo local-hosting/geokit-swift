@@ -14,14 +14,21 @@ public struct GeoKitMapContent: View {
             switch GeoKitMapProviderRegistry.resolve(for: request) {
             case .mapbox:
                 GeoKitMapboxMapContent(request: request)
+                    .id(MapProviderId.mapbox)
             case .apple:
                 #if os(iOS)
                 GeoKitMapKitMapContent(request: request)
+                    .id(MapProviderId.apple)
                 #else
                 unsupportedProviderFallback
                 #endif
             }
         }
+        .allowsHitTesting(request.mapAcceptsUserInteraction)
+        .preference(
+            key: GeoKitMapInteractiveGesturesKey.self,
+            value: request.mapAcceptsUserInteraction
+        )
         .accessibilityIdentifier("geokit-map-content-\(request.id)")
     }
 

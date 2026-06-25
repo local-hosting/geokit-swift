@@ -19,13 +19,39 @@ struct GeoKitMapboxMapContent: View {
     var body: some View {
         phaseContent
             .onAppear {
-                if case .idle = viewport {
-                    viewport = GeoKitMapViewport.initial(
-                        coordinates: request.pins.map(\.coordinate),
-                        preferredZoom: request.preferredZoom
-                    )
-                }
+                seedViewportIfNeeded()
             }
+            .onChange(of: request.mapProviderId) { _, _ in
+                resetForProviderChange()
+            }
+            .onChange(of: request.cameraFrame) { _, frame in
+                guard let frame else { return }
+                viewport = GeoKitMapViewport.from(frame)
+            }
+    }
+
+
+    private func resetForProviderChange() {
+        viewport = .idle
+        collapsedSnapshot = nil
+        selectedPinId = nil
+        seedViewportIfNeeded()
+    }
+
+    private func seedViewportIfNeeded() {
+        guard case .idle = viewport else { return }
+        applyCameraFrame(request.cameraFrame)
+    }
+
+    private func applyCameraFrame(_ frame: MapCameraFrame?) {
+        if let frame {
+            viewport = GeoKitMapViewport.from(frame)
+        } else {
+            viewport = GeoKitMapViewport.initial(
+                coordinates: request.pins.map(\.coordinate),
+                preferredZoom: request.preferredZoom
+            )
+        }
     }
 
     @ViewBuilder

@@ -22,22 +22,28 @@ struct GeoKitMapSurface: View {
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
 
     @State private var mapReady = false
+    @State private var reportedCameraFrame: MapCameraFrame?
+    @State private var liveDidRender = false
+
+    private static let crossFadeDuration: TimeInterval = 0.28
+
+
+    private func syncMapReady(for size: CGSize) {
+        let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
+        mapReady = canMount
+    }
 
     var body: some View {
         GeometryReader { geo in
-            let validSize = Self.isValidMapLayoutSize(geo.size)
-            let canMount = validSize && mapSurfaceReady
-            let showMap = mapReady && canMount
-            let showFrozen = isTransitioning && frozenSnapshot != nil
+            let size = geo.size
+            let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
+            let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
+            // Keep the captured snapshot on top until the live map has actually painted,
+            // then cross-fade it out so we never reveal a blank/half-loaded Metal map.
+            let showFrozen = frozenSnapshot != nil && (isTransitioning || !liveDidRender)
             ZStack {
                 Color.white
-                if showFrozen, let snapshot = frozenSnapshot {
-                    Image(uiImage: snapshot)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .clipped()
-                } else if showMap {
+                if showMap {
                     MapboxMaps.Map(viewport: $viewport) {
                         StyleProjection(name: .mercator)
                         if request.showUserPuck {
@@ -70,62 +76,103 @@ struct GeoKitMapSurface: View {
                     .onCameraChanged { event in
                         let zoom = event.cameraState.zoom
                         let cameraState = event.cameraState
-                        DispatchQueue.main.async {
-                            liveCameraState = cameraState
-                            zoomLevel = Float(zoom)
-                            currentZoom = zoom
-                            isPlusEnabled = zoom < 19
-                            isMinusEnabled = zoom > 10
+                        liveCameraState = cameraState
+                        zoomLevel = Float(zoom)
+                        currentZoom = zoom
+                        isPlusEnabled = zoom < 19
+                        isMinusEnabled = zoom > 10
+                        reportedCameraFrame = MapCameraFrame(
+                            centerLatitude: cameraState.center.latitude,
+                            centerLongitude: cameraState.center.longitude,
+                            zoom: cameraState.zoom,
+                            bearing: cameraState.bearing,
+                            pitch: cameraState.pitch
+                        )
+                    }
+                    .onMapIdle { _ in
+                        if !liveDidRender {
+                            withAnimation(.easeInOut(duration: Self.crossFadeDuration)) {
+                                liveDidRender = true
+                            }
                         }
+                        guard let cameraState = liveCameraState else { return }
+                        reportedCameraFrame = MapCameraFrame(
+                            centerLatitude: cameraState.center.latitude,
+                            centerLongitude: cameraState.center.longitude,
+                            zoom: cameraState.zoom,
+                            bearing: cameraState.bearing,
+                            pitch: cameraState.pitch
+                        )
                     }
                     .ornamentOptions(ornamentOptions)
                     .gestureOptions(gestureOptions)
-                    .allowsHitTesting(request.isExpanded)
-                    .geokitIgnoresSafeArea(when: request.isExpanded)
+                    .allowsHitTesting(request.mapAcceptsUserInteraction)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+                    .geokitIgnoresSafeArea(when: request.mapAcceptsUserInteraction)
                     .mapSurfaceTouchShield(
-                        isActive: request.isExpanded,
+                        isActive: request.mapAcceptsUserInteraction,
                         onBegan: onPinInteractionBegan,
                         onEnded: onPinInteractionEnded
                     )
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
+                }
+                if showFrozen, let snapshot = frozenSnapshot {
+                    Image(uiImage: snapshot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
                 }
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .onChange(of: canMount) { _, shouldMount in
-                if shouldMount {
-                    guard !mapReady else { return }
-                    DispatchQueue.main.async { mapReady = true }
-                } else {
-                    mapReady = false
-                }
+            .frame(width: size.width, height: size.height)
+            .onChange(of: size) { _, newSize in
+                syncMapReady(for: newSize)
+            }
+            .onChange(of: mapSurfaceReady) { _, _ in
+                syncMapReady(for: size)
             }
             .onAppear {
-                guard canMount else { return }
-                DispatchQueue.main.async { mapReady = true }
+                syncMapReady(for: size)
             }
+            .onDisappear {
+                mapReady = false
+                liveDidRender = false
+            }
+            .onChange(of: showMap) { _, isShowing in
+                if isShowing {
+                    GeoKitMapboxLiveMapRegistry.registerLiveMap()
+                } else {
+                    liveDidRender = false
+                    GeoKitMapboxLiveMapRegistry.unregisterLiveMap()
+                }
+            }
+            .onDisappear {
+                if showMap {
+                    GeoKitMapboxLiveMapRegistry.unregisterLiveMap()
+                }
+            }
+            .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
+            .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !showFrozen)
+            .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozen)
         }
         .clipped()
-        .preference(key: GeoKitLiveRenderingKey.self, value: true)
-    }
-
-    private static func isValidMapLayoutSize(_ size: CGSize) -> Bool {
-        size.width >= GeoKitMapLayout.minMapSize && size.height >= GeoKitMapLayout.minMapSize
     }
 
     private var ornamentOptions: OrnamentOptions {
-        GeoKitMapTokens.liveOrnamentOptions(interactiveGestures: request.isExpanded)
+        GeoKitMapTokens.liveOrnamentOptions(interactiveGestures: request.mapAcceptsUserInteraction)
     }
 
     private var gestureOptions: GestureOptions {
         GestureOptions(
-            panEnabled: request.isExpanded,
-            pinchEnabled: request.isExpanded,
-            rotateEnabled: request.isExpanded,
-            pinchPanEnabled: request.isExpanded,
-            pitchEnabled: request.isExpanded,
-            doubleTapToZoomInEnabled: request.isExpanded,
-            doubleTouchToZoomOutEnabled: request.isExpanded,
+            panEnabled: request.mapAcceptsUserInteraction,
+            pinchEnabled: request.mapAcceptsUserInteraction,
+            rotateEnabled: request.mapAcceptsUserInteraction,
+            pinchPanEnabled: request.mapAcceptsUserInteraction,
+            pitchEnabled: request.mapAcceptsUserInteraction,
+            doubleTapToZoomInEnabled: request.mapAcceptsUserInteraction,
+            doubleTouchToZoomOutEnabled: request.mapAcceptsUserInteraction,
             quickZoomEnabled: false
         )
     }

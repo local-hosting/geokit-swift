@@ -1,5 +1,6 @@
 import CoreGraphics
+import GeoKitContract
 
 enum GeoKitMapLayout {
-    static let minMapSize: CGFloat = 128
+    static let minMapSize = MapSurfaceMountPolicy.minLayoutSize
 }
