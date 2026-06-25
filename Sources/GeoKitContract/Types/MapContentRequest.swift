@@ -17,6 +17,10 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
     public var showUserPuck: Bool
     /// Per-map override; when nil, `GeoKitMapProviderRegistry.defaultProvider` is used.
     public var mapProviderId: MapProviderId?
+    /// Optional seed camera preserved across provider switches; read once when a map surface mounts.
+    public var cameraFrame: MapCameraFrame?
+    /// Front-card captures jump ahead of peek/background snapshot work.
+    public var snapshotPriority: MapSnapshotPriority
 
     public init(
         id: String,
@@ -27,7 +31,9 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         preferredZoom: Double = 12,
         pins: [MapPin] = [],
         showUserPuck: Bool = false,
-        mapProviderId: MapProviderId? = nil
+        mapProviderId: MapProviderId? = nil,
+        cameraFrame: MapCameraFrame? = nil,
+        snapshotPriority: MapSnapshotPriority = .background
     ) {
         self.id = id
         self.phase = phase
@@ -38,5 +44,12 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         self.pins = pins
         self.showUserPuck = showUserPuck
         self.mapProviderId = mapProviderId
+        self.cameraFrame = cameraFrame
+        self.snapshotPriority = snapshotPriority
+    }
+
+    /// Full-screen live maps only — collapsed cards and transition snapshots pass touches to host chrome.
+    public var mapAcceptsUserInteraction: Bool {
+        isExpanded && phase == .live
     }
 }

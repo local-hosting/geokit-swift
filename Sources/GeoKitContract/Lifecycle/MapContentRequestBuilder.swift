@@ -11,7 +11,9 @@ public enum MapContentRequestBuilder {
         preferredZoom: Double = 12,
         pins: [MapPin] = [],
         showUserPuck: Bool = false,
-        mapProviderId: MapProviderId? = nil
+        mapProviderId: MapProviderId? = nil,
+        cameraFrame: MapCameraFrame? = nil,
+        snapshotPriority: MapSnapshotPriority? = nil
     ) -> MapContentRequest {
         MapContentRequest(
             id: id,
@@ -22,7 +24,21 @@ public enum MapContentRequestBuilder {
             preferredZoom: preferredZoom,
             pins: pins,
             showUserPuck: showUserPuck,
-            mapProviderId: mapProviderId
+            mapProviderId: mapProviderId,
+            cameraFrame: cameraFrame,
+            snapshotPriority: snapshotPriority ?? Self.snapshotPriority(for: policy)
         )
+    }
+}
+
+
+extension MapContentRequestBuilder {
+    public static func snapshotPriority(for policy: MapStagePolicy) -> MapSnapshotPriority {
+        switch policy.stage {
+        case .peek:
+            return .background
+        case .center, .expand:
+            return .top
+        }
     }
 }

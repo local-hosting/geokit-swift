@@ -16,10 +16,6 @@ public enum MapContentPhaseResolver {
         guard input.lifecycle.isSurfaceReady else { return .placeholder }
 
         if !input.policy.allowsLiveRendering {
-            return input.lifecycle.hasSnapshot && input.policy.allowsSnapshotCapture ? .snapshot : .placeholder
-        }
-
-        if input.policy.stage == .peek {
             return input.lifecycle.hasSnapshot ? .snapshot : .placeholder
         }
 
