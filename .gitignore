@@ -5,3 +5,6 @@
 *.xcworkspace/xcuserdata/
 DerivedData/
 Package.resolved
+.derived/
+build/
+**/build/
