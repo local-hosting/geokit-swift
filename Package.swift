@@ -5,14 +5,15 @@ let package = Package(
     name: "GeoKit",
     platforms: [
         .iOS(.v17),
-        .macOS(.v14),
     ],
     products: [
         .library(name: "GeoKitCore", targets: ["GeoKitCore"]),
         .library(name: "GeoKitContract", targets: ["GeoKitContract"]),
+        .library(name: "GeoKitUI", targets: ["GeoKitUI"]),
         .library(name: "GeoKit", type: .dynamic, targets: ["GeoKit"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", exact: "11.25.0"),
         .package(url: "https://github.com/pawelmajcher/SwiftyH3.git", "0.5.0"..<"0.6.0"),
     ],
     targets: [
@@ -27,8 +28,20 @@ let package = Package(
             dependencies: ["GeoKitCore"]
         ),
         .target(
+            name: "GeoKitUI",
+            dependencies: [
+                "GeoKitCore",
+                "GeoKitContract",
+                .product(name: "MapboxMaps", package: "mapbox-maps-ios"),
+            ]
+        ),
+        .target(
             name: "GeoKit",
-            dependencies: ["GeoKitCore", "GeoKitContract"]
+            dependencies: [
+                "GeoKitCore",
+                "GeoKitContract",
+                "GeoKitUI",
+            ]
         ),
         .testTarget(
             name: "GeoKitCoreTests",

@@ -15,7 +15,7 @@
 ## Tier 2 — behavioral (planned)
 
 - Map surface lifecycle, snapshot ↔ live handoff
-- Card stack stage policy (`MapStagePolicyResolver`)
+- Host stack stage policy (`MapStagePolicyResolver`)
 - Offline tile regions (Swift-only today)
 
 ## Tier 3 — Node-only (out of scope v1)

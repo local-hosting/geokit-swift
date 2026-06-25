@@ -20,7 +20,11 @@ public enum GeoKitRuntime {
 
     @discardableResult
     public static func loadIfNeeded() -> Bool {
+        #if canImport(SwiftUI)
+        if isLoaded { return mapContent != nil }
+        #else
         if isLoaded { return true }
+        #endif
         guard let loadFramework else { return false }
         let loaded = loadFramework()
         isLoaded = loaded

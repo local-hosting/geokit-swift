@@ -1,5 +1,19 @@
 # GeoKitTestApp
 
-Standalone iOS demo for map surface, markers, snapshots, offline, and GeoKitCore calculators.
+Standalone iOS demo for GeoKit map surface, snapshots, and stack expand/collapse.
 
-**Status:** scaffold only — add an Xcode iOS app target here in Phase 2 that depends on the local `GeoKit` package.
+## Run in Xcode
+
+Open `GeoKitTestApp.xcodeproj` and run the **GeoKitTestApp** scheme on an iOS simulator.
+
+## Run from CLI
+
+```bash
+cd GeoKitTestApp
+xcodebuild -resolvePackageDependencies -project GeoKitTestApp.xcodeproj -scheme GeoKitTestApp
+xcodebuild -project GeoKitTestApp.xcodeproj -scheme GeoKitTestApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -disableAutomaticPackageResolution build
+```
+
+Mapbox token: `GeoKitTestApp/Info.plist` (`MBXAccessToken`).

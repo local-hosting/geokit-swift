@@ -1,21 +1,49 @@
 # GeoKit (Swift)
 
-Swift counterpart to [`@corio-platforms/geokit`](https://github.com/corio-platforms/geokit) — geo math in **GeoKitCore**, map content in **GeoKit** (dynamic framework), runtime contract in **GeoKitContract**.
+Swift counterpart to [`@corio-platforms/geokit`](https://github.com/corio-platforms/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
 
 ## Targets
 
 | Target | Role | Node equivalent |
 |--------|------|-----------------|
-| **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@geokit` root |
-| **GeoKitContract** | `GeoKitRuntime`, `MapContentRequest` — linked by host before dlopen | app wiring |
-| **GeoKit** | Map surface, markers, snapshots, offline (Phase 3+) | `@geokit/ui` |
-| **GeoKitTestApp** | Standalone demo app (Phase 2+) | geokit Vite demo |
+| **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@geokit` root / `utils/*` |
+| **GeoKitContract** | `GeoKitRuntime`, `MapContentRequest` — linked by host before dlopen | app wiring + `types/` |
+| **GeoKitUI** | SwiftUI map surface, markers, snapshots, theme | `@geokit/ui` |
+| **GeoKit** | `dlopen` entry + `GeoKitRegister` | side-effect registration |
+| **GeoKitTestApp** | Standalone iOS demo (`GeoKitTestApp/GeoKitTestApp.xcodeproj`) | geokit Vite demo |
+
+## Source layout
+
+Mirrors Node geokit folder domains:
+
+```text
+Sources/
+  GeoKitCore/
+    Constants/
+    Types/
+    Utils/{bounds,bearing,coordinates,distance,h3}/
+  GeoKitContract/
+    Runtime/
+    Types/
+  GeoKitUI/
+    Bootstrap/
+    Policy/
+    Components/{Map,Point,Callout}/
+    Utils/
+  GeoKit/
+    Register/
+Tests/
+  GeoKitCoreTests/
+    Utils/{bounds,bearing,coordinates,distance,h3}/
+    Fixtures/
+```
 
 ## Phase 1 (current)
 
 - GeoKitCore geo calculators with shared JSON fixtures vs Node geokit
 - GeoKitContract lazy-load registration surface
-- GeoKit dynamic framework stub (`GeoKitRegister` placeholder content)
+- GeoKitUI map content (placeholder, snapshot, live Mapbox)
+- GeoKit dynamic framework registers UI via `GeoKitRegister`
 
 ## Usage
 
@@ -30,7 +58,9 @@ let meters = Distance.haversineMeters(
 let cell = try H3.coordinatesToCell(LatLon(latitude: 40.7128, longitude: -74.006), resolution: 9)
 ```
 
-Host apps link **GeoKitContract** only; `dlopen` GeoKit.framework after the card stack paints, then call `GeoKitRegister.registerMapContent()`.
+Host apps link **GeoKitContract** only; `dlopen` GeoKit.framework after the map host paints, then call `GeoKitRegister.registerMapContent()`.
+
+Apps that link map UI directly (no `dlopen`) can depend on **GeoKitUI** + **GeoKitContract**.
 
 ## Development
 
