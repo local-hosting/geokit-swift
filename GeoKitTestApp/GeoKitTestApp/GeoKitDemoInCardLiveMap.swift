@@ -1,61 +1,18 @@
 #if os(iOS)
-import AccordDesignSystem
 import GeoKit
 import GeoKitContract
 import GeoKitUI
 import SwiftUI
 
-/// One Mapbox surface per active card — resizes with the reported media frame; never remounts on expand/collapse.
-struct GeoKitDemoPersistentMapHost: View {
+/// Live map mounted inside ``AXCard`` media — shares the card clip, footer, and expand/collapse transform.
+struct GeoKitDemoInCardLiveMap: View {
     @ObservedObject var cameraStore: MapCameraStore
     @ObservedObject var card: GeoKitDemoCard
-    let frame: CGRect
-    let cornerRadius: CGFloat
-    let collapsedReferenceFrame: CGRect
     let isExpanded: Bool
     let mapProviderId: MapProviderId
     let mapIsTransitioning: Bool
 
     @State private var acceptsPinSelectionUpdates = false
-
-    private var centerFrame: MapLiveSurfaceCenterFrame {
-        MapLiveSurfaceCenterFrame(globalFrame: frame)
-    }
-
-    var body: some View {
-        GeometryReader { root in
-            let origin = root.frame(in: .global).origin
-            GeoKitDemoPersistentMapBody(
-                cameraStore: cameraStore,
-                card: card,
-                isExpanded: isExpanded,
-                mapProviderId: mapProviderId,
-                mapIsTransitioning: mapIsTransitioning,
-                acceptsPinSelectionUpdates: $acceptsPinSelectionUpdates
-            )
-            .id(card.id)
-            .geokitCenterAnchoredGlobalFrame(
-                centerFrame,
-                localOrigin: origin,
-                cornerRadius: cornerRadius
-            )
-            .allowsHitTesting(true)
-        }
-        .allowsHitTesting(true)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Live map")
-        .accessibilityIdentifier("geokit-test-app.live-map")
-    }
-}
-
-/// Holds Mapbox state across expand/collapse frame resizes for the same card id.
-private struct GeoKitDemoPersistentMapBody: View {
-    @ObservedObject var cameraStore: MapCameraStore
-    @ObservedObject var card: GeoKitDemoCard
-    let isExpanded: Bool
-    let mapProviderId: MapProviderId
-    let mapIsTransitioning: Bool
-    @Binding var acceptsPinSelectionUpdates: Bool
 
     var body: some View {
         Group {
@@ -69,6 +26,7 @@ private struct GeoKitDemoPersistentMapBody: View {
                         cameraFrame: cameraStore.frame(for: card.id)
                     )
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .environment(
                     \.geokitTransitionSnapshot,
                     card.frozenSnapshot(for: mapProviderId)
@@ -89,6 +47,9 @@ private struct GeoKitDemoPersistentMapBody: View {
                 }
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Live map")
+        .accessibilityIdentifier("geokit-test-app.live-map")
     }
 }
 #endif
