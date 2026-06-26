@@ -53,11 +53,20 @@ struct GeoKitMapSurface: View {
             let size = geo.size
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
             let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-            // Tile snapshots omit pins — still show them while live tiles warm up or during transitions.
-            let showFrozen = frozenSnapshot != nil && (isTransitioning || !liveDidRender)
+            // Tile snapshots omit pins — draw them under the live map so annotations stay visible.
+            let showFrozenUnderlay = frozenSnapshot != nil && (isTransitioning || !liveDidRender)
             let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
             ZStack {
                 GeoKitMapTheme.placeholderBackground
+                if let snapshot = frozenSnapshot, showFrozenUnderlay {
+                    Image(uiImage: snapshot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
                 if showMap {
                     MapboxMaps.Map(viewport: $viewport) {
                         StyleProjection(name: .mercator)
@@ -128,15 +137,6 @@ struct GeoKitMapSurface: View {
                         onEnded: onPinInteractionEnded
                     )
                 }
-                if showFrozen, let snapshot = frozenSnapshot {
-                    Image(uiImage: snapshot)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
-                        .clipped()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
-                }
             }
             .frame(width: size.width, height: size.height)
             .onChange(of: size) { _, newSize in
@@ -187,8 +187,8 @@ struct GeoKitMapSurface: View {
                 }
             }
             .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
-            .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !showFrozen)
-            .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozen)
+            .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !isTransitioning)
+            .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozenUnderlay)
         }
         .clipped()
     }

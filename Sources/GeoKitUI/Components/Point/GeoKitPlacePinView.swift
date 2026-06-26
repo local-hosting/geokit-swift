@@ -29,6 +29,7 @@ private enum PinCalloutLayout {
 }
 
 struct GeoKitPlacePinView: View {
+    @Environment(\.geokitMapIsTransitioning) private var mapIsTransitioning
     let pin: MapPin
     let zoom: CGFloat
     var tap: GeoKitTap
@@ -99,10 +100,11 @@ struct GeoKitPlacePinView: View {
                 color: accentColor,
                 selected: selected,
                 showText: showText,
-                visible: visible
+                visible: visible,
+                skipIntroAnimation: mapIsTransitioning
             )
             .fixedSize(horizontal: true, vertical: true)
-            .opacity(opacity)
+            .opacity(mapIsTransitioning ? 1.0 : opacity)
             .onTapGesture {
                 onTap(pin, !selected, false)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.23) {
@@ -110,7 +112,6 @@ struct GeoKitPlacePinView: View {
                 }
             }
             .pinTouchShield(onInteractionBegan: onInteractionBegan)
-            
             .onAppear {
                 opacity = 1.0
             }
@@ -186,12 +187,14 @@ struct GeoKitPlacePinView: View {
         var selected: Bool = false
         var showText: Bool
         var visible: Bool = false
+        var skipIntroAnimation: Bool = false
 
         var body: some View {
             if selected {
                 emphasizedPinCallout(
                     isEmphasized: showText,
-                    showNameLabel: showText
+                    showNameLabel: showText,
+                    skipIntroAnimation: skipIntroAnimation
                 )
             } else {
                 unselectedDot
@@ -211,7 +214,11 @@ struct GeoKitPlacePinView: View {
         }
 
         @ViewBuilder
-        private func emphasizedPinCallout(isEmphasized: Bool, showNameLabel: Bool) -> some View {
+        private func emphasizedPinCallout(
+            isEmphasized: Bool,
+            showNameLabel: Bool,
+            skipIntroAnimation: Bool = false
+        ) -> some View {
             HStack(spacing: PinCalloutLayout.rowSpacing) {
                 if isEmphasized {
                     GeoKitPinIcon.image(named: icon)
@@ -243,8 +250,9 @@ struct GeoKitPlacePinView: View {
             }
             .opacity(showNameLabel ? 1 : 0)
             .animation(
-                .easeIn(duration: 0.3)
-                .delay(isEmphasized ? 0.27 : 0),
+                skipIntroAnimation
+                    ? nil
+                    : .easeIn(duration: 0.3).delay(isEmphasized ? 0.27 : 0),
                 value: isEmphasized
             )
             .padding(PinCalloutLayout.contentPadding)

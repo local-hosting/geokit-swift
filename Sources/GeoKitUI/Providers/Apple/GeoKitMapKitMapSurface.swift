@@ -38,18 +38,20 @@ struct GeoKitMapKitMapSurface: View {
         let validSize = MapSurfaceMountPolicy.isValidLayoutSize(size)
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-        // Tile snapshots omit SwiftUI pin annotations — keep the live map when pins are present.
-        let showFrozen = isTransitioning && frozenSnapshot != nil && request.pins.isEmpty
+        // Tile snapshots omit pins — keep them under the live map during card transitions.
+        let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil
 
         ZStack {
             GeoKitMapTheme.placeholderBackground
-            if showFrozen, let snapshot = frozenSnapshot {
+            if showFrozenUnderlay, let snapshot = frozenSnapshot {
                 Image(uiImage: snapshot)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
                     .clipped()
-            } else if showMap {
+                    .allowsHitTesting(false)
+            }
+            if showMap {
                 liveMap(size: size)
             }
         }
@@ -67,8 +69,8 @@ struct GeoKitMapKitMapSurface: View {
             mapReady = false
         }
         .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
-        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !showFrozen)
-        .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozen)
+        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !showFrozenUnderlay)
+        .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozenUnderlay)
     }
 
     private func liveMap(size: CGSize) -> some View {
