@@ -31,9 +31,9 @@ struct GeoKitDemoRootView: View {
     }
     @Namespace private var cardNamespace
 
-    /// Collapsed stack only — expanded overlay uses full screen + ``AXCloseButton`` top trailing.
+    /// Keep main-screen chrome visible while the front card expands on top of the stack.
     private var showsMapProviderPicker: Bool {
-        !deck.isExpanded && !deck.isCollapsing
+        !deck.isCollapsing
     }
 
     private var collapsedMapContentSize: CGSize {
