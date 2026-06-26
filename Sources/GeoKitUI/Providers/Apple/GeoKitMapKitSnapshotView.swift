@@ -122,9 +122,11 @@ struct GeoKitMapKitSnapshotView: View {
             let z = String(format: "%.2f", zoom)
             let b = String(format: "%.1f", camera.heading)
             let p = String(format: "%.1f", camera.pitch)
-            return "\(request.id)|apple|\(lat),\(lon)|z\(z)|b\(b)|p\(p)|\(w)x\(h)"
+            let pin = request.selectedPinId?.uuidString ?? "none"
+            return "\(request.id)|apple|\(lat),\(lon)|z\(z)|b\(b)|p\(p)|pin\(pin)|\(w)x\(h)"
         }
-        return "\(request.id)|apple|\(w)x\(h)"
+        let pin = request.selectedPinId?.uuidString ?? "none"
+        return "\(request.id)|apple|pin\(pin)|\(w)x\(h)"
     }
 }
 
@@ -155,12 +157,16 @@ enum GeoKitMapKitSnapshotService {
                     continuation.resume(returning: nil)
                     return
                 }
-                let image = GeoKitSnapshotPinDraw.composite(
-                    baseImage: snapshot.image,
-                    pins: request.pins,
-                    pointForCoordinate: { snapshot.point(for: $0) },
-                    selectedPinId: request.selectedPinId
-                )
+                let zoom = request.cameraFrame?.zoom ?? Double(request.preferredZoom)
+                let image = DispatchQueue.main.sync {
+                    GeoKitSnapshotPinDraw.composite(
+                        baseImage: snapshot.image,
+                        pins: request.pins,
+                        pointForCoordinate: { snapshot.point(for: $0) },
+                        selectedPinId: request.selectedPinId,
+                        zoom: zoom
+                    )
+                }
                 continuation.resume(returning: image)
             }
         }

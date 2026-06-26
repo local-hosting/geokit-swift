@@ -10,6 +10,7 @@ private struct GeoKitSelfManagedMapMediaTaskID: Hashable {
     let height: Int
     let isCentered: Bool
     let loadAllowed: Bool
+    let selectedPinId: UUID?
 }
 
 public extension View {
@@ -54,14 +55,16 @@ private struct GeoKitSelfManagedMapMediaModifier: ViewModifier {
     let onLoadingChanged: (Bool) -> Void
 
     private var taskID: GeoKitSelfManagedMapMediaTaskID {
-        GeoKitSelfManagedMapMediaTaskID(
+        let request = card.mapSnapshotRequest(provider: provider, cameraFrame: cameraFrame)
+        return GeoKitSelfManagedMapMediaTaskID(
             cardID: card.id,
             generation: generation,
             provider: provider,
             width: Int(mapSize.width.rounded()),
             height: Int(mapSize.height.rounded()),
             isCentered: isCentered,
-            loadAllowed: loadAllowed
+            loadAllowed: loadAllowed,
+            selectedPinId: request.selectedPinId
         )
     }
 

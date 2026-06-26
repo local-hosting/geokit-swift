@@ -8,6 +8,7 @@ public final class GeoKitMapProviderSnapshotCache {
     private var snapshots: [MapProviderId: UIImage] = [:]
     private var snapshotCameras: [MapProviderId: MapCameraFrame] = [:]
     private var snapshotSizes: [MapProviderId: CGSize] = [:]
+    private var snapshotSelectedPinIds: [MapProviderId: UUID] = [:]
     private var prefetchScheduled: Set<MapProviderId> = []
 
     public init() {}
@@ -23,23 +24,35 @@ public final class GeoKitMapProviderSnapshotCache {
     public func setSnapshot(
         _ image: UIImage?,
         for provider: MapProviderId,
-        cameraFrame: MapCameraFrame
+        cameraFrame: MapCameraFrame,
+        selectedPinId: UUID? = nil
     ) {
         if let image {
             snapshots[provider] = image
             snapshotCameras[provider] = cameraFrame
+            if let selectedPinId {
+                snapshotSelectedPinIds[provider] = selectedPinId
+            } else {
+                snapshotSelectedPinIds.removeValue(forKey: provider)
+            }
         } else {
             removeSnapshot(for: provider)
         }
     }
 
     /// Peek snapshot is valid only when it matches the card's shared camera (same view on every provider).
-    public func isSnapshotCurrent(for provider: MapProviderId, currentCamera: MapCameraFrame?) -> Bool {
+    public func isSnapshotCurrent(
+        for provider: MapProviderId,
+        currentCamera: MapCameraFrame?,
+        selectedPinId: UUID? = nil
+    ) -> Bool {
         guard snapshot(for: provider) != nil, let capturedCamera = snapshotCameras[provider] else {
             return false
         }
-        guard let currentCamera else { return true }
-        return capturedCamera.isApproximatelyEqual(to: currentCamera)
+        let capturedSelection = snapshotSelectedPinIds[provider]
+        let selectionMatches = capturedSelection == selectedPinId
+        guard let currentCamera else { return selectionMatches }
+        return capturedCamera.isApproximatelyEqual(to: currentCamera) && selectionMatches
     }
 
     public func snapshotSize(for provider: MapProviderId) -> CGSize {
@@ -66,6 +79,7 @@ public final class GeoKitMapProviderSnapshotCache {
         snapshots.removeAll()
         snapshotCameras.removeAll()
         snapshotSizes.removeAll()
+        snapshotSelectedPinIds.removeAll()
         prefetchScheduled.removeAll()
     }
 
@@ -73,6 +87,7 @@ public final class GeoKitMapProviderSnapshotCache {
         snapshots.removeValue(forKey: provider)
         snapshotCameras.removeValue(forKey: provider)
         snapshotSizes.removeValue(forKey: provider)
+        snapshotSelectedPinIds.removeValue(forKey: provider)
         prefetchScheduled.remove(provider)
     }
 }

@@ -223,19 +223,14 @@ private struct GeoKitDemoCardContent: View {
         stackOffset == 1 && !deckExpanded
     }
 
-    private var activeSnapshot: UIImage? {
+    /// Peek image only when camera and pin callout state match the cached capture.
+    private var displaySnapshot: UIImage? {
         guard card.hasUsableSnapshot(
             for: mapProviderId,
             cameraFrame: cameraStore.frame(for: card.id)
         ) else {
             return nil
         }
-        return card.frozenSnapshot(for: mapProviderId)
-    }
-
-    /// Any cached peek image — show while a fresh snapshot is captured or live tiles warm up.
-    private var displaySnapshot: UIImage? {
-        if let activeSnapshot { return activeSnapshot }
         return card.frozenSnapshot(for: mapProviderId)
     }
 
@@ -281,7 +276,7 @@ private struct GeoKitDemoCardContent: View {
 
     private var peekSnapshotLoadAllowed: Bool {
         guard !isExpanded, !mediaStore.isSnapshotBootstrapping else { return false }
-        if isStackCenter { return activeSnapshot == nil }
+        if isStackCenter { return displaySnapshot == nil }
         if stackOffset > 0, !deckExpanded { return displaySnapshot == nil }
         return false
     }

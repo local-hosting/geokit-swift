@@ -76,7 +76,8 @@ struct GeoKitCollapsedSnapshotView: View {
                     styleURI: styleURI,
                     priority: request.snapshotPriority,
                     pins: request.pins,
-                    selectedPinId: request.selectedPinId
+                    selectedPinId: request.selectedPinId,
+                    zoom: request.cameraFrame?.zoom ?? Double(request.preferredZoom)
                 )
             }
             guard !Task.isCancelled else { return }
@@ -99,7 +100,8 @@ struct GeoKitCollapsedSnapshotView: View {
         let w = Int(size.width.rounded())
         let h = Int(size.height.rounded())
         let provider = request.mapProviderId?.rawValue ?? "default"
-        return "\(request.id)|\(provider)|\(lat),\(lon)|z\(zoom)|b\(bearing)|p\(pitch)|\(w)x\(h)"
+        let pin = request.selectedPinId?.uuidString ?? "none"
+        return "\(request.id)|\(provider)|\(lat),\(lon)|z\(zoom)|b\(bearing)|p\(pitch)|pin\(pin)|\(w)x\(h)"
     }
 }
 

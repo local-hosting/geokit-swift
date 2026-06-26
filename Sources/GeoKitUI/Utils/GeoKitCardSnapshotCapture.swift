@@ -39,13 +39,15 @@ public enum GeoKitCardSnapshotCapture {
                 preferredZoom: request.preferredZoom
             )
         }
+        let zoom = request.cameraFrame?.zoom ?? Double(request.preferredZoom)
         return await GeoKitSnapshotService.capture(
             viewport: viewport,
             size: size,
             styleURI: request.mapStyleURI,
             priority: priority,
             pins: request.pins,
-            selectedPinId: request.selectedPinId
+            selectedPinId: request.selectedPinId,
+            zoom: zoom
         )
     }
 

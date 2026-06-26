@@ -15,6 +15,7 @@ actor GeoKitSnapshotCaptureQueue {
         let styleURI: String
         let pins: [MapPin]
         let selectedPinId: UUID?
+        let zoom: Double
         let continuation: CheckedContinuation<UIImage?, Never>
     }
 
@@ -28,7 +29,8 @@ actor GeoKitSnapshotCaptureQueue {
         styleURI: String,
         priority: MapSnapshotPriority,
         pins: [MapPin] = [],
-        selectedPinId: UUID? = nil
+        selectedPinId: UUID? = nil,
+        zoom: Double = 12
     ) async -> UIImage? {
         await withCheckedContinuation { continuation in
             let job = Job(
@@ -38,6 +40,7 @@ actor GeoKitSnapshotCaptureQueue {
                 styleURI: styleURI,
                 pins: pins,
                 selectedPinId: selectedPinId,
+                zoom: zoom,
                 continuation: continuation
             )
             enqueue(job)
@@ -102,7 +105,7 @@ actor GeoKitSnapshotCaptureQueue {
         }
 
         if Task.isCancelled { return nil }
-        return await captureOnMain(size: job.size, camera: camera, style: style, pins: job.pins, selectedPinId: job.selectedPinId)
+        return await captureOnMain(size: job.size, camera: camera, style: style, pins: job.pins, selectedPinId: job.selectedPinId, zoom: job.zoom)
     }
 
     @MainActor
@@ -111,7 +114,8 @@ actor GeoKitSnapshotCaptureQueue {
         camera: CameraOptions,
         style: StyleURI,
         pins: [MapPin],
-        selectedPinId: UUID?
+        selectedPinId: UUID?,
+        zoom: Double
     ) async -> UIImage? {
         GeoKitMapBootstrap.prepareMapbox()
         let scale = UIApplication.shared.connectedScenes
@@ -142,6 +146,7 @@ actor GeoKitSnapshotCaptureQueue {
                         in: overlay.context,
                         pointForCoordinate: overlay.pointForCoordinate,
                         selectedPinId: selectedPinId,
+                        zoom: zoom,
                         scale: overlay.scale
                     )
                 } completion: { result in
@@ -179,7 +184,8 @@ enum GeoKitSnapshotService {
         styleURI: String,
         priority: MapSnapshotPriority = .background,
         pins: [MapPin] = [],
-        selectedPinId: UUID? = nil
+        selectedPinId: UUID? = nil,
+        zoom: Double = 12
     ) async -> UIImage? {
         await GeoKitSnapshotCaptureQueue.shared.capture(
             viewport: viewport,
@@ -187,7 +193,8 @@ enum GeoKitSnapshotService {
             styleURI: styleURI,
             priority: priority,
             pins: pins,
-            selectedPinId: selectedPinId
+            selectedPinId: selectedPinId,
+            zoom: zoom
         )
     }
 }

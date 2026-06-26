@@ -99,7 +99,12 @@ public final class GeoKitCardMapMediaController {
         // the card never promotes to live (infinite re-capture, permanent loading spinner).
         guard let image else { return }
         let resolvedCamera = MapCameraFrameResolver.resolve(for: request)
-        card.setFrozenSnapshot(image, for: provider, cameraFrame: resolvedCamera)
+        card.setFrozenSnapshot(
+            image,
+            for: provider,
+            cameraFrame: resolvedCamera,
+            selectedPinId: request.selectedPinId
+        )
     }
 
     private func resolvedCaptureSize(

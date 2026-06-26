@@ -17,15 +17,26 @@ public extension GeoKitMapSnapshotCard {
     }
 
     func hasUsableSnapshot(for provider: MapProviderId, cameraFrame: MapCameraFrame?) -> Bool {
-        mapProviderSnapshotCache.isSnapshotCurrent(for: provider, currentCamera: cameraFrame)
+        let request = mapSnapshotRequest(provider: provider, cameraFrame: cameraFrame)
+        return mapProviderSnapshotCache.isSnapshotCurrent(
+            for: provider,
+            currentCamera: cameraFrame,
+            selectedPinId: request.selectedPinId
+        )
     }
 
     func setFrozenSnapshot(
         _ image: UIImage?,
         for provider: MapProviderId,
-        cameraFrame: MapCameraFrame
+        cameraFrame: MapCameraFrame,
+        selectedPinId: UUID? = nil
     ) {
-        mapProviderSnapshotCache.setSnapshot(image, for: provider, cameraFrame: cameraFrame)
+        mapProviderSnapshotCache.setSnapshot(
+            image,
+            for: provider,
+            cameraFrame: cameraFrame,
+            selectedPinId: selectedPinId
+        )
         mapSnapshotStorageDidChange()
     }
 

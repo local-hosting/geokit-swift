@@ -62,6 +62,17 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
         XCTAssertTrue(cache.isSnapshotCurrent(for: .mapbox, currentCamera: noisy))
     }
 
+    func testSnapshotInvalidWhenSelectedPinChanges() {
+        let cache = GeoKitMapProviderSnapshotCache()
+        let pinA = UUID()
+        let pinB = UUID()
+        cache.setSnapshot(UIImage(), for: .mapbox, cameraFrame: cameraA, selectedPinId: pinA)
+
+        XCTAssertTrue(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraA, selectedPinId: pinA))
+        XCTAssertFalse(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraA, selectedPinId: pinB))
+        XCTAssertFalse(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraA, selectedPinId: nil))
+    }
+
     func testSnapshotValidBeforeUserCameraIsStored() {
         let cache = GeoKitMapProviderSnapshotCache()
         cache.setSnapshot(UIImage(), for: .apple, cameraFrame: cameraA)

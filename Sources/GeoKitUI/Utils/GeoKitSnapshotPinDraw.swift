@@ -1,14 +1,15 @@
 #if os(iOS)
 import CoreLocation
 import GeoKitContract
+import SwiftUI
 import UIKit
 
 /// Draws peek snapshot pin markers onto a static map image (Mapbox overlay or MapKit composite).
+@MainActor
 enum GeoKitSnapshotPinDraw {
-    private static let accent = UIColor(red: 69 / 255, green: 56 / 255, blue: 178 / 255, alpha: 1)
+    private static let accentColor = Color(red: 69 / 255, green: 56 / 255, blue: 178 / 255)
     private static let dotDiameter: CGFloat = 14
-    private static let selectedScale: CGFloat = 1.15
-    /// Matches ``GeoKitPlacePinView`` bottom-anchor lift for the collapsed dot.
+    /// Matches ``GeoKitPlacePinView`` bottom-anchor lift for the collapsed dot fallback.
     private static let anchorLift: CGFloat = 16
 
     static func draw(
@@ -16,9 +17,11 @@ enum GeoKitSnapshotPinDraw {
         in context: CGContext,
         pointForCoordinate: (CLLocationCoordinate2D) -> CGPoint,
         selectedPinId: UUID?,
+        zoom: Double,
         scale: CGFloat
     ) {
         guard !pins.isEmpty else { return }
+        let pinZoom = CGFloat(zoom)
         let ordered = pins.sorted { lhs, rhs in
             switch (lhs.id == selectedPinId, rhs.id == selectedPinId) {
             case (true, false): return false
@@ -29,8 +32,12 @@ enum GeoKitSnapshotPinDraw {
         for pin in ordered {
             let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
             let anchor = pointForCoordinate(coordinate)
-            let diameter = dotDiameter * (pin.id == selectedPinId ? selectedScale : 1)
-            drawDot(in: context, anchor: anchor, diameter: diameter, scale: scale)
+            let selected = pin.id == selectedPinId
+            if let image = renderPinImage(for: pin, coordinate: coordinate, selected: selected, zoom: pinZoom, scale: scale) {
+                drawPinImage(image, anchor: anchor)
+            } else {
+                drawDot(in: context, anchor: anchor, scale: scale)
+            }
         }
     }
 
@@ -38,7 +45,8 @@ enum GeoKitSnapshotPinDraw {
         baseImage: UIImage,
         pins: [MapPin],
         pointForCoordinate: (CLLocationCoordinate2D) -> CGPoint,
-        selectedPinId: UUID?
+        selectedPinId: UUID?,
+        zoom: Double
     ) -> UIImage {
         guard !pins.isEmpty else { return baseImage }
         let format = UIGraphicsImageRendererFormat()
@@ -52,18 +60,46 @@ enum GeoKitSnapshotPinDraw {
                 in: rendererContext.cgContext,
                 pointForCoordinate: pointForCoordinate,
                 selectedPinId: selectedPinId,
+                zoom: zoom,
                 scale: baseImage.scale
             )
         }
     }
 
-    private static func drawDot(
-        in context: CGContext,
-        anchor: CGPoint,
-        diameter: CGFloat,
+    private static func renderPinImage(
+        for pin: MapPin,
+        coordinate: CLLocationCoordinate2D,
+        selected: Bool,
+        zoom: CGFloat,
         scale: CGFloat
-    ) {
-        let scaledDiameter = diameter * scale
+    ) -> UIImage? {
+        let content = GeoKitPlacePinView(
+            pin: pin,
+            zoom: zoom,
+            tap: GeoKitTap(id: pin.id, coordinate: coordinate),
+            color: accentColor,
+            onTap: { _, _, _ in },
+            selected: selected,
+            visible: true,
+            allowCallout: true,
+            showText: selected
+        )
+        .environment(\.geokitMapIsTransitioning, true)
+        .fixedSize()
+
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = scale
+        return renderer.uiImage
+    }
+
+    private static func drawPinImage(_ image: UIImage, anchor: CGPoint) {
+        let size = image.size
+        let origin = CGPoint(x: anchor.x - size.width / 2, y: anchor.y - size.height)
+        image.draw(at: origin)
+    }
+
+    private static func drawDot(in context: CGContext, anchor: CGPoint, scale: CGFloat) {
+        let scaledDiameter = dotDiameter * scale
         let lift = anchorLift * scale
         let center = CGPoint(x: anchor.x, y: anchor.y - lift)
         let rect = CGRect(
@@ -72,7 +108,7 @@ enum GeoKitSnapshotPinDraw {
             width: scaledDiameter,
             height: scaledDiameter
         )
-        context.setFillColor(accent.cgColor)
+        context.setFillColor(UIColor(red: 69 / 255, green: 56 / 255, blue: 178 / 255, alpha: 1).cgColor)
         context.fillEllipse(in: rect)
         context.setStrokeColor(UIColor.white.cgColor)
         context.setLineWidth(2 * scale)
