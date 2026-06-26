@@ -13,7 +13,7 @@ enum GeoKitMapTokens {
             compass: CompassViewOptions(
                 position: .bottomLeft,
                 margins: CGPoint(x: 20, y: 20),
-                visibility: interactiveGestures ? .adaptive : .hidden
+                visibility: .hidden
             ),
             logo: logo,
             attributionButton: attribution
