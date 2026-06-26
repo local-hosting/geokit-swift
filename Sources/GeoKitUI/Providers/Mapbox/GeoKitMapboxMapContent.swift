@@ -36,10 +36,6 @@ struct GeoKitMapboxMapContent: View {
                 guard let frame, !mapIsTransitioning else { return }
                 applyCameraFrame(frame)
             }
-            .onChange(of: mapIsTransitioning) { _, transitioning in
-                guard transitioning else { return }
-                applyCameraFrame(request.cameraFrame)
-            }
             .onChange(of: request.selectedPinId) { _, pinId in
                 selectedPinId = pinId
             }

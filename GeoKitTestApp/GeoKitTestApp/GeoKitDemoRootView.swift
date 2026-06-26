@@ -304,7 +304,7 @@ private struct GeoKitDemoCardContent: View {
         ZStack {
             GeoKitMapTheme.placeholderBackground
 
-            if let image = displaySnapshot, !showsPaintedLiveMap {
+            if let image = displaySnapshot, !showsPaintedLiveMap, !(mapIsTransitioning && showsLiveMap) {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)

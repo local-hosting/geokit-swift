@@ -25,24 +25,15 @@ struct GeoKitMapSurface: View {
     @State private var reportedCameraFrame: MapCameraFrame?
     @State private var liveDidRender = false
     @State private var pinZoomHold: CGFloat?
-
     private static let crossFadeDuration: TimeInterval = 0.28
 
     private func resolvedPinZoom(isTransitioning: Bool) -> CGFloat {
         if let pinZoomHold { return pinZoomHold }
-        if isTransitioning, let frame = request.cameraFrame {
-            return CGFloat(frame.zoom)
+        if isTransitioning {
+            return currentZoom > 0 ? currentZoom : CGFloat(zoomLevel)
         }
         return CGFloat(zoomLevel)
     }
-
-    private func relockViewportForTransition() {
-        guard let frame = request.cameraFrame else { return }
-        viewport = GeoKitMapViewport.from(frame)
-        zoomLevel = Float(frame.zoom)
-        currentZoom = CGFloat(frame.zoom)
-    }
-
     private func syncMapReady(for size: CGSize) {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         mapReady = canMount
@@ -54,7 +45,7 @@ struct GeoKitMapSurface: View {
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
             let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
             // Tile snapshots omit pins — draw them under the live map so annotations stay visible.
-            let showFrozenUnderlay = frozenSnapshot != nil && (isTransitioning || !liveDidRender)
+            let showFrozenUnderlay = frozenSnapshot != nil && !liveDidRender && !isTransitioning
             let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
             ZStack {
                 GeoKitMapTheme.placeholderBackground
@@ -141,27 +132,6 @@ struct GeoKitMapSurface: View {
             .frame(width: size.width, height: size.height)
             .onChange(of: size) { _, newSize in
                 syncMapReady(for: newSize)
-                guard isTransitioning else { return }
-                if pinZoomHold == nil, let frame = request.cameraFrame {
-                    pinZoomHold = CGFloat(frame.zoom)
-                }
-                relockViewportForTransition()
-            }
-            .onChange(of: isTransitioning) { wasTransitioning, transitioning in
-                if transitioning, !wasTransitioning {
-                    relockViewportForTransition()
-                    if let frame = request.cameraFrame {
-                        pinZoomHold = CGFloat(frame.zoom)
-                    }
-                }
-                if wasTransitioning, !transitioning {
-                    let heldZoom = pinZoomHold
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.crossFadeDuration) {
-                        if pinZoomHold == heldZoom {
-                            pinZoomHold = nil
-                        }
-                    }
-                }
             }
             .onChange(of: mapSurfaceReady) { _, _ in
                 syncMapReady(for: size)
@@ -189,9 +159,23 @@ struct GeoKitMapSurface: View {
             .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
             .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !isTransitioning)
             .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozenUnderlay)
+            .onChange(of: isTransitioning) { wasTransitioning, transitioning in
+                if transitioning, !wasTransitioning {
+                    pinZoomHold = currentZoom > 0 ? currentZoom : CGFloat(zoomLevel)
+                }
+                if wasTransitioning, !transitioning {
+                    let heldZoom = pinZoomHold
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.crossFadeDuration) {
+                        if pinZoomHold == heldZoom {
+                            pinZoomHold = nil
+                        }
+                    }
+                }
+            }
         }
         .clipped()
     }
+
 
     private var ornamentOptions: OrnamentOptions {
         GeoKitMapTokens.liveOrnamentOptions(interactiveGestures: request.mapAcceptsUserInteraction)
