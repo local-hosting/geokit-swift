@@ -122,6 +122,12 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
         XCTAssertFalse(MapCardMediaPresentationPolicy.showsLiveMap(ctx))
     }
 
+    func testLiveCenterWaitingForRenderHidesLoadingOverlay() {
+        let ctx = context(isStackCenter: true, isLiveEnabled: true, isMapRendered: false, hasActiveSnapshot: false)
+
+        XCTAssertFalse(MapCardMediaPresentationPolicy.shouldShowLoadingOverlay(ctx))
+    }
+
     func testNonLiveCenterWaitingForSnapshotShowsLoading() {
         let ctx = context(isStackCenter: true, isLiveEnabled: false, hasActiveSnapshot: false)
 
@@ -216,13 +222,14 @@ final class MapLiveCardSelectionPolicyTests: XCTestCase {
         )
     }
 
-    func testNilWhenNeitherSnapshotNorRendered() {
-        XCTAssertNil(
+    func testAssignsLiveEvenBeforeSnapshotOrRender() {
+        XCTAssertEqual(
             MapLiveCardSelectionPolicy.liveCardID(
                 centerCardID: "louisville",
                 centerHasUsableSnapshot: false,
                 centerMapRendered: false
-            )
+            ),
+            "louisville"
         )
     }
 }

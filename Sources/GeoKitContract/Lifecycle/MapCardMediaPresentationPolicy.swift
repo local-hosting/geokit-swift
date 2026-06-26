@@ -72,9 +72,7 @@ public enum MapCardMediaPresentationPolicy {
     public static func shouldShowLoadingOverlay(_ context: MapCardMediaPresentationContext) -> Bool {
         if liveMapVisible(context) || context.hasActiveSnapshot { return false }
         if context.cardIsCollapsing { return false }
-        if context.isStackCenter,
-           showsLiveMap(context),
-           !context.isMapRendered {
+        if showsLiveMap(context), !context.isMapRendered {
             return false
         }
         return context.isStackCenter || context.isStackOneBehind
@@ -123,15 +121,12 @@ public enum MapLiveSurfaceFrameResolver {
 }
 
 public enum MapLiveCardSelectionPolicy {
-    /// Snapshot gates first live mount; keep ownership once the persistent surface has painted.
+    /// Center card owns the single live surface; snapshots cross-fade underneath while tiles warm up.
     public static func liveCardID(
         centerCardID: String,
         centerHasUsableSnapshot: Bool,
         centerMapRendered: Bool
     ) -> String? {
-        if centerHasUsableSnapshot || centerMapRendered {
-            return centerCardID
-        }
-        return nil
+        centerCardID
     }
 }

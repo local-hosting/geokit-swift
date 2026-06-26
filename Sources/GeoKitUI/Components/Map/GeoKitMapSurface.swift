@@ -53,11 +53,8 @@ struct GeoKitMapSurface: View {
             let size = geo.size
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
             let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-            // Tile snapshots omit pins — skip frozen overlay at rest, but allow it during transitions.
-            let pinsCoverFrozen = !request.pins.isEmpty
-            let showFrozen = frozenSnapshot != nil
-                && (isTransitioning || !liveDidRender)
-                && (!pinsCoverFrozen || isTransitioning)
+            // Tile snapshots omit pins — still show them while live tiles warm up or during transitions.
+            let showFrozen = frozenSnapshot != nil && (isTransitioning || !liveDidRender)
             let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
             ZStack {
                 GeoKitMapTheme.placeholderBackground

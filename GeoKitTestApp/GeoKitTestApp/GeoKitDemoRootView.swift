@@ -164,9 +164,6 @@ struct GeoKitDemoRootView: View {
             debounceMs: force ? 0 : debounceMs,
             onMediaReady: { index in
                 deck.handleMediaEvent(.mediaReady(kind: .map), at: index)
-                if index == deck.currentIndex {
-                    mediaStore.syncCenterLiveFromDeck(deck, provider: mapProviderStore.provider)
-                }
             }
         )
     }
@@ -236,6 +233,12 @@ private struct GeoKitDemoCardContent: View {
         return card.frozenSnapshot(for: mapProviderId)
     }
 
+    /// Any cached peek image — show while a fresh snapshot is captured or live tiles warm up.
+    private var displaySnapshot: UIImage? {
+        if let activeSnapshot { return activeSnapshot }
+        return card.frozenSnapshot(for: mapProviderId)
+    }
+
     private var presentationContext: MapCardMediaPresentationContext {
         MapCardMediaPresentationContext(
             isStackCenter: isStackCenter,
@@ -246,7 +249,7 @@ private struct GeoKitDemoCardContent: View {
             cardIsCollapsing: cardIsCollapsing,
             isLiveEnabled: mediaStore.isLiveEnabled(cardID: card.id),
             isMapRendered: card.isMapRendered(for: mapProviderId),
-            hasActiveSnapshot: activeSnapshot != nil,
+            hasActiveSnapshot: displaySnapshot != nil,
             isCenteredInStack: isCentered
         )
     }
@@ -269,20 +272,44 @@ private struct GeoKitDemoCardContent: View {
 
     private var showsBlankPlaceholder: Bool {
         if isExpanded { return false }
-        return !shouldShowLoading && activeSnapshot == nil && !liveMapVisible
+        return !shouldShowLoading && displaySnapshot == nil && !liveMapVisible && !showsLiveMap
     }
 
     private var reportsLiveRenderingToCard: Bool {
-        liveMapVisible || activeSnapshot != nil
+        liveMapVisible || displaySnapshot != nil
+    }
+
+    private var peekSnapshotLoadAllowed: Bool {
+        guard !isExpanded, !mediaStore.isSnapshotBootstrapping else { return false }
+        if isStackCenter { return activeSnapshot == nil }
+        if stackOffset > 0, !deckExpanded { return displaySnapshot == nil }
+        return false
     }
 
     private var mapIsTransitioning: Bool {
         cardIsTransitioning || cardIsCollapsing
     }
 
+    private var cardMediaLoadingChrome: some View {
+        ZStack {
+            if displaySnapshot == nil {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(GeoKitMapTheme.accent)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityLabel("Loading")
+        .accessibilityIdentifier(
+            isStackCenter ? "geokit-test-app.card-loading" : "geokit-test-app.card-loading-fan"
+        )
+    }
+
     var body: some View {
         ZStack {
-            if let image = activeSnapshot, !showsPaintedLiveMap {
+            GeoKitMapTheme.placeholderBackground
+
+            if let image = displaySnapshot, !showsPaintedLiveMap {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -305,15 +332,8 @@ private struct GeoKitDemoCardContent: View {
             Color.clear
                 .preference(key: AXCardLiveRenderingKey.self, value: reportsLiveRenderingToCard)
 
-            if showsBlankPlaceholder {
-                Color(white: 0.94)
-            }
-
             if shouldShowLoading {
-                AX.CardMediaLoadingOverlay()
-                    .accessibilityIdentifier(
-                        isStackCenter ? "geokit-test-app.card-loading" : "geokit-test-app.card-loading-fan"
-                    )
+                cardMediaLoadingChrome
             }
         }
         .geokitSelfManagedMapMedia(
@@ -322,21 +342,14 @@ private struct GeoKitDemoCardContent: View {
             provider: mapProviderId,
             mapSize: mapContentSize,
             generation: mediaStore.mapMediaGeneration,
-            loadAllowed: MapCardMediaPresentationPolicy.snapshotLoadAllowed(
-                isExpandedOverlaySlot: isExpanded,
-                isSnapshotBootstrapping: mediaStore.isSnapshotBootstrapping,
-                mediaLoadAllowed: mediaLoadAllowed,
-                isStackCenter: isStackCenter,
-                isStackOneBehind: isStackOneBehind,
-                hasActiveSnapshot: activeSnapshot != nil
-            ),
+            loadAllowed: peekSnapshotLoadAllowed,
             cameraFrame: cameraStore.frame(for: card.id),
             controller: mediaStore.mapMediaController,
             onLoadingChanged: { mediaStore.setMapLoading($0, cardID: card.id) }
         )
         .allowsHitTesting(isExpanded)
         .onChange(of: showsLiveMap) { wasLive, isLive in
-            if wasLive, !isLive, activeSnapshot == nil {
+            if wasLive, !isLive, displaySnapshot == nil {
                 card.setMapRendered(false, for: mapProviderId)
             }
         }
