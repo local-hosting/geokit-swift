@@ -8,89 +8,50 @@ import UIKit
 @MainActor
 final class GeoKitDemoMediaStore: ObservableObject {
     let mapMediaController = GeoKitCardMapMediaController.shared
+    let cameraStore: MapCameraStore
+
+    init(cameraStore: MapCameraStore) {
+        self.cameraStore = cameraStore
+    }
 
     @Published private(set) var mapMediaGeneration: UInt = 0
-    @Published private(set) var liveCardIDs: Set<String> = []
     @Published private(set) var mapContentSize: CGSize = .zero
     @Published private(set) var loadingCardIDs: Set<String> = []
-    @Published private(set) var stackLiveDragOffset: CGFloat = 0
+    @Published private(set) var isSnapshotBootstrapping = false
+
+    /// Single persistent live map owner — same Mapbox surface from collapsed through expand/collapse.
+    @Published private(set) var liveCardID: String?
 
     private var fanBootstrapTask: Task<Void, Never>?
     private var fanBootstrapScheduledTask: Task<Void, Never>?
     private var fanBootstrapCenterCardID: String?
+    private var pendingCenterLiveSync = false
 
-    @Published private(set) var isFanBootstrapping = false
-    private var pendingStackLivePreload = false
-    private weak var deckRef: GeoKitDemoDeck?
-    private var stackContainerWidth: CGFloat = 0
-
-    init() {
-        isFanBootstrapping = true
+    func isLiveEnabled(cardID: String) -> Bool {
+        liveCardID == cardID
     }
 
-    func bindDeck(_ deck: GeoKitDemoDeck) {
-        deckRef = deck
-    }
-
-    /// 0…1 reveal of the incoming center card while the front card is dragged off.
-    var incomingCenterDragRevealProgress: CGFloat {
-        guard stackContainerWidth > 0, stackLiveDragOffset < 0 else { return 0 }
-        return min(1, abs(stackLiveDragOffset) / stackContainerWidth)
-    }
-
-    var isDraggingToNextCard: Bool {
-        stackLiveDragOffset < -AX.StackConstants.dragMinimumDistance
-    }
-
-    func isLivePreloaded(cardID: String) -> Bool {
-        liveCardIDs.contains(cardID)
-    }
-
-    func syncStackLivePreload(cards: [GeoKitDemoCard], centerIndex: Int) {
-        if isFanBootstrapping {
-            pendingStackLivePreload = true
+    func syncCenterLive(cards: [GeoKitDemoCard], centerIndex: Int, provider: MapProviderId) {
+        if isSnapshotBootstrapping {
+            pendingCenterLiveSync = true
             return
         }
-        promoteStackLiveAfterStaticBootstrap(cards: cards, centerIndex: centerIndex)
-    }
-
-    func syncStackLivePreloadFromDeck() {
-        guard let deck = deckRef else { return }
-        syncStackLivePreload(cards: deck.cards, centerIndex: 0)
-    }
-
-    /// Front card drag left — the card behind center is about to become live; mount it now.
-    func handleIncomingCenterDrag(
-        liveDragOffset: CGFloat,
-        containerWidth: CGFloat,
-        cards: [GeoKitDemoCard],
-        centerIndex: Int
-    ) {
-        stackLiveDragOffset = liveDragOffset
-        stackContainerWidth = containerWidth
-
-        guard liveDragOffset < -AX.StackConstants.dragMinimumDistance else { return }
-        let incomingIndex = centerIndex + 1
-        guard cards.indices.contains(incomingIndex) else { return }
-
-        var ids = liveCardIDs
-        if cards.indices.contains(centerIndex) {
-            ids.insert(cards[centerIndex].id)
+        pendingCenterLiveSync = false
+        guard cards.indices.contains(centerIndex) else {
+            liveCardID = nil
+            return
         }
-        ids.insert(cards[incomingIndex].id)
-        guard ids != liveCardIDs else { return }
-        liveCardIDs = ids
+        let center = cards[centerIndex]
+        let centerCamera = cameraStore.frame(for: center.id)
+        liveCardID = MapLiveCardSelectionPolicy.liveCardID(
+            centerCardID: center.id,
+            centerHasUsableSnapshot: center.hasUsableSnapshot(for: provider, cameraFrame: centerCamera),
+            centerMapRendered: center.isMapRendered(for: provider)
+        )
     }
 
-    private func applyCenterLivePreload(cards: [GeoKitDemoCard], centerIndex: Int) {
-        guard cards.indices.contains(centerIndex) else { return }
-        liveCardIDs.insert(cards[centerIndex].id)
-    }
-
-    private func applyBehindLivePreload(cards: [GeoKitDemoCard], centerIndex: Int) {
-        let behindIndex = centerIndex + 1
-        guard cards.indices.contains(behindIndex) else { return }
-        liveCardIDs.insert(cards[behindIndex].id)
+    func syncCenterLiveFromDeck(_ deck: GeoKitDemoDeck, provider: MapProviderId) {
+        syncCenterLive(cards: deck.cards, centerIndex: deck.currentIndex, provider: provider)
     }
 
     func isMapLoading(cardID: String) -> Bool {
@@ -114,18 +75,27 @@ final class GeoKitDemoMediaStore: ObservableObject {
         fanBootstrapTask?.cancel()
         fanBootstrapScheduledTask?.cancel()
         fanBootstrapCenterCardID = nil
-        isFanBootstrapping = false
-        pendingStackLivePreload = false
-        stackLiveDragOffset = 0
+        isSnapshotBootstrapping = false
+        pendingCenterLiveSync = false
         mapMediaGeneration &+= 1
-        liveCardIDs = []
+        liveCardID = nil
         loadingCardIDs.removeAll()
         for card in cards {
-            card.frozenSnapshot = nil
-            card.snapshotPrefetchScheduled = false
-            card.isMapRendered = false
-            card.lastCameraFrame = nil
+            card.mapProviderSnapshotCache.removeAll()
+            card.clearMapRendered()
         }
+    }
+
+    /// Tear down live map state when switching providers — cached per-provider snapshots are preserved.
+    func prepareForProviderSwitch(in cards: [GeoKitDemoCard]) {
+        fanBootstrapTask?.cancel()
+        fanBootstrapScheduledTask?.cancel()
+        fanBootstrapCenterCardID = nil
+        isSnapshotBootstrapping = false
+        pendingCenterLiveSync = false
+        mapMediaGeneration &+= 1
+        liveCardID = nil
+        loadingCardIDs.removeAll()
     }
 
     func scheduleBootstrapFanSnapshots(
@@ -136,6 +106,15 @@ final class GeoKitDemoMediaStore: ObservableObject {
         onMediaReady: @escaping (Int) -> Void
     ) {
         guard cards.indices.contains(centerIndex) else { return }
+        #if DEBUG
+        if GeoKitDemoLaunchArguments.isUITestMode {
+            isSnapshotBootstrapping = false
+            pendingCenterLiveSync = false
+            liveCardID = cards[centerIndex].id
+            onMediaReady(centerIndex)
+            return
+        }
+        #endif
         let centerID = cards[centerIndex].id
         if fanBootstrapCenterCardID == centerID,
            let task = fanBootstrapTask,
@@ -159,18 +138,11 @@ final class GeoKitDemoMediaStore: ObservableObject {
             return
         }
 
-        reserveFanBootstrapWindow()
         fanBootstrapScheduledTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(debounceMs))
             guard !Task.isCancelled else { return }
             run()
         }
-    }
-
-    private func reserveFanBootstrapWindow() {
-        isFanBootstrapping = true
-        pendingStackLivePreload = false
-        liveCardIDs = []
     }
 
     private func runBootstrapFanSnapshots(
@@ -180,18 +152,20 @@ final class GeoKitDemoMediaStore: ObservableObject {
         onMediaReady: @escaping (Int) -> Void
     ) {
         guard cards.indices.contains(centerIndex) else {
-            isFanBootstrapping = false
+            finishSnapshotBootstrap(cards: cards, centerIndex: centerIndex, provider: provider)
             return
         }
 
         let center = cards[centerIndex]
+        let centerCamera = cameraStore.frame(for: center.id)
 
-        if center.frozenSnapshot != nil {
-            promoteStackLiveAfterStaticBootstrap(cards: cards, centerIndex: centerIndex)
+        if center.hasUsableSnapshot(for: provider, cameraFrame: centerCamera) {
             fanBootstrapCenterCardID = center.id
             fanBootstrapTask?.cancel()
             fanBootstrapTask = Task { [weak self] in
                 guard let self else { return }
+                defer { self.finishSnapshotBootstrap(cards: cards, centerIndex: centerIndex, provider: provider) }
+                onMediaReady(centerIndex)
                 await self.captureImmediateBehindSnapshotIfNeeded(
                     cards: cards,
                     centerIndex: centerIndex,
@@ -203,7 +177,7 @@ final class GeoKitDemoMediaStore: ObservableObject {
         }
 
         guard MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: mapContentSize) else {
-            isFanBootstrapping = false
+            finishSnapshotBootstrap(cards: cards, centerIndex: centerIndex, provider: provider)
             return
         }
 
@@ -215,21 +189,25 @@ final class GeoKitDemoMediaStore: ObservableObject {
 
         fanBootstrapTask?.cancel()
         fanBootstrapCenterCardID = center.id
-        reserveFanBootstrapWindow()
+        beginSnapshotBootstrap()
 
         fanBootstrapTask = Task { [weak self] in
             guard let self else { return }
-            defer { self.endFanBootstrapWindow() }
+            defer { self.finishSnapshotBootstrap(cards: cards, centerIndex: centerIndex, provider: provider) }
 
             await self.mapMediaController.ensureStaticSnapshot(
                 for: center,
                 size: self.mapContentSize,
                 provider: provider,
                 priority: .top,
+                cameraFrame: self.cameraStore.frame(for: center.id),
                 onLoadingChanged: { self.setMapLoading($0, cardID: center.id) }
             )
             guard !Task.isCancelled else { return }
-            if center.frozenSnapshot != nil {
+            if center.hasUsableSnapshot(
+                for: provider,
+                cameraFrame: self.cameraStore.frame(for: center.id)
+            ) {
                 onMediaReady(centerIndex)
             }
 
@@ -239,24 +217,23 @@ final class GeoKitDemoMediaStore: ObservableObject {
                 provider: provider,
                 onMediaReady: onMediaReady
             )
-            guard !Task.isCancelled else { return }
-            self.promoteStackLiveAfterStaticBootstrap(cards: cards, centerIndex: centerIndex)
         }
     }
 
-    private func endFanBootstrapWindow() {
-        isFanBootstrapping = false
-        if pendingStackLivePreload {
-            pendingStackLivePreload = false
-            syncStackLivePreloadFromDeck()
-        } else {
-            pendingStackLivePreload = false
-        }
+    private func beginSnapshotBootstrap() {
+        isSnapshotBootstrapping = true
+        liveCardID = nil
     }
 
-    private func promoteStackLiveAfterStaticBootstrap(cards: [GeoKitDemoCard], centerIndex: Int) {
-        applyCenterLivePreload(cards: cards, centerIndex: centerIndex)
-        applyBehindLivePreload(cards: cards, centerIndex: centerIndex)
+    private func finishSnapshotBootstrap(
+        cards: [GeoKitDemoCard],
+        centerIndex: Int,
+        provider: MapProviderId
+    ) {
+        isSnapshotBootstrapping = false
+        if pendingCenterLiveSync {
+            syncCenterLive(cards: cards, centerIndex: centerIndex, provider: provider)
+        }
     }
 
     private func captureImmediateBehindSnapshotIfNeeded(
@@ -265,10 +242,14 @@ final class GeoKitDemoMediaStore: ObservableObject {
         provider: MapProviderId,
         onMediaReady: @escaping (Int) -> Void
     ) async {
+        #if DEBUG
+        if GeoKitDemoLaunchArguments.isUITestMode { return }
+        #endif
         let behindIndex = centerIndex + 1
         guard cards.indices.contains(behindIndex) else { return }
         let card = cards[behindIndex]
-        guard card.frozenSnapshot == nil else {
+        let cardCamera = cameraStore.frame(for: card.id)
+        guard !card.hasUsableSnapshot(for: provider, cameraFrame: cardCamera) else {
             onMediaReady(behindIndex)
             return
         }
@@ -277,11 +258,11 @@ final class GeoKitDemoMediaStore: ObservableObject {
             size: mapContentSize,
             provider: provider,
             priority: .background,
+            cameraFrame: cameraStore.frame(for: card.id),
             onLoadingChanged: { self.setMapLoading($0, cardID: card.id) }
         )
-        if card.frozenSnapshot != nil {
+        if card.hasUsableSnapshot(for: provider, cameraFrame: cardCamera) {
             onMediaReady(behindIndex)
-            applyBehindLivePreload(cards: cards, centerIndex: centerIndex)
         }
     }
 }

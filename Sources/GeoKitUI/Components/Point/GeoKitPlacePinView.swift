@@ -22,6 +22,10 @@ private enum PinCalloutLayout {
     static let iconGlyphSize: CGFloat = 16
     static let iconPadding: CGFloat = 4
     static let textTrailingPadding: CGFloat = 4
+    static let dotDiameter: CGFloat = 12
+    static let dotTouchPadding: CGFloat = 10
+    /// Map annotations anchor the view bottom to the coordinate; lift callouts so the tail points at the collapsed dot center.
+    static var mapPointAnchorLift: CGFloat { dotTouchPadding + dotDiameter / 2 }
 }
 
 struct GeoKitPlacePinView: View {
@@ -197,13 +201,13 @@ struct GeoKitPlacePinView: View {
         private var unselectedDot: some View {
             Circle()
                 .fill(color)
-                .frame(width: 12, height: 12)
+                .frame(width: PinCalloutLayout.dotDiameter, height: PinCalloutLayout.dotDiameter)
                 .overlay(
                     Circle()
                         .stroke(Color.white, lineWidth: 2)
                 )
                 .shadow(color: color.opacity(0.3), radius: 2)
-                .padding(10)
+                .padding(PinCalloutLayout.dotTouchPadding)
         }
 
         @ViewBuilder
@@ -246,13 +250,14 @@ struct GeoKitPlacePinView: View {
             .padding(PinCalloutLayout.contentPadding)
             .foregroundColor(isEmphasized ? .white : color)
             .geoKitCallout(
-                anchor: tap.selectedAnchor ?? .center,
+                anchor: tap.selectedAnchor ?? .bottom,
                 color: isEmphasized ? color : (selected ? color : .white),
                 borderColor: isEmphasized ? .white : (selected ? .white : color),
                 tailSize: PinCalloutLayout.tailSize,
                 cornerRadius: PinCalloutLayout.cornerRadius,
                 borderWidth: PinCalloutLayout.borderWidth
             )
+            .offset(y: -PinCalloutLayout.mapPointAnchorLift)
         }
     }
 }

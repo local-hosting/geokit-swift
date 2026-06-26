@@ -16,7 +16,7 @@ struct GeoKitMapKitSnapshotView: View {
         GeometryReader { geo in
             let size = geo.size
             ZStack {
-                Color.white
+                GeoKitMapTheme.placeholderBackground
                 if let image = snapshot {
                     Image(uiImage: image)
                         .resizable()

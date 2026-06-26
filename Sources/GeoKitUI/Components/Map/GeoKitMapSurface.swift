@@ -24,9 +24,24 @@ struct GeoKitMapSurface: View {
     @State private var mapReady = false
     @State private var reportedCameraFrame: MapCameraFrame?
     @State private var liveDidRender = false
+    @State private var pinZoomHold: CGFloat?
 
     private static let crossFadeDuration: TimeInterval = 0.28
 
+    private func resolvedPinZoom(isTransitioning: Bool) -> CGFloat {
+        if let pinZoomHold { return pinZoomHold }
+        if isTransitioning, let frame = request.cameraFrame {
+            return CGFloat(frame.zoom)
+        }
+        return CGFloat(zoomLevel)
+    }
+
+    private func relockViewportForTransition() {
+        guard let frame = request.cameraFrame else { return }
+        viewport = GeoKitMapViewport.from(frame)
+        zoomLevel = Float(frame.zoom)
+        currentZoom = CGFloat(frame.zoom)
+    }
 
     private func syncMapReady(for size: CGSize) {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
@@ -38,11 +53,14 @@ struct GeoKitMapSurface: View {
             let size = geo.size
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
             let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-            // Keep the captured snapshot on top until the live map has actually painted,
-            // then cross-fade it out so we never reveal a blank/half-loaded Metal map.
-            let showFrozen = frozenSnapshot != nil && (isTransitioning || !liveDidRender)
+            // Tile snapshots omit pins — skip frozen overlay at rest, but allow it during transitions.
+            let pinsCoverFrozen = !request.pins.isEmpty
+            let showFrozen = frozenSnapshot != nil
+                && (isTransitioning || !liveDidRender)
+                && (!pinsCoverFrozen || isTransitioning)
+            let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
             ZStack {
-                Color.white
+                GeoKitMapTheme.placeholderBackground
                 if showMap {
                     MapboxMaps.Map(viewport: $viewport) {
                         StyleProjection(name: .mercator)
@@ -54,7 +72,7 @@ struct GeoKitMapSurface: View {
                             MapViewAnnotation(coordinate: pin.coordinate) {
                                 GeoKitPlacePinView(
                                     pin: pin,
-                                    zoom: CGFloat(zoomLevel),
+                                    zoom: pinZoom,
                                     tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
                                     color: GeoKitMapTheme.accent,
                                     pinStyle: pin.isPrimary ? .primary : .secondary,
@@ -74,6 +92,7 @@ struct GeoKitMapSurface: View {
                     }
                     .mapStyle(MapStyle(uri: StyleURI(rawValue: request.mapStyleURI)!))
                     .onCameraChanged { event in
+                        guard !isTransitioning else { return }
                         let zoom = event.cameraState.zoom
                         let cameraState = event.cameraState
                         liveCameraState = cameraState
@@ -81,13 +100,6 @@ struct GeoKitMapSurface: View {
                         currentZoom = zoom
                         isPlusEnabled = zoom < 19
                         isMinusEnabled = zoom > 10
-                        reportedCameraFrame = MapCameraFrame(
-                            centerLatitude: cameraState.center.latitude,
-                            centerLongitude: cameraState.center.longitude,
-                            zoom: cameraState.zoom,
-                            bearing: cameraState.bearing,
-                            pitch: cameraState.pitch
-                        )
                     }
                     .onMapIdle { _ in
                         if !liveDidRender {
@@ -95,14 +107,17 @@ struct GeoKitMapSurface: View {
                                 liveDidRender = true
                             }
                         }
-                        guard let cameraState = liveCameraState else { return }
-                        reportedCameraFrame = MapCameraFrame(
+                        guard !isTransitioning, let cameraState = liveCameraState else { return }
+                        let nextFrame = MapCameraFrame(
                             centerLatitude: cameraState.center.latitude,
                             centerLongitude: cameraState.center.longitude,
                             zoom: cameraState.zoom,
                             bearing: cameraState.bearing,
                             pitch: cameraState.pitch
                         )
+                        if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
+                            reportedCameraFrame = nextFrame
+                        }
                     }
                     .ornamentOptions(ornamentOptions)
                     .gestureOptions(gestureOptions)
@@ -129,6 +144,27 @@ struct GeoKitMapSurface: View {
             .frame(width: size.width, height: size.height)
             .onChange(of: size) { _, newSize in
                 syncMapReady(for: newSize)
+                guard isTransitioning else { return }
+                if pinZoomHold == nil, let frame = request.cameraFrame {
+                    pinZoomHold = CGFloat(frame.zoom)
+                }
+                relockViewportForTransition()
+            }
+            .onChange(of: isTransitioning) { wasTransitioning, transitioning in
+                if transitioning, !wasTransitioning {
+                    relockViewportForTransition()
+                    if let frame = request.cameraFrame {
+                        pinZoomHold = CGFloat(frame.zoom)
+                    }
+                }
+                if wasTransitioning, !transitioning {
+                    let heldZoom = pinZoomHold
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.crossFadeDuration) {
+                        if pinZoomHold == heldZoom {
+                            pinZoomHold = nil
+                        }
+                    }
+                }
             }
             .onChange(of: mapSurfaceReady) { _, _ in
                 syncMapReady(for: size)

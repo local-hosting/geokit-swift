@@ -21,13 +21,14 @@ public final class GeoKitCardMapMediaController {
         size: CGSize,
         provider: MapProviderId,
         priority: MapSnapshotPriority = .background,
+        cameraFrame: MapCameraFrame? = nil,
         onLoadingChanged: ((Bool) -> Void)? = nil
     ) async {
         while !Task.isCancelled {
             let canStart = canStartSnapshotCapture(for: provider)
             let action = MapSnapshotRetryPolicy.nextAction(
-                hasSnapshot: card.frozenSnapshot != nil,
-                isPrefetchScheduled: card.snapshotPrefetchScheduled,
+                hasSnapshot: card.hasUsableSnapshot(for: provider, cameraFrame: cameraFrame),
+                isPrefetchScheduled: card.isSnapshotPrefetchScheduled(for: provider),
                 provider: provider,
                 canStartSnapshotCapture: canStart,
                 isOnline: reachability.isOnline
@@ -45,9 +46,10 @@ public final class GeoKitCardMapMediaController {
                     size: size,
                     provider: provider,
                     priority: priority,
+                    cameraFrame: cameraFrame,
                     onLoadingChanged: onLoadingChanged
                 )
-                if card.frozenSnapshot != nil { return }
+                if card.hasUsableSnapshot(for: provider, cameraFrame: cameraFrame) { return }
                 if !reachability.isOnline {
                     await reachability.waitUntilOnline()
                 } else {
@@ -62,26 +64,27 @@ public final class GeoKitCardMapMediaController {
         size: CGSize,
         provider: MapProviderId,
         priority: MapSnapshotPriority,
+        cameraFrame: MapCameraFrame?,
         onLoadingChanged: ((Bool) -> Void)?
     ) async {
-        let captureSize = resolvedCaptureSize(card: card, fallback: size)
+        let captureSize = resolvedCaptureSize(card: card, provider: provider, fallback: size)
         guard MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: captureSize) else { return }
 
-        card.snapshotPrefetchScheduled = true
+        card.setSnapshotPrefetchScheduled(true, for: provider)
         onLoadingChanged?(true)
         defer {
-            card.snapshotPrefetchScheduled = false
+            card.setSnapshotPrefetchScheduled(false, for: provider)
             onLoadingChanged?(false)
         }
 
-        if card.mapSnapshotSize != captureSize {
-            card.mapSnapshotSize = captureSize
+        if card.mapSnapshotSize(for: provider) != captureSize {
+            card.setMapSnapshotSize(captureSize, for: provider)
         }
 
         await waitUntilSnapshotCaptureAllowed(for: provider)
         guard !Task.isCancelled else { return }
 
-        let request = card.mapSnapshotRequest(provider: provider)
+        let request = card.mapSnapshotRequest(provider: provider, cameraFrame: cameraFrame)
         let image = await MapSnapshotCaptureExecutor.captureWithRetry {
             await GeoKitCardSnapshotCapture.capture(
                 request: request,
@@ -95,12 +98,18 @@ public final class GeoKitCardMapMediaController {
         // sub-pixel layout churn cancels the task mid-capture, the snapshot is thrown away, and
         // the card never promotes to live (infinite re-capture, permanent loading spinner).
         guard let image else { return }
-        card.frozenSnapshot = image
+        let resolvedCamera = MapCameraFrameResolver.resolve(for: request)
+        card.setFrozenSnapshot(image, for: provider, cameraFrame: resolvedCamera)
     }
 
-    private func resolvedCaptureSize(card: any GeoKitMapSnapshotCard, fallback: CGSize) -> CGSize {
-        if MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: card.mapSnapshotSize) {
-            return card.mapSnapshotSize
+    private func resolvedCaptureSize(
+        card: any GeoKitMapSnapshotCard,
+        provider: MapProviderId,
+        fallback: CGSize
+    ) -> CGSize {
+        let storedSize = card.mapSnapshotSize(for: provider)
+        if MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: storedSize) {
+            return storedSize
         }
         return fallback
     }

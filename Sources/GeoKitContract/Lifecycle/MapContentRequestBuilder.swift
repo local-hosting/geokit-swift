@@ -13,6 +13,7 @@ public enum MapContentRequestBuilder {
         showUserPuck: Bool = false,
         mapProviderId: MapProviderId? = nil,
         cameraFrame: MapCameraFrame? = nil,
+        selectedPinId: UUID? = nil,
         snapshotPriority: MapSnapshotPriority? = nil
     ) -> MapContentRequest {
         MapContentRequest(
@@ -26,6 +27,7 @@ public enum MapContentRequestBuilder {
             showUserPuck: showUserPuck,
             mapProviderId: mapProviderId,
             cameraFrame: cameraFrame,
+            selectedPinId: selectedPinId,
             snapshotPriority: snapshotPriority ?? Self.snapshotPriority(for: policy)
         )
     }

@@ -7,31 +7,59 @@ import SwiftUI
 struct GeoKitMapKitMapContent: View {
     let request: MapContentRequest
 
+    @Environment(\.geokitTransitionSnapshot) private var transitionSnapshot
+    @Environment(\.geokitMapIsTransitioning) private var mapIsTransitioning
     @State private var position: MapCameraPosition = .automatic
     @State private var collapsedSnapshot: UIImage?
     @State private var zoomLevel: Float = 12
     @State private var selectedPinId: UUID?
+    @State private var appliedCameraFrame: MapCameraFrame?
 
     var body: some View {
         phaseContent
             .onAppear {
+                seedTransitionSnapshotIfNeeded()
                 seedPositionIfNeeded()
+                seedSelectedPinIfNeeded()
+            }
+            .onChange(of: transitionSnapshot) { _, _ in
+                seedTransitionSnapshotIfNeeded()
             }
             .onChange(of: request.mapProviderId) { _, _ in
                 resetForProviderChange()
             }
             .onChange(of: request.cameraFrame) { _, frame in
-                guard let frame else { return }
-                position = GeoKitMapKitCamera.from(frame)
+                guard let frame, !mapIsTransitioning else { return }
+                applyCameraFrame(frame)
             }
+            .onChange(of: mapIsTransitioning) { _, transitioning in
+                guard transitioning else { return }
+                applyCameraFrame(request.cameraFrame)
+            }
+            .onChange(of: request.selectedPinId) { _, pinId in
+                selectedPinId = pinId
+            }
+            .preference(key: GeoKitSelectedPinIdKey.self, value: selectedPinId)
     }
 
 
+    private func seedTransitionSnapshotIfNeeded() {
+        guard collapsedSnapshot == nil, let transitionSnapshot else { return }
+        collapsedSnapshot = transitionSnapshot
+    }
+
     private func resetForProviderChange() {
-        position = .automatic
         collapsedSnapshot = nil
-        selectedPinId = nil
-        seedPositionIfNeeded()
+        seedSelectedPinIfNeeded()
+        applyCameraFrame(request.cameraFrame)
+    }
+
+    private func seedSelectedPinIfNeeded() {
+        selectedPinId = request.selectedPinId
+    }
+
+    private func togglePinSelection(_ pin: GeoKitContract.MapPin) {
+        selectedPinId = selectedPinId == pin.id ? nil : pin.id
     }
 
     private func seedPositionIfNeeded() {
@@ -40,14 +68,16 @@ struct GeoKitMapKitMapContent: View {
     }
 
     private func applyCameraFrame(_ frame: MapCameraFrame?) {
-        if let frame {
-            position = GeoKitMapKitCamera.from(frame)
-        } else {
-            position = GeoKitMapKitCamera.initialPosition(
-                coordinates: request.pins.map(\.coordinate),
-                preferredZoom: request.preferredZoom
-            )
+        let resolved = frame ?? MapCameraFrameResolver.initialFrame(
+            pins: request.pins,
+            preferredZoom: request.preferredZoom
+        )
+        if let appliedCameraFrame, appliedCameraFrame.isApproximatelyEqual(to: resolved) {
+            return
         }
+        appliedCameraFrame = resolved
+        position = GeoKitMapKitCamera.from(resolved)
+        zoomLevel = Float(resolved.zoom)
     }
 
     @ViewBuilder
@@ -67,7 +97,7 @@ struct GeoKitMapKitMapContent: View {
                 position: $position,
                 zoomLevel: $zoomLevel,
                 selectedPinId: selectedPinId,
-                onPinTap: { pin, _ in selectedPinId = pin.id },
+                onPinTap: { pin, _ in togglePinSelection(pin) },
                 onPinInteractionBegan: {},
                 frozenSnapshot: collapsedSnapshot
             )

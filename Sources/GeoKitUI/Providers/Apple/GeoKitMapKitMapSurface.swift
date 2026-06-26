@@ -38,10 +38,11 @@ struct GeoKitMapKitMapSurface: View {
         let validSize = MapSurfaceMountPolicy.isValidLayoutSize(size)
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-        let showFrozen = isTransitioning && frozenSnapshot != nil
+        // Tile snapshots omit SwiftUI pin annotations — keep the live map when pins are present.
+        let showFrozen = isTransitioning && frozenSnapshot != nil && request.pins.isEmpty
 
         ZStack {
-            Color.white
+            GeoKitMapTheme.placeholderBackground
             if showFrozen, let snapshot = frozenSnapshot {
                 Image(uiImage: snapshot)
                     .resizable()
@@ -87,10 +88,12 @@ struct GeoKitMapKitMapSurface: View {
                 latitude: camera.centerCoordinate.latitude
             )
             zoomLevel = Float(zoom)
-            reportedCameraFrame = GeoKitMapKitCamera.frame(from: camera)
         }
         .onMapCameraChange(frequency: .onEnd) { context in
-            reportedCameraFrame = GeoKitMapKitCamera.frame(from: context.camera)
+            let nextFrame = GeoKitMapKitCamera.frame(from: context.camera)
+            if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
+                reportedCameraFrame = nextFrame
+            }
         }
         .allowsHitTesting(request.mapAcceptsUserInteraction)
         .geokitIgnoresSafeArea(when: request.mapAcceptsUserInteraction)

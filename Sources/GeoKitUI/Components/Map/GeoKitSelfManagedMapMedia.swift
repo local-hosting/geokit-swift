@@ -22,6 +22,7 @@ public extension View {
         mapSize: CGSize,
         generation: UInt,
         loadAllowed: Bool,
+        cameraFrame: MapCameraFrame? = nil,
         controller: GeoKitCardMapMediaController = .shared,
         onLoadingChanged: @escaping (Bool) -> Void = { _ in }
     ) -> some View {
@@ -33,6 +34,7 @@ public extension View {
                 mapSize: mapSize,
                 generation: generation,
                 loadAllowed: loadAllowed,
+                cameraFrame: cameraFrame,
                 controller: controller,
                 onLoadingChanged: onLoadingChanged
             )
@@ -47,6 +49,7 @@ private struct GeoKitSelfManagedMapMediaModifier: ViewModifier {
     let mapSize: CGSize
     let generation: UInt
     let loadAllowed: Bool
+    let cameraFrame: MapCameraFrame?
     let controller: GeoKitCardMapMediaController
     let onLoadingChanged: (Bool) -> Void
 
@@ -73,6 +76,7 @@ private struct GeoKitSelfManagedMapMediaModifier: ViewModifier {
                     size: mapSize,
                     provider: provider,
                     priority: priority,
+                    cameraFrame: cameraFrame,
                     onLoadingChanged: onLoadingChanged
                 )
             }

@@ -8,15 +8,13 @@ import UIKit
 @MainActor
 final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
     let pins: [MapPin]
+    let mapProviderSnapshotCache = GeoKitMapProviderSnapshotCache()
 
 #if os(iOS)
-    @Published var frozenSnapshot: UIImage?
-    @Published var isMapRendered = false
-    /// Latest live-map camera — preserved across expand/collapse remounts.
-    @Published var lastCameraFrame: MapCameraFrame?
-    var mapSnapshotSize: CGSize = .zero
+    private var mapRenderedByProvider: [MapProviderId: Bool] = [:]
+    /// Open pin callout — preserved across expand/collapse remounts.
+    @Published var selectedPinId: UUID?
     var snapshotCaptureTask: Task<Void, Never>?
-    var snapshotPrefetchScheduled = false
     var isPreparingTransitionSnapshot = false
 
 #endif
@@ -31,13 +29,33 @@ final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
         super.init(id: id, title: title, subtitle: subtitle)
     }
 
-    func mapSnapshotRequest(provider: MapProviderId) -> MapContentRequest {
+    func mapSnapshotStorageDidChange() {
+        objectWillChange.send()
+    }
+
+    func isMapRendered(for provider: MapProviderId) -> Bool {
+        mapRenderedByProvider[provider] ?? false
+    }
+
+    func setMapRendered(_ rendered: Bool, for provider: MapProviderId) {
+        guard mapRenderedByProvider[provider] != rendered else { return }
+        mapRenderedByProvider[provider] = rendered
+        objectWillChange.send()
+    }
+
+    func clearMapRendered() {
+        guard !mapRenderedByProvider.isEmpty else { return }
+        mapRenderedByProvider.removeAll()
+        objectWillChange.send()
+    }
+
+    func mapSnapshotRequest(provider: MapProviderId, cameraFrame: MapCameraFrame?) -> MapContentRequest {
         mapRequest(
             isExpanded: false,
             allowsLiveMount: false,
             isCenterSlot: false,
             mapProviderId: provider,
-            cameraFrame: lastCameraFrame
+            cameraFrame: cameraFrame
         )
     }
 
@@ -59,8 +77,8 @@ final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
             showUserPuck: false,
             mapProviderId: mapProviderId,
             cameraFrame: cameraFrame,
+            selectedPinId: selectedPinId,
             snapshotPriority: isCenterSlot ? .top : .background
         )
     }
 }
-

@@ -19,6 +19,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
     public var mapProviderId: MapProviderId?
     /// Optional seed camera preserved across provider switches; read once when a map surface mounts.
     public var cameraFrame: MapCameraFrame?
+    /// Host-persisted pin selection (callout open) restored when the live map remounts.
+    public var selectedPinId: UUID?
     /// Front-card captures jump ahead of peek/background snapshot work.
     public var snapshotPriority: MapSnapshotPriority
 
@@ -33,6 +35,7 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         showUserPuck: Bool = false,
         mapProviderId: MapProviderId? = nil,
         cameraFrame: MapCameraFrame? = nil,
+        selectedPinId: UUID? = nil,
         snapshotPriority: MapSnapshotPriority = .background
     ) {
         self.id = id
@@ -45,6 +48,7 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         self.showUserPuck = showUserPuck
         self.mapProviderId = mapProviderId
         self.cameraFrame = cameraFrame
+        self.selectedPinId = selectedPinId
         self.snapshotPriority = snapshotPriority
     }
 

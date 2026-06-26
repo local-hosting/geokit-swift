@@ -8,6 +8,11 @@ import SwiftUI
 struct GeoKitTestAppApp: App {
     init() {
         AX.bootstrap()
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-CaptureExpandFrames") {
+            AX.Animation.speed = 0.1
+        }
+        #endif
         GeoKitMapProviderRegistry.configure(
             provider: .mapbox,
             mapbox: MapboxProviderConfig(styleURI: GeoKitDemoConstants.mapStyleURI)

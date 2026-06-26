@@ -1,5 +1,8 @@
 import GeoKitContract
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Hosts may read this preference to skip rasterization (e.g. `drawingGroup`) while a live Mapbox surface is mounted.
 public struct GeoKitLiveRenderingKey: PreferenceKey {
@@ -28,6 +31,17 @@ public struct GeoKitMapInteractiveGesturesKey: PreferenceKey {
     }
 }
 
+/// Latest selected pin id from a live map surface — hosts may persist across remounts.
+public struct GeoKitSelectedPinIdKey: PreferenceKey {
+    public static var defaultValue: UUID? = nil
+
+    public static func reduce(value: inout UUID?, nextValue: () -> UUID?) {
+        if let next = nextValue() {
+            value = next
+        }
+    }
+}
+
 /// Latest provider-neutral camera frame from a live map surface — hosts may persist across provider switches.
 public struct GeoKitMapCameraFrameKey: PreferenceKey {
     public static var defaultValue: MapCameraFrame? = nil
@@ -47,6 +61,12 @@ private struct GeoKitMapIsTransitioningKey: EnvironmentKey {
     static let defaultValue = false
 }
 
+#if os(iOS)
+private struct GeoKitTransitionSnapshotKey: EnvironmentKey {
+    static let defaultValue: UIImage? = nil
+}
+#endif
+
 public extension EnvironmentValues {
     /// When `false`, GeoKit defers mounting the live Mapbox view until layout is stable.
     var geokitMapSurfaceReady: Bool {
@@ -59,6 +79,14 @@ public extension EnvironmentValues {
         get { self[GeoKitMapIsTransitioningKey.self] }
         set { self[GeoKitMapIsTransitioningKey.self] = newValue }
     }
+
+#if os(iOS)
+    /// Host-owned static snapshot (e.g. card fan capture) for live-map crossfade on expand/remount.
+    var geokitTransitionSnapshot: UIImage? {
+        get { self[GeoKitTransitionSnapshotKey.self] }
+        set { self[GeoKitTransitionSnapshotKey.self] = newValue }
+    }
+#endif
 }
 
 extension View {
