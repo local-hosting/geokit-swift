@@ -151,7 +151,17 @@ enum GeoKitMapKitSnapshotService {
                     continuation.resume(returning: nil)
                     return
                 }
-                continuation.resume(returning: snapshot?.image)
+                guard let snapshot else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let image = GeoKitSnapshotPinDraw.composite(
+                    baseImage: snapshot.image,
+                    pins: request.pins,
+                    pointForCoordinate: { snapshot.point(for: $0) },
+                    selectedPinId: request.selectedPinId
+                )
+                continuation.resume(returning: image)
             }
         }
     }

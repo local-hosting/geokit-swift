@@ -74,7 +74,9 @@ struct GeoKitCollapsedSnapshotView: View {
                     viewport: resolvedViewport,
                     size: size,
                     styleURI: styleURI,
-                    priority: request.snapshotPriority
+                    priority: request.snapshotPriority,
+                    pins: request.pins,
+                    selectedPinId: request.selectedPinId
                 )
             }
             guard !Task.isCancelled else { return }

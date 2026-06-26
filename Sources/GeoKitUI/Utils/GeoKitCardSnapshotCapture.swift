@@ -43,7 +43,9 @@ public enum GeoKitCardSnapshotCapture {
             viewport: viewport,
             size: size,
             styleURI: request.mapStyleURI,
-            priority: priority
+            priority: priority,
+            pins: request.pins,
+            selectedPinId: request.selectedPinId
         )
     }
 
