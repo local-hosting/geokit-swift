@@ -30,6 +30,8 @@ struct GeoKitDemoRootView: View {
         _mediaStore = StateObject(wrappedValue: GeoKitDemoMediaStore(cameraStore: cameraStore))
     }
     @Namespace private var cardNamespace
+    @State private var liveMapSurfaceFrame: CGRect = .zero
+    @State private var liveMapSurfaceCornerRadius: CGFloat = AX.Radius.card
 
     /// Keep main-screen chrome visible while the front card expands on top of the stack.
     private var showsMapProviderPicker: Bool {
@@ -47,16 +49,64 @@ struct GeoKitDemoRootView: View {
         )
     }
 
-    private var expandedMapContentSize: CGSize {
-        UIScreen.main.bounds.size
-    }
-
     var body: some View {
         AXBackdropShell {
-            cardStackRegion
-                .axGlassPlacement(.overScene)
+            ZStack {
+                GeoKitDemoBackdropActivationView()
+
+                persistentMapOverlay
+                    .zIndex(1)
+
+                cardStackRegion
+                    .zIndex(2)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onPreferenceChange(AXCardMediaSurfaceFramePreferenceKey.self) { entries in
+                guard let liveID = mediaStore.liveCardID,
+                      let entry = entries.first(where: { $0.cardID == liveID }),
+                      MapLiveSurfaceFrameResolver.isValidHostFrame(entry.frame) else { return }
+                var transaction = Transaction()
+                if deck.isExpanded || deck.isCollapsing {
+                    transaction.animation = AX.Animation.expansionSpring
+                } else if deck.isTransitioning {
+                    transaction.animation = AX.Animation.deckSpring
+                }
+                withTransaction(transaction) {
+                    liveMapSurfaceFrame = entry.frame
+                    if let radius = entry.cornerRadius {
+                        liveMapSurfaceCornerRadius = radius
+                    }
+                }
+            }
+            .axGlassPlacement(.overScene)
         }
         .accessibilityIdentifier("geokit-test-app.root")
+    }
+
+    private var resolvedLiveMapFrame: CGRect {
+        MapLiveSurfaceFrameResolver.resolve(
+            reportedFrame: liveMapSurfaceFrame,
+            collapsedCardFrame: deck.collapsedCardFrame
+        )
+    }
+
+    @ViewBuilder
+    private var persistentMapOverlay: some View {
+        let mapFrame = resolvedLiveMapFrame
+        if let liveID = mediaStore.liveCardID,
+           let card = deck.cards.first(where: { $0.id == liveID }),
+           MapLiveSurfaceFrameResolver.isValidHostFrame(mapFrame) {
+            GeoKitDemoPersistentMapHost(
+                cameraStore: cameraStore,
+                card: card,
+                frame: mapFrame,
+                cornerRadius: liveMapSurfaceCornerRadius,
+                collapsedReferenceFrame: deck.collapsedCardFrame,
+                isExpanded: deck.isExpanded,
+                mapProviderId: mapProviderStore.provider,
+                mapIsTransitioning: deck.isCollapsing || deck.isTransitioning
+            )
+        }
     }
 
     private var cardStackRegion: some View {
@@ -76,7 +126,7 @@ struct GeoKitDemoRootView: View {
                 card: card,
                 isExpanded: isExpanded,
                 mapProviderId: mapProviderStore.provider,
-                mapContentSize: isExpanded ? expandedMapContentSize : collapsedMapContentSize
+                mapContentSize: collapsedMapContentSize
             )
         } headerContent: { card in
             AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
@@ -91,9 +141,6 @@ struct GeoKitDemoRootView: View {
                     .accessibilityIdentifier("geokit-test-app.stack-paging")
                     .allowsHitTesting(false)
             }
-        }
-        .background {
-            GeoKitDemoBackdropActivationView()
         }
         .onAppear {
             syncFanSnapshots(force: true)
@@ -124,6 +171,7 @@ struct GeoKitDemoRootView: View {
         }
         .environmentObject(mediaStore)
         .environmentObject(cameraStore)
+        .environment(\.axCardExternalLiveMapHost, true)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .top, spacing: 0) {
             if showsMapProviderPicker {
@@ -164,6 +212,9 @@ struct GeoKitDemoRootView: View {
             debounceMs: force ? 0 : debounceMs,
             onMediaReady: { index in
                 deck.handleMediaEvent(.mediaReady(kind: .map), at: index)
+                if index == deck.currentIndex {
+                    mediaStore.syncCenterLiveFromDeck(deck, provider: mapProviderStore.provider)
+                }
             }
         )
     }
@@ -214,6 +265,7 @@ private struct GeoKitDemoCardContent: View {
     @Environment(\.axCardIsTransitioning) private var cardIsTransitioning
     @Environment(\.axCardIsCollapsing) private var cardIsCollapsing
     @Environment(\.axCardMediaLoadAllowed) private var mediaLoadAllowed
+    @Environment(\.axCardMediaLayoutSize) private var cardMediaLayoutSize
 
     private var isStackCenter: Bool {
         isCentered && (!deckExpanded || cardIsCollapsing)
@@ -221,6 +273,13 @@ private struct GeoKitDemoCardContent: View {
 
     private var isStackOneBehind: Bool {
         stackOffset == 1 && !deckExpanded
+    }
+
+    private var effectiveMapSize: CGSize {
+        if AX.Layout.isValidCardMediaLayoutSize(cardMediaLayoutSize) {
+            return cardMediaLayoutSize
+        }
+        return mapContentSize
     }
 
     /// Peek image only when camera and pin callout state match the cached capture.
@@ -267,11 +326,20 @@ private struct GeoKitDemoCardContent: View {
 
     private var showsBlankPlaceholder: Bool {
         if isExpanded { return false }
-        return !shouldShowLoading && displaySnapshot == nil && !liveMapVisible && !showsLiveMap
+        return !shouldShowLoading && displaySnapshot == nil && !liveMapVisible
     }
 
     private var reportsLiveRenderingToCard: Bool {
         liveMapVisible || displaySnapshot != nil
+    }
+
+    private var reportsMediaSurfaceFrame: Bool {
+        guard MapCardMediaPresentationPolicy.reportsMediaSurfaceFrame(presentationContext) else {
+            return false
+        }
+        if isExpanded { return false }
+        if deckExpanded && !isExpanded { return false }
+        return true
     }
 
     private var peekSnapshotLoadAllowed: Bool {
@@ -279,10 +347,6 @@ private struct GeoKitDemoCardContent: View {
         if isStackCenter { return displaySnapshot == nil }
         if stackOffset > 0, !deckExpanded { return displaySnapshot == nil }
         return false
-    }
-
-    private var mapIsTransitioning: Bool {
-        cardIsTransitioning || cardIsCollapsing
     }
 
     private var cardMediaLoadingChrome: some View {
@@ -304,28 +368,23 @@ private struct GeoKitDemoCardContent: View {
         ZStack {
             GeoKitMapTheme.placeholderBackground
 
-            if let image = displaySnapshot, !showsPaintedLiveMap, !(mapIsTransitioning && showsLiveMap) {
+            if let image = displaySnapshot, !isExpanded {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
+                    .opacity(showsPaintedLiveMap ? 0 : 1)
+                    .animation(.easeInOut(duration: Self.liveCrossFadeDuration), value: showsPaintedLiveMap)
                     .allowsHitTesting(false)
-            }
-
-            if showsLiveMap {
-                GeoKitDemoInCardLiveMap(
-                    cameraStore: cameraStore,
-                    card: card,
-                    isExpanded: isExpanded,
-                    mapProviderId: mapProviderId,
-                    mapIsTransitioning: mapIsTransitioning
-                )
-                .id(card.id)
             }
 
             Color.clear
                 .preference(key: AXCardLiveRenderingKey.self, value: reportsLiveRenderingToCard)
+
+            if showsBlankPlaceholder {
+                GeoKitMapTheme.placeholderBackground
+            }
 
             if shouldShowLoading {
                 cardMediaLoadingChrome
@@ -335,13 +394,14 @@ private struct GeoKitDemoCardContent: View {
             card: card,
             isCentered: isStackCenter,
             provider: mapProviderId,
-            mapSize: mapContentSize,
+            mapSize: effectiveMapSize,
             generation: mediaStore.mapMediaGeneration,
             loadAllowed: peekSnapshotLoadAllowed,
             cameraFrame: cameraStore.frame(for: card.id),
             controller: mediaStore.mapMediaController,
             onLoadingChanged: { mediaStore.setMapLoading($0, cardID: card.id) }
         )
+        .axReportsCardMediaSurfaceFrame(cardID: card.id, active: reportsMediaSurfaceFrame)
         .allowsHitTesting(isExpanded)
         .onChange(of: showsLiveMap) { wasLive, isLive in
             if wasLive, !isLive, displaySnapshot == nil {

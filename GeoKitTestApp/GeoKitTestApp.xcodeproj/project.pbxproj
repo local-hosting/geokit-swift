@@ -14,7 +14,7 @@
 		GKTA005 /* GeoKitDemoConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA105 /* GeoKitDemoConstants.swift */; };
 		GKTA00B /* GeoKitDemoMediaCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA109 /* GeoKitDemoMediaCoordinator.swift */; };
 		GKTA00D /* GeoKitDemoCaptureHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA110 /* GeoKitDemoCaptureHarness.swift */; };
-		GKTA00E /* GeoKitDemoInCardLiveMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA111 /* GeoKitDemoInCardLiveMap.swift */; };
+		GKTA00E /* GeoKitDemoPersistentMapHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA111 /* GeoKitDemoPersistentMapHost.swift */; };
 
 		GKTA006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = GKTA106 /* Assets.xcassets */; };
 		GKTA007 /* AccordDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP02 /* AccordDesignSystem */; };
@@ -48,7 +48,7 @@
 		GKTA105 /* GeoKitDemoConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoConstants.swift; sourceTree = "<group>"; };
 		GKTA106 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		GKTA110 /* GeoKitDemoCaptureHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCaptureHarness.swift; sourceTree = "<group>"; };
-		GKTA111 /* GeoKitDemoInCardLiveMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoInCardLiveMap.swift; sourceTree = "<group>"; };
+		GKTA111 /* GeoKitDemoPersistentMapHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoPersistentMapHost.swift; sourceTree = "<group>"; };
 		GKTA107 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		GKTA108 /* GeoKitTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoKitTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		GKTA112 /* GeoKitDemoCardSwitchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCardSwitchUITests.swift; sourceTree = "<group>"; };
@@ -96,7 +96,7 @@
 				GKTA105 /* GeoKitDemoConstants.swift */,
 				GKTA109 /* GeoKitDemoMediaCoordinator.swift */,
 				GKTA110 /* GeoKitDemoCaptureHarness.swift */,
-				GKTA111 /* GeoKitDemoInCardLiveMap.swift */,
+				GKTA111 /* GeoKitDemoPersistentMapHost.swift */,
 				GKTA106 /* Assets.xcassets */,
 				GKTA107 /* Info.plist */,
 			);
@@ -248,7 +248,7 @@
 				GKTA004 /* GeoKitDemoCard.swift in Sources */,
 				GKTA00B /* GeoKitDemoMediaCoordinator.swift in Sources */,
 				GKTA00D /* GeoKitDemoCaptureHarness.swift in Sources */,
-				GKTA00E /* GeoKitDemoInCardLiveMap.swift in Sources */,
+				GKTA00E /* GeoKitDemoPersistentMapHost.swift in Sources */,
 				GKTA005 /* GeoKitDemoConstants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
