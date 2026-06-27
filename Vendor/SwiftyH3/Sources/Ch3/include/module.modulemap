@@ -1,4 +1,0 @@
-module Ch3 {
-  umbrella header "Ch3.h"
-  export *
-}

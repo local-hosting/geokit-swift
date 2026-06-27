@@ -73,6 +73,10 @@ Host apps link **GeoKitContract** only; `dlopen` GeoKit.framework after the map 
 
 Apps that link map UI directly (no `dlopen`) can depend on **GeoKitUI** + **GeoKitContract**.
 
+## H3
+
+H3 indexing uses the [`SwiftyH3`](https://github.com/pawelmajcher/SwiftyH3) package (wraps Uber's H3 C library). `GeoKitCore`'s `H3` enum is a thin adapter over it. Bump the version range in `Package.swift` when updating.
+
 ## Development
 
 ```bash
