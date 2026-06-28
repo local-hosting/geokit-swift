@@ -32,8 +32,12 @@ struct GeoKitDemoRootView: View {
     }
 
     private var isCenterMediaReady: Bool {
-        coordinator.mediaStore.isInitialCenterPeekReady
+        coordinator.mediaStore.isInitialFocusedStaticReady
             || coordinator.isCenterMediaReady(centerCard: centerCard)
+    }
+
+    private var isSessionExpanded: Bool {
+        collection.isExpanded || collection.isCollapsing
     }
 
     var body: some View {
@@ -45,6 +49,7 @@ struct GeoKitDemoRootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .axGlassPlacement(.overScene)
         }
+        .environment(\.geokitAnimationSpeed, AX.Animation.speed)
         .accessibilityIdentifier("geokit-test-app.root")
         .overlay(alignment: .topLeading) {
             Color.clear
@@ -60,15 +65,32 @@ struct GeoKitDemoRootView: View {
     }
 
     private var cardStackRegion: some View {
+        cardStackWithHoistedOverlay
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityIdentifier("geokit-test-app.stack")
+            .overlay(alignment: .bottom) {
+                if collection.cards.count > 1 {
+                    Color.clear
+                        .frame(height: 28)
+                        .accessibilityIdentifier("geokit-test-app.stack-paging")
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if showsMapProviderPicker {
+                    mapProviderHeader
+                }
+            }
+    }
+
+    /// Stack fan + hoisted ``CardExpanded``; live host sits behind the overlay once frame prefs are reported.
+    private var cardStackWithHoistedOverlay: some View {
         AX.Stack(
             collection: collection,
             cardNamespace: cardNamespace,
+            showExpandedOverlay: false,
             stackPadding: AX.StackConstants.defaultPadding,
-            onBackCardTap: { _, index in
-                let count = collection.cards.count
-                guard !collection.isExpanded, count > 0 else { return }
-                collection.rotateStackToPage((collection.stackPageIndex + index) % count)
-            },
             isInteractionBlocked: { _ in collection.isExpanded },
             paging: stackPaging
         ) { card, _ in
@@ -82,9 +104,18 @@ struct GeoKitDemoRootView: View {
             AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
                 .accessibilityIdentifier("geokit-test-app.card-badge-\(card.id)")
         }
+        .environment(\.axCardExternalLiveMediaHost, true)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityIdentifier("geokit-test-app.stack")
-        .geoKitCardMapHost(
+        .overlay {
+            expandedOverlays
+                .zIndex(AX.Constants.ZIndex.overlay)
+        }
+        // After overlay so expanded slot surface-frame preferences reach the live host.
+        .geoKitMapLiveHostBackground(
+            coordinator: coordinator,
+            collection: collection
+        )
+        .geoKitMapHost(
             coordinator: coordinator,
             collection: collection,
             layout: .stack,
@@ -102,21 +133,38 @@ struct GeoKitDemoRootView: View {
                     GeoKitDemoCaptureHarness.scheduleExpandCapture(collection: collection)
                 }
                 #endif
-            }
+            },
+            embedsLiveHost: false
         )
-        .overlay(alignment: .bottom) {
-            if collection.cards.count > 1 {
-                Color.clear
-                    .frame(height: 28)
-                    .accessibilityIdentifier("geokit-test-app.stack-paging")
-                    .allowsHitTesting(false)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if showsMapProviderPicker {
-                mapProviderHeader
-            }
+    }
+
+    @ViewBuilder
+    private var expandedOverlays: some View {
+        if isSessionExpanded {
+            CardExpanded(
+                model: collection,
+                cardNamespace: cardNamespace,
+                cardConfig: AXCardConfig(
+                    badgeWidthFraction: nil,
+                    showsGradientOverlay: true
+                ),
+                isInteractionBlocked: { _ in true },
+                cardContent: { card, _ in
+                    GeoKitCardMap(
+                        card: card,
+                        loadingAccessibilityIdentifier: "geokit-test-app.card-loading",
+                        fanLoadingAccessibilityIdentifier: "geokit-test-app.card-loading-fan",
+                        cardAccessibilityIdentifierPrefix: "geokit-test-app.card"
+                    )
+                },
+                headerContent: { card in
+                    AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
+                        .accessibilityIdentifier("geokit-test-app.card-badge-\(card.id)")
+                }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea()
+            .accessibilityIdentifier("geokit-test-app.expanded-overlay")
         }
     }
 

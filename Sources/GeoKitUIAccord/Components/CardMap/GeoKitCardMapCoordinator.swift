@@ -29,6 +29,7 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
     private weak var boundCollection: AXCardCollectionModel<Card>?
     private(set) var boundLayout: CardMediaCollectionLayout = .stack
     private var storeSubscriptions = Set<AnyCancellable>()
+    private var lastRefreshLayoutSize: CGSize = .zero
 
     public init() {
         let cameraStore = MapCameraStore()
@@ -101,33 +102,37 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
     // MARK: - Plugin callbacks
 
     func bootstrapCenterMedia(session: AXCardMediaLoadSession, skipSnapshotCapture: Bool = false) {
-        syncCenterMedia(session: session, skipSnapshotCapture: skipSnapshotCapture)
+        syncCollectionMedia(session: session, skipSnapshotCapture: skipSnapshotCapture)
     }
 
     func handleCollectionIdentityChange(session: AXCardMediaLoadSession) {
+        guard !isDemotedChoreographyActive(session: session) else { return }
         commitDragWarmHandoffIfNeeded(session: session)
-        syncCenterMedia(session: session)
+        syncCollectionMedia(session: session)
     }
 
     func handleCenterIndexChange(session: AXCardMediaLoadSession) {
+        guard !isDemotedChoreographyActive(session: session) else { return }
         commitDragWarmHandoffIfNeeded(session: session)
-        syncCenterLive(session: session)
+        syncFocusedLive(session: session)
         if !session.isExpanded {
-            syncCenterMedia(session: session)
+            syncCollectionMedia(session: session)
         }
     }
 
     func handleExpandedChange(expanded: Bool, session: AXCardMediaLoadSession) {
-        syncCenterLive(session: session)
+        syncFocusedLive(session: session)
         if expanded {
-            refreshVisibleFanPeeks(session: session)
+            captureVisibleStaticSnapshots(session: session)
         } else {
-            syncCenterMedia(session: session)
+            syncCollectionMedia(session: session)
         }
     }
 
     func handleContainerWidthChange(session: AXCardMediaLoadSession) {
-        syncCenterMedia(session: session)
+        updateLayoutSize(from: session)
+        guard needsStackMediaSync(session: session) else { return }
+        syncCollectionMedia(session: session)
     }
 
     func handleProviderSwitch() {
@@ -141,18 +146,20 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
             mediaContentSize: collapsedMapContentSize,
             mediaLoadDepth: collection.mediaLoadDepth
         )
-        syncCenterMedia(session: session)
+        syncCollectionMedia(session: session)
     }
 
     func handleCollapsedFrameChange(session: AXCardMediaLoadSession) {
-        guard !session.isExpanded, !session.isCollapsing else { return }
-        syncCenterMedia(session: session)
+        guard !session.isExpanded, !session.isCollapsing, !session.isTransitioning else { return }
+        updateLayoutSize(from: session)
+        guard needsStackMediaSync(session: session) else { return }
+        syncCollectionMedia(session: session)
     }
 
     func handleCollapseFinished(wasCollapsing: Bool, session: AXCardMediaLoadSession) {
         guard wasCollapsing, !session.isCollapsing, !session.isExpanded else { return }
-        syncCenterLive(session: session)
-        syncCenterMedia(session: session)
+        syncFocusedLive(session: session)
+        syncCollectionMedia(session: session)
     }
 
     func handleCardDragChanged(
@@ -211,31 +218,49 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
         return false
     }
 
-    public func isCenterPeekReady(centerCard: Card?) -> Bool {
-        guard let centerCard else { return false }
-        let camera = cameraStore.frame(for: centerCard.id)
-        return centerCard.hasUsableSnapshot(for: provider, cameraFrame: camera)
+    public func isFocusedStaticReady(focusedCard: Card?) -> Bool {
+        guard let focusedCard else { return false }
+        let camera = cameraStore.frame(for: focusedCard.id)
+        return focusedCard.hasUsableSnapshot(for: provider, cameraFrame: camera)
     }
 
     // MARK: - Internal media sync
 
-    private func syncCenterLive(session: AXCardMediaLoadSession) {
-        guard let collection = boundCollection else { return }
-        let cards = collection.cards
-        mediaStore.syncCenterLive(cards: cards, centerIndex: session.centerIndex)
+    func handleDemotedCardChoreographyEnded(session: AXCardMediaLoadSession) {
+        commitDragWarmHandoffIfNeeded(session: session)
+        syncFocusedLive(session: session)
+        if !session.isExpanded {
+            syncCollectionMedia(session: session)
+        }
     }
 
-    private func syncCenterMedia(session: AXCardMediaLoadSession, skipSnapshotCapture: Bool = false) {
+    private func isDemotedChoreographyActive(session: AXCardMediaLoadSession) -> Bool {
+        session.recentlyDemotedCardIndex != nil
+    }
+
+    private func syncFocusedLive(session: AXCardMediaLoadSession) {
         guard let collection = boundCollection else { return }
+        let cards = collection.cards
+        if let demotedIndex = session.recentlyDemotedCardIndex, cards.indices.contains(demotedIndex) {
+            mediaStore.syncFocusedLive(cards: cards, focusedIndex: demotedIndex)
+            return
+        }
+        mediaStore.syncFocusedLive(cards: cards, focusedIndex: session.centerIndex)
+    }
+
+    private func syncCollectionMedia(session: AXCardMediaLoadSession, skipSnapshotCapture: Bool = false) {
+        guard let collection = boundCollection else { return }
+        if isDemotedChoreographyActive(session: session) {
+            captureVisibleStaticSnapshots(session: session)
+            return
+        }
         guard !mediaStore.isSnapshotBootstrapping else { return }
-        let size = collapsedMapContentSize
-        guard AX.Layout.isValidCardMediaLayoutSize(size) else { return }
-        mediaStore.updateMapContentSize(size)
+        guard updateLayoutSize(from: session) else { return }
         let cards = collection.cards
         seedCamerasFromPins(in: cards)
-        mediaStore.refreshCenter(
+        mediaStore.syncCollectionMedia(
             cards: cards,
-            centerIndex: session.centerIndex,
+            focusedIndex: session.centerIndex,
             provider: provider,
             skipSnapshotCapture: skipSnapshotCapture,
             onMediaReady: { [weak collection] index in
@@ -244,21 +269,39 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
         )
     }
 
-    private func refreshVisibleFanPeeks(session: AXCardMediaLoadSession) {
+    private func captureVisibleStaticSnapshots(session: AXCardMediaLoadSession) {
         guard let collection = boundCollection else { return }
-        let size = collapsedMapContentSize
-        guard AX.Layout.isValidCardMediaLayoutSize(size) else { return }
-        mediaStore.updateMapContentSize(size)
+        guard updateLayoutSize(from: session) else { return }
         let cards = collection.cards
         seedCamerasFromPins(in: cards)
-        mediaStore.refreshFanPeeks(
+        mediaStore.captureVisibleStaticSnapshots(
             cards: cards,
-            centerIndex: session.centerIndex,
+            focusedIndex: session.centerIndex,
             provider: provider,
             onMediaReady: { [weak collection] index in
                 collection?.handleMediaEvent(.mediaReady(kind: .map), at: index)
             }
         )
+    }
+
+    @discardableResult
+    private func updateLayoutSize(from session: AXCardMediaLoadSession) -> Bool {
+        let size = collapsedMapContentSize
+        guard AX.Layout.isValidCardMediaLayoutSize(size) else { return false }
+        mediaStore.updateMapContentSize(size)
+        lastRefreshLayoutSize = size
+        return true
+    }
+
+    private func needsStackMediaSync(session: AXCardMediaLoadSession) -> Bool {
+        guard let collection = boundCollection else { return false }
+        let cards = collection.cards
+        guard cards.indices.contains(session.centerIndex) else { return true }
+        let focusedID = cards[session.centerIndex].id
+        if mediaStore.liveCardID != focusedID { return true }
+        if !mediaStore.hasRevealedCardStack { return true }
+        let size = collapsedMapContentSize
+        return layoutSizeChangeRequiresMediaRefresh(from: lastRefreshLayoutSize, to: size)
     }
 
     private func seedCamerasFromPins(in cards: [Card]) {
@@ -285,10 +328,19 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
 
     private func commitDragWarmHandoffIfNeeded(session: AXCardMediaLoadSession) {
         guard let collection = boundCollection else { return }
+        guard !isDemotedChoreographyActive(session: session) else { return }
         mediaStore.commitDragWarmHandoff(
             cards: collection.cards,
-            centerIndex: session.centerIndex
+            focusedIndex: session.centerIndex
         )
+    }
+
+    /// Ignore sub-point card spring resize churn once center live is mounted.
+    private func layoutSizeChangeRequiresMediaRefresh(from previous: CGSize, to next: CGSize) -> Bool {
+        guard previous.width > 0, previous.height > 0 else { return true }
+        let widthDelta = abs(next.width - previous.width)
+        let heightDelta = abs(next.height - previous.height)
+        return widthDelta > 2 || heightDelta > 2
     }
 }
 #endif

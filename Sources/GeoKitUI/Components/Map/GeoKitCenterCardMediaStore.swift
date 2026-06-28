@@ -4,7 +4,7 @@ import CoreGraphics
 import Foundation
 import GeoKitContract
 
-/// Center-card media orchestration: center snapshot → live, then background fan peeks.
+/// Card-stack map media: static snapshots for visible cards, one live map on the focused (top) card.
 @MainActor
 public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: ObservableObject {
     let snapshotController: GeoKitMapSnapshotControlling
@@ -21,20 +21,22 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
     @Published public private(set) var liveCardID: String?
     /// Incoming stack card warming live tiles while the user drags the front card.
     @Published public private(set) var warmLiveCardID: String?
-    /// True once the center card has a cheap static peek — used to reveal the stack on first load.
-    @Published public private(set) var isInitialCenterPeekReady = false
-    /// After the stack is revealed once, later center swaps keep the stack visible.
+    /// True once the focused card has a static image (or live is allowed without one) — reveals the stack on first load.
+    @Published public private(set) var isInitialFocusedStaticReady = false
+    /// After the stack is revealed once, later focus swaps keep the stack visible.
     @Published public private(set) var hasRevealedCardStack = false
-    /// When false, ``GeoKitCardMapHostModifier`` keeps the stack hidden until ``isInitialCenterPeekReady``.
-    @Published public var hidesStackUntilInitialCenterPeekReady = true
-    /// True while ``prepareCardExpansion`` is capturing the center-card peek used for expand animation.
+    /// When false, ``GeoKitMapHostModifier`` keeps the stack hidden until ``isInitialFocusedStaticReady``.
+    @Published public var hidesStackUntilInitialFocusedStaticReady = true
+    /// True while ``prepareCardExpansion`` captures the focused-card static used for expand animation.
     @Published public private(set) var isSnapshotBootstrapping = false
 
-    private var centerTask: Task<Void, Never>?
-    private var fanTask: Task<Void, Never>?
+    private var focusedCaptureTask: Task<Void, Never>?
+    private var visibleStaticCaptureTask: Task<Void, Never>?
     private var expansionPrepareTask: Task<Void, Never>?
-    /// (cardID, provider) of an in-flight center capture — prevents layout churn from cancel/restarting it.
-    private var centerCaptureInFlight: (cardID: String, provider: MapProviderId)?
+    /// In-flight focused capture — layout churn must not restart it for the same card+provider.
+    private var focusedCaptureInFlight: (cardID: String, provider: MapProviderId)?
+    /// Fan indices currently being captured — layout churn must not restart the same pass.
+    private var visibleStaticCaptureInFlight: [Int]?
 
     public func isLiveEnabled(for cardID: String) -> Bool {
         liveCardID == cardID || warmLiveCardID == cardID
@@ -49,28 +51,32 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         warmLiveCardID = nil
     }
 
-    /// Promotes drag-warmed live tiles to the new center card before clearing warm state.
-    public func commitDragWarmHandoff(cards: [Card], centerIndex: Int) {
-        guard cards.indices.contains(centerIndex) else {
+    /// Promotes drag-warmed live tiles to the new focused card before clearing warm state.
+    public func commitDragWarmHandoff(cards: [Card], focusedIndex: Int) {
+        guard cards.indices.contains(focusedIndex) else {
             endDragWarmLive()
             return
         }
-        let centerID = cards[centerIndex].id
-        if warmLiveCardID == centerID {
-            liveCardID = centerID
+        let focusedID = cards[focusedIndex].id
+        if warmLiveCardID == focusedID {
+            liveCardID = focusedID
             warmLiveCardID = nil
         } else {
-            syncCenterLive(cards: cards, centerIndex: centerIndex)
+            assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
             endDragWarmLive()
         }
     }
 
-    public func syncCenterLive(cards: [Card], centerIndex: Int) {
-        guard cards.indices.contains(centerIndex) else {
+    public func syncFocusedLive(cards: [Card], focusedIndex: Int) {
+        assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
+    }
+
+    private func assignLiveToFocused(cards: [Card], focusedIndex: Int) {
+        guard cards.indices.contains(focusedIndex) else {
             liveCardID = nil
             return
         }
-        liveCardID = cards[centerIndex].id
+        liveCardID = cards[focusedIndex].id
     }
 
     public func isMapLoading(for cardID: String) -> Bool {
@@ -85,9 +91,8 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         }
     }
 
-    /// Suppresses the center-card spinner while the stack stays hidden for the initial HTTP peek.
-    private func setMapLoadingIfVisible(_ isLoading: Bool, cardID: String) {
-        guard hasRevealedCardStack || !hidesStackUntilInitialCenterPeekReady else { return }
+    private func setMapLoadingIfStackVisible(_ isLoading: Bool, cardID: String) {
+        guard hasRevealedCardStack || !hidesStackUntilInitialFocusedStaticReady else { return }
         setMapLoading(isLoading, cardID: cardID)
     }
 
@@ -97,27 +102,40 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
     }
 
     public func invalidateAllSnapshots(in cards: [Card]) {
-        resetMediaState(in: cards)
+        resetMediaState(in: cards, preserveStackReveal: false, preserveSnapshotCache: false)
     }
 
     public func prepareForProviderSwitch(in cards: [Card]) {
-        resetMediaState(in: cards)
+        resetMediaState(in: cards, preserveStackReveal: true, preserveSnapshotCache: true)
     }
 
-    private func resetMediaState(in cards: [Card]) {
-        centerTask?.cancel()
-        fanTask?.cancel()
+    private func cancelMediaTasks() {
+        focusedCaptureTask?.cancel()
+        visibleStaticCaptureTask?.cancel()
         expansionPrepareTask?.cancel()
-        centerCaptureInFlight = nil
+        focusedCaptureInFlight = nil
+        visibleStaticCaptureInFlight = nil
         isSnapshotBootstrapping = false
+    }
+
+    private func resetMediaState(
+        in cards: [Card],
+        preserveStackReveal: Bool,
+        preserveSnapshotCache: Bool
+    ) {
+        cancelMediaTasks()
         mapMediaGeneration &+= 1
         liveCardID = nil
         warmLiveCardID = nil
         loadingCardIDs.removeAll()
-        isInitialCenterPeekReady = false
-        hasRevealedCardStack = false
+        if !preserveStackReveal {
+            isInitialFocusedStaticReady = false
+            hasRevealedCardStack = false
+        }
         for card in cards {
-            card.mapProviderSnapshotCache.removeAll()
+            if !preserveSnapshotCache {
+                card.mapProviderSnapshotCache.removeAll()
+            }
             if let liveCard = card as? any GeoKitLiveMapCard {
                 liveCard.clearMapRendered()
             }
@@ -128,77 +146,105 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: mapContentSize)
     }
 
-    private func centerIsLiveRendered(_ center: Card, provider: MapProviderId) -> Bool {
-        guard let liveCard = center as? any GeoKitLiveMapCard else { return false }
-        return liveCard.isMapRendered(for: provider)
+    private func cardHasStaticSnapshot(_ card: Card, provider: MapProviderId) -> Bool {
+        card.hasUsableSnapshot(for: provider, cameraFrame: cameraStore.frame(for: card.id))
     }
 
-    /// Cheap static peek while center live stays mounted — HTTP capture only, no live suspend.
-    private func enqueueBackgroundCenterPeek(
-        center: Card,
-        centerIndex: Int,
+    private func visibleStaticCaptureIndices(
         cards: [Card],
-        provider: MapProviderId,
-        cameraFrame: MapCameraFrame?,
-        onMediaReady: @escaping (Int) -> Void
-    ) {
-        if centerTask != nil,
-           let inFlight = centerCaptureInFlight,
-           inFlight.cardID == center.id,
-           inFlight.provider == provider {
-            return
-        }
-
-        centerTask?.cancel()
-        centerCaptureInFlight = (center.id, provider)
-        centerTask = Task { [weak self] in
-            guard let self else { return }
-            defer {
-                if let inFlight = self.centerCaptureInFlight,
-                   inFlight.cardID == center.id, inFlight.provider == provider {
-                    self.centerCaptureInFlight = nil
-                }
-            }
-
-            await self.snapshotController.ensureStaticSnapshot(
-                for: center,
-                size: self.mapContentSize,
-                provider: provider,
-                priority: MapSnapshotCapturePolicy.bootstrapPeekPriority,
-                cameraFrame: cameraFrame,
-                onLoadingChanged: { loading in
-                    self.setMapLoadingIfVisible(loading, cardID: center.id)
-                }
-            )
-
-            guard !Task.isCancelled else { return }
-            guard !self.isSnapshotBootstrapping else { return }
-            guard cards.indices.contains(centerIndex) else { return }
-            self.markInitialCenterPeekReady(cards: cards, centerIndex: centerIndex, provider: provider)
-            onMediaReady(centerIndex)
-        }
-    }
-
-    private func makePlan(cards: [Card], centerIndex: Int, provider: MapProviderId) -> MapMediaRefreshPlan {
+        focusedIndex: Int,
+        provider: MapProviderId
+    ) -> [Int] {
         MapMediaRefreshPlanner.plan(
-            centerIndex: centerIndex,
+            centerIndex: focusedIndex,
             cardCount: cards.count,
             peekRadius: GeoKitMapCardStageConstants.peekRadius,
             layoutReady: layoutReady,
-            centerHasSnapshot: cards[centerIndex].hasUsableSnapshot(
-                for: provider,
-                cameraFrame: cameraStore.frame(for: cards[centerIndex].id)
-            ),
+            centerHasSnapshot: cardHasStaticSnapshot(cards[focusedIndex], provider: provider),
             fanHasSnapshot: { index in
                 guard cards.indices.contains(index) else { return true }
-                let card = cards[index]
-                return card.hasUsableSnapshot(for: provider, cameraFrame: self.cameraStore.frame(for: card.id))
+                return self.cardHasStaticSnapshot(cards[index], provider: provider)
             }
+        ).fanCaptureIndices
+    }
+
+    /// Sync static snapshots and live ownership for the focused card in any collection layout.
+    public func syncCollectionMedia(
+        cards: [Card],
+        focusedIndex: Int,
+        provider: MapProviderId,
+        skipSnapshotCapture: Bool = false,
+        onMediaReady: @escaping (Int) -> Void
+    ) {
+        guard cards.indices.contains(focusedIndex) else { return }
+        guard !isSnapshotBootstrapping else { return }
+        guard layoutReady else { return }
+
+        if skipSnapshotCapture {
+            assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
+            markStackReady(cards: cards, focusedIndex: focusedIndex, provider: provider, allowWithoutSnapshot: true)
+            onMediaReady(focusedIndex)
+            return
+        }
+
+        let focused = cards[focusedIndex]
+        let focusedHasSnapshot = cardHasStaticSnapshot(focused, provider: provider)
+
+        // Steady state — focused card already owns live; never suspend for layout churn.
+        if liveCardID == focused.id {
+            captureVisibleStaticSnapshots(
+                cards: cards,
+                focusedIndex: focusedIndex,
+                provider: provider,
+                onMediaReady: onMediaReady
+            )
+            if !focusedHasSnapshot {
+                captureFocusedStaticInBackground(
+                    focused: focused,
+                    focusedIndex: focusedIndex,
+                    cards: cards,
+                    provider: provider,
+                    onMediaReady: onMediaReady
+                )
+            }
+            return
+        }
+
+        // Focus handoff or first paint — focused already has a static image.
+        if focusedHasSnapshot {
+            revealFocusedAndGoLive(
+                cards: cards,
+                focusedIndex: focusedIndex,
+                provider: provider,
+                onMediaReady: onMediaReady
+            )
+            return
+        }
+
+        // Bootstrap focused card: static first, then live (focus change or cold start only).
+        bootstrapFocusedStaticThenLive(
+            focused: focused,
+            focusedIndex: focusedIndex,
+            cards: cards,
+            provider: provider,
+            onMediaReady: onMediaReady
         )
     }
 
-    /// Capture a fresh center peek at tap time, then call `onReady` so ``AXCardCollectionModel/expandActiveCard()``
-    /// can start the overlay spring with snapshot-only media.
+    /// Visible fan slots only — static snapshots; never touches live ownership.
+    public func captureVisibleStaticSnapshots(
+        cards: [Card],
+        focusedIndex: Int,
+        provider: MapProviderId,
+        onMediaReady: @escaping (Int) -> Void
+    ) {
+        guard cards.indices.contains(focusedIndex) else { return }
+        guard layoutReady else { return }
+        let indices = visibleStaticCaptureIndices(cards: cards, focusedIndex: focusedIndex, provider: provider)
+        captureStaticSnapshots(at: indices, cards: cards, provider: provider, onMediaReady: onMediaReady)
+    }
+
+    /// Capture a fresh focused static at tap time, then call `onReady` so expand can start snapshot-only.
     public func prepareCardExpansion(
         card: Card,
         provider: MapProviderId,
@@ -219,17 +265,16 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         }
 
         expansionPrepareTask?.cancel()
-        centerTask?.cancel()
-        centerCaptureInFlight = nil
+        focusedCaptureTask?.cancel()
+        focusedCaptureInFlight = nil
         isSnapshotBootstrapping = true
 
         expansionPrepareTask = Task { [weak self] in
             guard let self else { return }
             defer { self.isSnapshotBootstrapping = false }
 
-            // GPU snapshotter cannot run while center live Metal is mounted — suspend live first.
-            let centerID = card.id
-            let hadLiveOnCenter = self.liveCardID == centerID
+            let focusedID = card.id
+            let hadLiveOnFocused = self.liveCardID == focusedID
             self.liveCardID = nil
             await Task.yield()
 
@@ -237,7 +282,6 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
                 for: card,
                 size: captureSize,
                 provider: provider,
-                // GPU snapshot at full viewport — matches live camera; never upscaled during the spring.
                 priority: MapSnapshotCapturePolicy.expansionPeekPriority,
                 cameraFrame: cameraFrame,
                 onLoadingChanged: { self.setMapLoading($0, cardID: card.id) },
@@ -246,172 +290,150 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
             )
 
             guard !Task.isCancelled else {
-                if hadLiveOnCenter { self.liveCardID = centerID }
+                if hadLiveOnFocused { self.liveCardID = focusedID }
                 return
             }
-            await MainActor.run { onReady() }
-        }
-    }
-
-    /// Center peek snapshot, hand off to live, then fan peeks in the background.
-    public func refreshCenter(
-        cards: [Card],
-        centerIndex: Int,
-        provider: MapProviderId,
-        skipSnapshotCapture: Bool = false,
-        onMediaReady: @escaping (Int) -> Void
-    ) {
-        guard cards.indices.contains(centerIndex) else { return }
-        guard !isSnapshotBootstrapping else { return }
-
-        if skipSnapshotCapture {
-            syncCenterLive(cards: cards, centerIndex: centerIndex)
-            markInitialCenterPeekReady(
-                cards: cards,
-                centerIndex: centerIndex,
-                provider: provider,
-                allowWithoutSnapshot: true
-            )
-            onMediaReady(centerIndex)
-            return
-        }
-
-        let plan = makePlan(cards: cards, centerIndex: centerIndex, provider: provider)
-        guard !plan.isNoop else { return }
-
-        if !plan.capturesCenterBeforeLive {
-            syncCenterLive(cards: cards, centerIndex: centerIndex)
-            markInitialCenterPeekReady(cards: cards, centerIndex: centerIndex, provider: provider)
-            onMediaReady(centerIndex)
-            captureFan(indices: plan.fanCaptureIndices, cards: cards, provider: provider, onMediaReady: onMediaReady)
-            return
-        }
-
-        let center = cards[centerIndex]
-        let centerCamera = cameraStore.frame(for: center.id)
-
-        // Right-drag release: back card was warming live without a static peek — keep live mounted
-        // and capture the HTTP peek in the background instead of suspending to a white card plate.
-        if centerIsLiveRendered(center, provider: provider) {
-            syncCenterLive(cards: cards, centerIndex: centerIndex)
-            warmLiveCardID = nil
-            markInitialCenterPeekReady(
-                cards: cards,
-                centerIndex: centerIndex,
-                provider: provider,
-                allowWithoutSnapshot: true
-            )
-            onMediaReady(centerIndex)
-            captureFan(indices: plan.fanCaptureIndices, cards: cards, provider: provider, onMediaReady: onMediaReady)
-            enqueueBackgroundCenterPeek(
-                center: center,
-                centerIndex: centerIndex,
-                cards: cards,
-                provider: provider,
-                cameraFrame: centerCamera,
-                onMediaReady: onMediaReady
-            )
-            return
-        }
-
-        // Layout churn (card frame settling) calls refreshCenter every animation frame. Cancelling and
-        // restarting the Mapbox snapshotter each time means it never finishes loading the style — the card
-        // stays dark forever. Let an in-flight capture for the same card+provider run to completion instead.
-        if centerTask != nil,
-           let inFlight = centerCaptureInFlight,
-           inFlight.cardID == center.id,
-           inFlight.provider == provider {
-            return
-        }
-
-        centerTask?.cancel()
-        liveCardID = nil
-        centerCaptureInFlight = (center.id, provider)
-        centerTask = Task { [weak self] in
-            guard let self else { return }
-            defer {
-                if let inFlight = self.centerCaptureInFlight,
-                   inFlight.cardID == center.id, inFlight.provider == provider {
-                    self.centerCaptureInFlight = nil
-                }
+            await MainActor.run {
+                if hadLiveOnFocused { self.liveCardID = focusedID }
+                onReady()
             }
-
-            await self.snapshotController.ensureStaticSnapshot(
-                for: center,
-                size: self.mapContentSize,
-                provider: provider,
-                priority: MapSnapshotCapturePolicy.bootstrapPeekPriority,
-                cameraFrame: centerCamera,
-                onLoadingChanged: { loading in
-                    self.setMapLoadingIfVisible(loading, cardID: center.id)
-                }
-            )
-
-            guard !Task.isCancelled else { return }
-            guard !self.isSnapshotBootstrapping else { return }
-
-            self.finishInitialCenterBootstrap(
-                cards: cards,
-                centerIndex: centerIndex,
-                provider: provider,
-                onMediaReady: onMediaReady
-            )
         }
     }
 
-    /// Reveal the stack and hand off to live even when the HTTP peek failed — never leave a blank screen.
-    private func finishInitialCenterBootstrap(
+    // MARK: - Private orchestration
+
+    private func revealFocusedAndGoLive(
         cards: [Card],
-        centerIndex: Int,
+        focusedIndex: Int,
         provider: MapProviderId,
         onMediaReady: @escaping (Int) -> Void
     ) {
-        guard cards.indices.contains(centerIndex) else { return }
-        let center = cards[centerIndex]
-        let centerCamera = cameraStore.frame(for: center.id)
-        let hasPeek = center.frozenSnapshot(for: provider) != nil
-            || center.hasUsableSnapshot(for: provider, cameraFrame: centerCamera)
-
-        markInitialCenterPeekReady(
+        markStackReady(cards: cards, focusedIndex: focusedIndex, provider: provider)
+        assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
+        warmLiveCardID = nil
+        onMediaReady(focusedIndex)
+        captureVisibleStaticSnapshots(
             cards: cards,
-            centerIndex: centerIndex,
-            provider: provider,
-            allowWithoutSnapshot: !hasPeek
-        )
-        syncCenterLive(cards: cards, centerIndex: centerIndex)
-        onMediaReady(centerIndex)
-        refreshFanPeeks(
-            cards: cards,
-            centerIndex: centerIndex,
+            focusedIndex: focusedIndex,
             provider: provider,
             onMediaReady: onMediaReady
         )
     }
 
-    /// Visible fan slots only — runs after center snapshot + live; Mapbox waits for safe snapshot windows.
-    public func refreshFanPeeks(
+    private func bootstrapFocusedStaticThenLive(
+        focused: Card,
+        focusedIndex: Int,
         cards: [Card],
-        centerIndex: Int,
         provider: MapProviderId,
         onMediaReady: @escaping (Int) -> Void
     ) {
-        guard cards.indices.contains(centerIndex) else { return }
-        let plan = makePlan(cards: cards, centerIndex: centerIndex, provider: provider)
-        guard !plan.isNoop else { return }
-        captureFan(indices: plan.fanCaptureIndices, cards: cards, provider: provider, onMediaReady: onMediaReady)
+        if focusedCaptureTask != nil,
+           let inFlight = focusedCaptureInFlight,
+           inFlight.cardID == focused.id,
+           inFlight.provider == provider {
+            return
+        }
+
+        focusedCaptureTask?.cancel()
+        liveCardID = nil
+        focusedCaptureInFlight = (focused.id, provider)
+        let camera = cameraStore.frame(for: focused.id)
+
+        focusedCaptureTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if let inFlight = self.focusedCaptureInFlight,
+                   inFlight.cardID == focused.id, inFlight.provider == provider {
+                    self.focusedCaptureInFlight = nil
+                }
+            }
+
+            await self.snapshotController.ensureStaticSnapshot(
+                for: focused,
+                size: self.mapContentSize,
+                provider: provider,
+                priority: MapSnapshotCapturePolicy.bootstrapPeekPriority,
+                cameraFrame: camera,
+                onLoadingChanged: { loading in
+                    self.setMapLoadingIfStackVisible(loading, cardID: focused.id)
+                }
+            )
+
+            guard !Task.isCancelled else { return }
+            guard !self.isSnapshotBootstrapping else { return }
+            guard cards.indices.contains(focusedIndex) else { return }
+
+            self.revealFocusedAndGoLive(
+                cards: cards,
+                focusedIndex: focusedIndex,
+                provider: provider,
+                onMediaReady: onMediaReady
+            )
+        }
     }
 
-    private func captureFan(
-        indices: [Int],
+    private func captureFocusedStaticInBackground(
+        focused: Card,
+        focusedIndex: Int,
+        cards: [Card],
+        provider: MapProviderId,
+        onMediaReady: @escaping (Int) -> Void
+    ) {
+        if focusedCaptureTask != nil,
+           let inFlight = focusedCaptureInFlight,
+           inFlight.cardID == focused.id,
+           inFlight.provider == provider {
+            return
+        }
+
+        focusedCaptureTask?.cancel()
+        focusedCaptureInFlight = (focused.id, provider)
+        let camera = cameraStore.frame(for: focused.id)
+
+        focusedCaptureTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if let inFlight = self.focusedCaptureInFlight,
+                   inFlight.cardID == focused.id, inFlight.provider == provider {
+                    self.focusedCaptureInFlight = nil
+                }
+            }
+
+            await self.snapshotController.ensureStaticSnapshot(
+                for: focused,
+                size: self.mapContentSize,
+                provider: provider,
+                priority: MapSnapshotCapturePolicy.bootstrapPeekPriority,
+                cameraFrame: camera,
+                onLoadingChanged: { loading in
+                    self.setMapLoadingIfStackVisible(loading, cardID: focused.id)
+                }
+            )
+
+            guard !Task.isCancelled else { return }
+            guard !self.isSnapshotBootstrapping else { return }
+            guard cards.indices.contains(focusedIndex) else { return }
+            self.markStackReady(cards: cards, focusedIndex: focusedIndex, provider: provider)
+            onMediaReady(focusedIndex)
+        }
+    }
+
+    private func captureStaticSnapshots(
+        at indices: [Int],
         cards: [Card],
         provider: MapProviderId,
         onMediaReady: @escaping (Int) -> Void
     ) {
         guard !indices.isEmpty else { return }
+        if visibleStaticCaptureTask != nil, visibleStaticCaptureInFlight == indices {
+            return
+        }
 
-        fanTask?.cancel()
-        fanTask = Task { [weak self] in
+        visibleStaticCaptureTask?.cancel()
+        visibleStaticCaptureInFlight = indices
+        visibleStaticCaptureTask = Task { [weak self] in
             guard let self else { return }
+            defer { self.visibleStaticCaptureInFlight = nil }
             for index in indices {
                 guard !Task.isCancelled else { return }
                 guard cards.indices.contains(index) else { continue }
@@ -425,44 +447,40 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
                     cameraFrame: camera,
                     onLoadingChanged: { self.setMapLoading($0, cardID: card.id) }
                 )
-                if card.hasUsableSnapshot(for: provider, cameraFrame: camera) {
+                if self.cardHasStaticSnapshot(card, provider: provider) {
                     onMediaReady(index)
                 }
             }
         }
     }
 
-    private func markInitialCenterPeekReady(
+    private func markStackReady(
         cards: [Card],
-        centerIndex: Int,
+        focusedIndex: Int,
         provider: MapProviderId,
         allowWithoutSnapshot: Bool = false
     ) {
-        guard cards.indices.contains(centerIndex) else {
-            isInitialCenterPeekReady = false
+        guard cards.indices.contains(focusedIndex) else {
+            isInitialFocusedStaticReady = false
             return
         }
-        let center = cards[centerIndex]
-        let camera = cameraStore.frame(for: center.id)
-        let hasPeek = center.frozenSnapshot(for: provider) != nil
-            || center.hasUsableSnapshot(for: provider, cameraFrame: camera)
-        guard hasPeek || allowWithoutSnapshot else { return }
-        isInitialCenterPeekReady = true
+        let focused = cards[focusedIndex]
+        let hasStatic = cardHasStaticSnapshot(focused, provider: provider)
+            || focused.frozenSnapshot(for: provider) != nil
+        guard hasStatic || allowWithoutSnapshot else { return }
+        isInitialFocusedStaticReady = true
         hasRevealedCardStack = true
     }
 }
 
 #if os(iOS)
 public extension GeoKitCenterCardMediaStore {
-    /// iOS host init — defaults to the shared Mapbox/MapKit capture controller.
     convenience init(cameraStore: MapCameraStore) {
         self.init(cameraStore: cameraStore, snapshotController: GeoKitCardMapMediaController.shared)
     }
 
-    /// Concrete capture controller for SwiftUI card slots that drive live/static mounts.
     var mapMediaController: GeoKitCardMapMediaController { GeoKitCardMapMediaController.shared }
 
-    /// Returns a closure for ``AXCardCollectionModel/prepareCardExpansion`` — capture center peek, then expand.
     func makePrepareCardExpansionHandler(
         provider: @escaping () -> MapProviderId,
         mapSize: @escaping () -> CGSize,

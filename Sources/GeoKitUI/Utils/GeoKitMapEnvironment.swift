@@ -51,6 +51,15 @@ public struct GeoKitMapSnapshotCoversLiveKey: PreferenceKey {
     }
 }
 
+/// When true, the card slot peek snapshot is still opaque (including mid crossfade) — hosts defer live chrome until false.
+public struct GeoKitMapSnapshotVisibleKey: PreferenceKey {
+    public static var defaultValue = false
+
+    public static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
 /// Latest provider-neutral camera frame from a live map surface — hosts may persist across provider switches.
 public struct GeoKitMapCameraFrameKey: PreferenceKey {
     public static var defaultValue: MapCameraFrame? = nil
@@ -68,6 +77,10 @@ private struct GeoKitMapSurfaceReadyKey: EnvironmentKey {
 
 private struct GeoKitMapIsTransitioningKey: EnvironmentKey {
     static let defaultValue = false
+}
+
+private struct GeoKitAnimationSpeedKey: EnvironmentKey {
+    static let defaultValue: Double = 1.0
 }
 
 private struct GeoKitCardTransitionBaseSizeKey: EnvironmentKey {
@@ -99,6 +112,12 @@ public extension EnvironmentValues {
     var geokitMapIsTransitioning: Bool {
         get { self[GeoKitMapIsTransitioningKey.self] }
         set { self[GeoKitMapIsTransitioningKey.self] = newValue }
+    }
+
+    /// Scales live-map snapshot cross-fade (pair with host ``AX.Animation.speed`` when using Accord).
+    var geokitAnimationSpeed: Double {
+        get { self[GeoKitAnimationSpeedKey.self] }
+        set { self[GeoKitAnimationSpeedKey.self] = newValue }
     }
 
     /// Collapsed card size when expand/collapse spring begins — drives snapshot vertical reveal.

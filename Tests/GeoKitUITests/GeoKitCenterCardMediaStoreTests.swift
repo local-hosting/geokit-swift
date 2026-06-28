@@ -38,7 +38,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         let backCard = rotated.removeLast()
         rotated.insert(backCard, at: 0)
         store.beginDragWarmLive(cardID: backCard.id)
-        store.commitDragWarmHandoff(cards: rotated, centerIndex: 0)
+        store.commitDragWarmHandoff(cards: rotated, focusedIndex: 0)
         XCTAssertNil(store.warmLiveCardID)
         XCTAssertEqual(store.liveCardID, backCard.id)
     }
@@ -56,22 +56,34 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         rotated.insert(backCard, at: 0)
         backCard.setMapRendered(true, for: provider)
         store.beginDragWarmLive(cardID: backCard.id)
-        store.commitDragWarmHandoff(cards: rotated, centerIndex: 0)
+        store.commitDragWarmHandoff(cards: rotated, focusedIndex: 0)
 
-        store.refreshCenter(cards: rotated, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: rotated, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
 
         XCTAssertEqual(store.liveCardID, backCard.id, "live stays mounted while the HTTP peek runs")
         await settle()
         XCTAssertEqual(controller.captureCount(for: backCard.id), 1, "missing peek is captured in the background")
     }
 
+    func test_assignedCenterLiveWithoutRenderKeepsLiveDuringRefresh() async {
+        let (store, controller, cards) = makeStore(cardCount: 3)
+        store.syncFocusedLive(cards: cards, focusedIndex: 0)
+        XCTAssertEqual(store.liveCardID, cards[0].id)
+
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
+
+        XCTAssertEqual(store.liveCardID, cards[0].id, "layout refresh must not suspend live while tiles warm up")
+        await settle()
+        XCTAssertEqual(controller.captureCount(for: cards[0].id), 1, "peek capture runs in the background")
+    }
+
     func test_capturesCenterBeforeLive() async {
         let (store, controller, cards) = makeStore(cardCount: 6)
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
 
-        XCTAssertTrue(store.isInitialCenterPeekReady)
+        XCTAssertTrue(store.isInitialFocusedStaticReady)
         XCTAssertTrue(store.hasRevealedCardStack)
         XCTAssertEqual(controller.captureOrder.first, cards[0].id, "center must be captured first")
         XCTAssertEqual(store.liveCardID, cards[0].id, "center goes live after its snapshot exists")
@@ -86,9 +98,9 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
             cameraFrame: MapCameraFrame(centerLatitude: 1, centerLongitude: 2, zoom: 12)
         )
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
 
-        XCTAssertTrue(store.isInitialCenterPeekReady)
+        XCTAssertTrue(store.isInitialFocusedStaticReady)
         XCTAssertTrue(store.hasRevealedCardStack)
         await settle()
         XCTAssertEqual(controller.captureCount(for: cards[0].id), 0)
@@ -97,7 +109,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
     func test_fanCaptureOrderIsSequentialFromCenterOutward() async {
         let (store, controller, cards) = makeStore(cardCount: 6)
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
 
         XCTAssertEqual(
@@ -110,7 +122,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
     func test_fanCapturedAfterCenter() async {
         let (store, controller, cards) = makeStore(cardCount: 6)
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
 
         XCTAssertEqual(controller.captureOrder.first, cards[0].id, "center precedes fan")
@@ -125,9 +137,9 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
     func test_capturesEachCardOnce() async {
         let (store, controller, cards) = makeStore(cardCount: 6)
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
 
         for card in cards {
@@ -143,7 +155,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
             cameraFrame: MapCameraFrame(centerLatitude: 1, centerLongitude: 2, zoom: 12)
         )
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
 
         XCTAssertEqual(store.liveCardID, cards[0].id, "cached center goes live without awaiting capture")
         XCTAssertFalse(controller.captureOrder.contains(cards[0].id), "cached center is never recaptured")
@@ -160,7 +172,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         )
         let cards = (0..<6).map { FakeSnapshotCard(id: "card-\($0)") }
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
 
         XCTAssertTrue(controller.captureOrder.isEmpty, "no captures before a valid layout size")
@@ -170,7 +182,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
     func test_prepareCardExpansionSuspendsLiveBeforeCapture() async {
         let (store, controller, cards) = makeStore(cardCount: 1)
         let card = cards[0]
-        store.syncCenterLive(cards: cards, centerIndex: 0)
+        store.syncFocusedLive(cards: cards, focusedIndex: 0)
         XCTAssertEqual(store.liveCardID, card.id)
 
         store.prepareCardExpansion(
@@ -211,7 +223,7 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         XCTAssertTrue(card.hasUsableSnapshot(for: provider, cameraFrame: nil))
     }
 
-    func test_refreshCenterSkipsWhileExpansionPrepareInFlight() async {
+    func test_syncCollectionMediaSkipsWhileExpansionPrepareInFlight() async {
         let (store, controller, cards) = makeStore(cardCount: 1)
         var readyCalled = false
 
@@ -224,12 +236,40 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
             readyCalled = true
         }
 
-        store.refreshCenter(cards: cards, centerIndex: 0, provider: provider, onMediaReady: { _ in })
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
 
         await settle()
 
         XCTAssertTrue(readyCalled)
-        XCTAssertEqual(controller.captureCount(for: cards[0].id), 1, "refreshCenter must not restart center capture during expand prep")
+        XCTAssertEqual(controller.captureCount(for: cards[0].id), 1, "syncCollectionMedia must not restart center capture during expand prep")
+    }
+
+    func test_prepareForProviderSwitchKeepsStackVisibleAndSnapshotCache() async {
+        let (store, _, cards) = makeStore(cardCount: 3)
+        let mapboxCamera = MapCameraFrame(centerLatitude: 1, centerLongitude: 2, zoom: 12)
+        let appleCamera = MapCameraFrame(centerLatitude: 3, centerLongitude: 4, zoom: 11)
+
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: .mapbox, onMediaReady: { _ in })
+        await settle()
+
+        cards[0].setFrozenSnapshot(
+            makeTestSnapshotImage(),
+            for: .apple,
+            cameraFrame: appleCamera
+        )
+
+        store.prepareForProviderSwitch(in: cards)
+
+        XCTAssertTrue(store.hasRevealedCardStack, "provider switch must not hide the card stack")
+        XCTAssertTrue(store.isInitialFocusedStaticReady)
+        XCTAssertTrue(
+            cards[0].hasUsableSnapshot(for: .apple, cameraFrame: appleCamera),
+            "other providers' cached peeks must survive a provider switch"
+        )
+        XCTAssertTrue(
+            cards[0].hasUsableSnapshot(for: .mapbox, cameraFrame: mapboxCamera),
+            "current provider peeks must survive until refresh replaces them"
+        )
     }
 
     func test_prepareCardExpansionForceRecapturesWhenSnapshotAlreadyExists() async {

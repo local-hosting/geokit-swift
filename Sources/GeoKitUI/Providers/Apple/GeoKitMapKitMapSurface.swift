@@ -18,6 +18,7 @@ struct GeoKitMapKitMapSurface: View {
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
 
     @State private var mapReady = false
+    @State private var liveDidRender = false
     @State private var reportedCameraFrame: MapCameraFrame?
     @State private var pinsLayoutSettling = false
     @State private var lastSettledLayoutSize: CGSize = .zero
@@ -33,7 +34,7 @@ struct GeoKitMapKitMapSurface: View {
         MapPinTransitionCoverPolicy.snapshotCoversLive(
             mapIsTransitioning: isTransitioning,
             pinsLayoutSettling: pinsLayoutSettling,
-            livePainted: mapVisible && mapReady
+            livePainted: mapVisible && liveDidRender
         )
     }
 
@@ -106,12 +107,21 @@ struct GeoKitMapKitMapSurface: View {
         }
         .onDisappear {
             mapReady = false
+            liveDidRender = false
             pinsLayoutSettling = false
             lastSettledLayoutSize = .zero
         }
+        .onChange(of: showMap) { _, isShowing in
+            if !isShowing {
+                liveDidRender = false
+            }
+        }
         .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
-        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !hideLiveMapPins)
-        .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozenUnderlay)
+        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !hideLiveMapPins)
+        .preference(
+            key: GeoKitMapRenderedKey.self,
+            value: (showMap && liveDidRender) || showFrozenUnderlay
+        )
         .preference(key: GeoKitMapSnapshotCoversLiveKey.self, value: showMap && snapshotCoversLive(mapVisible: showMap))
         .onChange(of: isTransitioning) { wasTransitioning, transitioning in
             if transitioning, !wasTransitioning {
@@ -145,6 +155,9 @@ struct GeoKitMapKitMapSurface: View {
                 markLayoutSettled(size)
             } else if MapSurfaceMountPolicy.isValidLayoutSize(size) {
                 lastSettledLayoutSize = size
+            }
+            if !liveDidRender {
+                liveDidRender = true
             }
             let nextFrame = GeoKitMapKitCamera.frame(from: context.camera)
             if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {

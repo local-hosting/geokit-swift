@@ -8,6 +8,7 @@ import SwiftUI
 struct GeoKitTestAppApp: App {
     init() {
         AX.bootstrap()
+        AX.Animation.speed = GeoKitDemoConstants.animationSpeed
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-CaptureExpandFrames") {
             AX.Animation.speed = 0.1

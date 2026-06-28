@@ -127,7 +127,7 @@ Live map content mounts **inside** the active card slot (stack center or expande
 
 ### Host wiring
 
-1. ``GeoKitCenterCardMediaStore.refreshCenter`` — center peek snapshot, then ``liveCardID``.
+1. ``GeoKitCenterCardMediaStore.syncCollectionMedia`` — focused static snapshot, then ``liveCardID``.
 2. Card content: ``GeoKitMapCardSlot`` with ``MapCardMediaPresentationContext`` (static peek for fan/back; live only on top slot).
 3. Expanded overlay uses the same slot via ``CardExpanded`` — live stays in the overlay tree for the collapse spring.
 

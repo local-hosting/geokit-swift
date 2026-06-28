@@ -85,5 +85,9 @@ public final class GeoKitCardMapMediaPlugin<Card: GeoKitLiveMapCard & AXCardItem
     public func collectionWillDisappear() {
         unbind()
     }
+    public func demotedCardChoreographyEnded(session: AXCardMediaLoadSession) {
+        coordinator?.handleDemotedCardChoreographyEnded(session: session)
+    }
+
 }
 #endif

@@ -59,6 +59,17 @@ final class GeoKitCardMediaStateTests: XCTestCase {
         XCTAssertEqual(role, .hidden)
     }
 
+    func testHiddenWhenCollectionExpandedDuringCollapse() {
+        let role = GeoKitCardSlotRoleResolver.role(
+            isCentered: true,
+            stackOffset: 0,
+            collectionExpanded: true,
+            isCollapsing: true,
+            isExpandedOverlay: false
+        )
+        XCTAssertEqual(role, .hidden)
+    }
+
     func testLiveModeWhenCenterLiveEnabled() {
         let mode = GeoKitCardMediaModeResolver.resolve(
             role: .center,

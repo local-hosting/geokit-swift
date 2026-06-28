@@ -142,6 +142,18 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
         XCTAssertTrue(MapCardMediaPresentationPolicy.allowsLiveMount(overlay))
     }
 
+    func testStackCenterDoesNotAllowLiveMountDuringCollapse() {
+        let ctx = context(
+            isStackCenter: true,
+            collectionExpanded: true,
+            isExpandedOverlaySlot: false,
+            cardIsCollapsing: true,
+            isLiveEnabled: true
+        )
+
+        XCTAssertFalse(MapCardMediaPresentationPolicy.allowsLiveMount(ctx))
+    }
+
     func testExpandedOverlayDefersLiveDuringSpringWhenSnapshotReady() {
         let overlay = context(
             collectionExpanded: true,

@@ -10,21 +10,17 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
     public let mapProviderId: MapProviderId
     public let presentationContext: MapCardMediaPresentationContext
     public let peekSnapshot: UIImage?
-    public let mapSize: CGSize
-    public let mapMediaGeneration: UInt
-    public let peekSnapshotLoadAllowed: Bool
-    public let cameraFrame: MapCameraFrame?
-    public let mapMediaController: GeoKitCardMapMediaController
-    public let onLoadingChanged: (Bool) -> Void
     public let onLiveMountEndedWithoutSnapshot: () -> Void
-    public var liveCrossFadeDuration: TimeInterval = 0.3
+    public var liveCrossFadeDuration: TimeInterval = GeoKitMapCrossFadeConstants.baseDuration
     public var loadingAccessibilityIdentifier: String?
     public var fanLoadingAccessibilityIdentifier: String?
     /// When true (default for Accord stacks), a single external host paints the live map —
     /// this slot renders a transparent hole so the host shows through; fan slots still show static peeks.
     public var externalLiveMapHost: Bool = true
 
+    @Environment(\.geokitAnimationSpeed) private var animationSpeed
     @State private var liveSnapshotCoversLive = false
+    @State private var snapshotVisibleForHost = false
 
     public init(
         card: Card,
@@ -32,14 +28,8 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
         mapProviderId: MapProviderId,
         presentationContext: MapCardMediaPresentationContext,
         peekSnapshot: UIImage?,
-        mapSize: CGSize,
-        mapMediaGeneration: UInt,
-        peekSnapshotLoadAllowed: Bool,
-        cameraFrame: MapCameraFrame?,
-        mapMediaController: GeoKitCardMapMediaController = .shared,
-        onLoadingChanged: @escaping (Bool) -> Void,
         onLiveMountEndedWithoutSnapshot: @escaping () -> Void,
-        liveCrossFadeDuration: TimeInterval = 0.3,
+        liveCrossFadeDuration: TimeInterval = GeoKitMapCrossFadeConstants.baseDuration,
         loadingAccessibilityIdentifier: String? = nil,
         fanLoadingAccessibilityIdentifier: String? = nil,
         externalLiveMapHost: Bool = true
@@ -49,12 +39,6 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
         self.mapProviderId = mapProviderId
         self.presentationContext = presentationContext
         self.peekSnapshot = peekSnapshot
-        self.mapSize = mapSize
-        self.mapMediaGeneration = mapMediaGeneration
-        self.peekSnapshotLoadAllowed = peekSnapshotLoadAllowed
-        self.cameraFrame = cameraFrame
-        self.mapMediaController = mapMediaController
-        self.onLoadingChanged = onLoadingChanged
         self.onLiveMountEndedWithoutSnapshot = onLiveMountEndedWithoutSnapshot
         self.liveCrossFadeDuration = liveCrossFadeDuration
         self.loadingAccessibilityIdentifier = loadingAccessibilityIdentifier
@@ -95,7 +79,17 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
 
     private var keepsSnapshotVisible: Bool {
         guard peekSnapshot != nil else { return false }
+        if rendersExternalHostHole {
+            return !showsPaintedLiveMap
+        }
         return liveSnapshotCoversLive || !showsPaintedLiveMap
+    }
+
+    private var snapshotCrossfadeDuration: TimeInterval {
+        GeoKitMapCrossFadeConstants.scaledDuration(
+            animationSpeed: animationSpeed,
+            base: liveCrossFadeDuration
+        )
     }
 
     @ViewBuilder
@@ -103,15 +97,56 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
         GeoKitSnapshotImageFill(image: image, alignment: .center)
     }
 
+    @ViewBuilder
+    private func snapshotCrossfadeLayer(_ image: UIImage) -> some View {
+        snapshotImage(image)
+            .opacity(keepsSnapshotVisible ? 1 : 0)
+            .animation(.easeInOut(duration: snapshotCrossfadeDuration), value: keepsSnapshotVisible)
+            .allowsHitTesting(false)
+            .onChange(of: keepsSnapshotVisible) { wasVisible, isVisible in
+                syncSnapshotVisibleForHost(wasVisible: wasVisible, isVisible: isVisible)
+            }
+            .onAppear {
+                snapshotVisibleForHost = keepsSnapshotVisible
+            }
+    }
+
+    private func syncSnapshotVisibleForHost(wasVisible: Bool, isVisible: Bool) {
+        if isVisible {
+            snapshotVisibleForHost = true
+            return
+        }
+        guard wasVisible else {
+            snapshotVisibleForHost = false
+            return
+        }
+        snapshotVisibleForHost = true
+        let duration = snapshotCrossfadeDuration
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            if !keepsSnapshotVisible {
+                snapshotVisibleForHost = false
+            }
+        }
+    }
+
     public var body: some View {
         if rendersExternalHostHole {
-            // External host owns the live map for this slot — keep the media area transparent so it shows through.
-            Color.clear
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .preference(
-                    key: GeoKitLiveRenderingKey.self,
-                    value: presentationContext.isMapRendered
-                )
+            ZStack {
+                // External host owns the live map for this slot — keep the media area transparent so it shows through.
+                Color.clear
+                if let image = peekSnapshot {
+                    snapshotCrossfadeLayer(image)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .preference(
+                key: GeoKitLiveRenderingKey.self,
+                value: showsPaintedLiveMap
+            )
+            .preference(
+                key: GeoKitMapSnapshotVisibleKey.self,
+                value: snapshotVisibleForHost
+            )
         } else {
             inCardBody
         }
@@ -122,10 +157,7 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
             GeoKitMapTheme.placeholderBackground
 
             if let image = peekSnapshot {
-                snapshotImage(image)
-                    .opacity(keepsSnapshotVisible ? 1 : 0)
-                    .animation(.easeInOut(duration: liveCrossFadeDuration), value: keepsSnapshotVisible)
-                    .allowsHitTesting(false)
+                snapshotCrossfadeLayer(image)
             }
 
             if showsLiveMap {
@@ -148,6 +180,10 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
                     key: GeoKitLiveRenderingKey.self,
                     value: showsPaintedLiveMap && !liveSnapshotCoversLive
                 )
+                .preference(
+                    key: GeoKitMapSnapshotVisibleKey.self,
+                    value: snapshotVisibleForHost
+                )
 
             if showsBlankPlaceholder {
                 GeoKitMapTheme.placeholderBackground
@@ -159,17 +195,6 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
-        .geokitSelfManagedMapMedia(
-            card: card,
-            isCentered: presentationContext.isStackCenter,
-            provider: mapProviderId,
-            mapSize: mapSize,
-            generation: mapMediaGeneration,
-            loadAllowed: peekSnapshotLoadAllowed,
-            cameraFrame: cameraFrame,
-            controller: mapMediaController,
-            onLoadingChanged: onLoadingChanged
-        )
         .onChange(of: showsLiveMap) { wasLive, isLive in
             if wasLive, !isLive, peekSnapshot == nil {
                 onLiveMountEndedWithoutSnapshot()
@@ -178,6 +203,7 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
         .onChange(of: showsLiveMap) { _, isLive in
             if !isLive {
                 liveSnapshotCoversLive = false
+                snapshotVisibleForHost = false
             }
         }
     }
@@ -200,6 +226,4 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
     }
 }
 
-@available(*, deprecated, renamed: "GeoKitMapCardSlot")
-public typealias GeoKitExternalHostMapCardSlot = GeoKitMapCardSlot
 #endif

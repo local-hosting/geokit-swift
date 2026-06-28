@@ -22,6 +22,7 @@ struct GeoKitMapSurface: View {
 
     @Environment(\.geokitMapSurfaceReady) private var mapSurfaceReady
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
+    @Environment(\.geokitAnimationSpeed) private var animationSpeed
 
     @State private var mapReady = false
     @State private var reportedCameraFrame: MapCameraFrame?
@@ -29,7 +30,6 @@ struct GeoKitMapSurface: View {
     @State private var pinZoomHold: CGFloat?
     @State private var pinsLayoutSettling = false
     @State private var lastSettledLayoutSize: CGSize = .zero
-    private static let crossFadeDuration: TimeInterval = 0.28
 
     private var hideLiveMapPins: Bool {
         MapPinTransitionCoverPolicy.hideLiveMapPins(
@@ -144,7 +144,7 @@ struct GeoKitMapSurface: View {
                             lastSettledLayoutSize = size
                         }
                         if !liveDidRender {
-                            withAnimation(.easeInOut(duration: Self.crossFadeDuration)) {
+                            withAnimation(.easeInOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed))) {
                                 liveDidRender = true
                             }
                         }
@@ -208,7 +208,10 @@ struct GeoKitMapSurface: View {
             }
             .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
             .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !hideLiveMapPins)
-            .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozenUnderlay)
+            .preference(
+                key: GeoKitMapRenderedKey.self,
+                value: (showMap && liveDidRender) || showFrozenUnderlay
+            )
             .preference(key: GeoKitMapSnapshotCoversLiveKey.self, value: showMap && snapshotCoversLive)
             .onChange(of: isTransitioning) { wasTransitioning, transitioning in
                 if transitioning, !wasTransitioning {
@@ -217,7 +220,7 @@ struct GeoKitMapSurface: View {
                 }
                 if wasTransitioning, !transitioning {
                     let heldZoom = pinZoomHold
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.crossFadeDuration) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)) {
                         if pinZoomHold == heldZoom {
                             pinZoomHold = nil
                         }

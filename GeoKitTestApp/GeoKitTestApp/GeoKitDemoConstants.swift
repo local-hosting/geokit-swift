@@ -2,15 +2,14 @@ import Foundation
 
 /// Keep snapshot style in sync with `@corio-platforms/geokit/config/map-style` (`CORIO_MAPBOX_STYLE_URI`).
 enum GeoKitDemoConstants {
+    /// Global Accord animation speed (`AX.Animation.speed`). `2/3` ≈ 1.5× slower motion.
+    static let animationSpeed: Double = 2.0 / 3.0
+
     /// Peek tiles and expand/collapse snapshots — light Corio style.
     static let snapshotMapStyleURI = "mapbox://styles/corio/cm1gmmsh900xd01nw38jtafz7"
 
-    #if DEBUG
-    /// Live GPU map in debug builds — dark Mapbox style so live vs snapshot is obvious.
-    static let liveMapStyleURI = "mapbox://styles/mapbox/dark-v11"
-    #else
+    /// Live GPU map — same Corio style as snapshots so crossfade is seamless.
     static let liveMapStyleURI = snapshotMapStyleURI
-    #endif
 
     /// Registry bootstrap default (snapshots + Mapbox init).
     static let mapStyleURI = snapshotMapStyleURI
