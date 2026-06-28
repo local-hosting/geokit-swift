@@ -3,14 +3,14 @@ import GeoKitContract
 import XCTest
 
 final class MapPinTransitionCoverPolicyTests: XCTestCase {
-    func testHideLiveMapPinsDuringTransitionOrSettling() {
-        XCTAssertTrue(
+    func testLivePinsStayMountedDuringTransitionAndSettling() {
+        XCTAssertFalse(
             MapPinTransitionCoverPolicy.hideLiveMapPins(
                 mapIsTransitioning: true,
                 pinsLayoutSettling: false
             )
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             MapPinTransitionCoverPolicy.hideLiveMapPins(
                 mapIsTransitioning: false,
                 pinsLayoutSettling: true
@@ -24,8 +24,15 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
         )
     }
 
-    func testSnapshotCoversLiveWhileTransitioningOrSettling() {
+    func testSnapshotCoversLiveOnlyBeforeFirstPaint() {
         XCTAssertTrue(
+            MapPinTransitionCoverPolicy.snapshotCoversLive(
+                mapIsTransitioning: true,
+                pinsLayoutSettling: false,
+                livePainted: false
+            )
+        )
+        XCTAssertFalse(
             MapPinTransitionCoverPolicy.snapshotCoversLive(
                 mapIsTransitioning: true,
                 pinsLayoutSettling: false,
@@ -44,13 +51,6 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 mapIsTransitioning: false,
                 pinsLayoutSettling: false,
                 livePainted: false
-            )
-        )
-        XCTAssertFalse(
-            MapPinTransitionCoverPolicy.snapshotCoversLive(
-                mapIsTransitioning: false,
-                pinsLayoutSettling: false,
-                livePainted: true
             )
         )
     }

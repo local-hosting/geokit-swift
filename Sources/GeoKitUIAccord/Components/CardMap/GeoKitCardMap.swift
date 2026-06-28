@@ -94,10 +94,31 @@ private struct GeoKitCardMapBody<Card: GeoKitLiveMapCard & AXCardItem>: View {
         if coordinator.mediaStore.warmLiveCardID == card.id {
             return nil
         }
-        if CardMediaSlotPresentation.paintsStaticSnapshot(role: role, environment: slotEnvironment) {
+        if suppressesStaticSnapshotForLiveMount {
+            return nil
+        }
+        if CardMediaSlotPresentation.paintsStaticSnapshot(
+            role: role,
+            environment: slotEnvironment,
+            liveEnabled: coordinator.mediaStore.isLiveEnabled(for: card.id)
+        ) {
             return peekSnapshot
         }
         return nil
+    }
+
+    /// Live-first — static capture runs silently; overlay only until live tiles paint (never flash on settle).
+    private var suppressesStaticSnapshotForLiveMount: Bool {
+        guard coordinator.mediaStore.isLiveEnabled(for: card.id) else { return false }
+        if role == .center, !slotEnvironment.isExpandedOverlay {
+            guard !slotEnvironment.isTransitioning, !slotEnvironment.isCollapsing else { return false }
+            return true
+        }
+        if role == .expandedOverlay, slotEnvironment.isExpandedOverlay {
+            if card.isMapRendered(for: coordinator.provider) { return true }
+            return !slotEnvironment.isTransitioning && !slotEnvironment.isCollapsing
+        }
+        return false
     }
 
     private var presentationContext: MapCardMediaPresentationContext {

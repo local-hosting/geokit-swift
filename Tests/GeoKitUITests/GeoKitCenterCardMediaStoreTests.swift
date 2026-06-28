@@ -88,8 +88,10 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         await settle()
 
         XCTAssertTrue(store.hasRevealedCardStack)
-        XCTAssertEqual(controller.captureOrder.first, cards[0].id, "center must be captured first")
-        XCTAssertEqual(store.liveCardID, cards[0].id, "center goes live after its snapshot exists")
+        XCTAssertEqual(store.liveCardID, cards[0].id, "center owns live while peek capture runs")
+        await settle()
+        XCTAssertEqual(controller.captureOrder.first, cards[0].id, "center peek still captures first")
+        XCTAssertEqual(controller.captureCount(for: cards[0].id), 1)
         XCTAssertEqual(controller.priorityByCard[cards[0].id], .background, "center bootstrap uses cheap static peek")
     }
 

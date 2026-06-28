@@ -84,7 +84,7 @@ struct GeoKitDemoRootView: View {
             }
     }
 
-    /// Stack fan + hoisted ``CardExpanded``; live host sits behind the overlay once frame prefs are reported.
+    /// Stack fan + hoisted ``CardExpanded``; expanded map lives in-card so it tracks the spring frame.
     private var cardStackWithHoistedOverlay: some View {
         AX.Stack(
             collection: collection,
@@ -104,17 +104,11 @@ struct GeoKitDemoRootView: View {
             AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
                 .accessibilityIdentifier("geokit-test-app.card-badge-\(card.id)")
         }
-        .environment(\.axCardExternalLiveMediaHost, true)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay {
             expandedOverlays
                 .zIndex(AX.Constants.ZIndex.overlay)
         }
-        // After overlay so expanded slot surface-frame preferences reach the live host.
-        .geoKitMapLiveHostBackground(
-            coordinator: coordinator,
-            collection: collection
-        )
         .geoKitMapHost(
             coordinator: coordinator,
             collection: collection,

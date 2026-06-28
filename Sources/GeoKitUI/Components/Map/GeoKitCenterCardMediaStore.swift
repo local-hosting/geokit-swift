@@ -350,7 +350,13 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         }
 
         focusedCaptureTask?.cancel()
-        liveCardID = nil
+        assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
+        markStackRevealed(
+            cards: cards,
+            focusedIndex: focusedIndex,
+            provider: provider,
+            allowWithoutSnapshot: true
+        )
         focusedCaptureInFlight = (focused.id, provider)
         let camera = cameraStore.frame(for: focused.id)
 

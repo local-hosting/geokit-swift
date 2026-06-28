@@ -26,7 +26,8 @@ struct GeoKitMapKitMapSurface: View {
     private var hideLiveMapPins: Bool {
         MapPinTransitionCoverPolicy.hideLiveMapPins(
             mapIsTransitioning: isTransitioning,
-            pinsLayoutSettling: pinsLayoutSettling
+            pinsLayoutSettling: pinsLayoutSettling,
+            livePainted: liveDidRender
         )
     }
 
@@ -75,7 +76,7 @@ struct GeoKitMapKitMapSurface: View {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
         // Tile snapshots omit pins — keep them under the live map during card transitions.
-        let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil && !hideLiveMapPins
+        let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil && !liveDidRender
 
         ZStack {
             GeoKitMapTheme.placeholderBackground

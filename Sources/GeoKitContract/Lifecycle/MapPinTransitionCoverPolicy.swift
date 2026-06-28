@@ -1,26 +1,28 @@
 import CoreGraphics
 import Foundation
 
-/// When geo-projected map pins should hide and a static peek snapshot (with baked pins) covers the live surface.
+/// Live geo pins stay on the map surface — no snapshot bake / hide cycle during card springs.
 public enum MapPinTransitionCoverPolicy {
-    /// Hide ``MapViewAnnotation`` / MapKit annotations while the card spring or a post-spring layout resize runs.
     public static func hideLiveMapPins(
         mapIsTransitioning: Bool,
-        pinsLayoutSettling: Bool
+        pinsLayoutSettling: Bool,
+        livePainted: Bool = false
     ) -> Bool {
-        mapIsTransitioning || pinsLayoutSettling
+        _ = mapIsTransitioning
+        _ = pinsLayoutSettling
+        _ = livePainted
+        return false
     }
 
-    /// Keep the card-slot peek snapshot opaque on top of live tiles during card transitions or before first paint.
-    /// Steady-state layout settling hides live pins only — it must not pull the peek snapshot back over painted tiles.
+    /// Peek snapshot covers live tiles only until the first live paint — never again after.
     public static func snapshotCoversLive(
         mapIsTransitioning: Bool,
         pinsLayoutSettling: Bool,
         livePainted: Bool
     ) -> Bool {
-        if mapIsTransitioning { return true }
-        if !livePainted { return true }
-        return false
+        _ = mapIsTransitioning
+        _ = pinsLayoutSettling
+        return !livePainted
     }
 }
 

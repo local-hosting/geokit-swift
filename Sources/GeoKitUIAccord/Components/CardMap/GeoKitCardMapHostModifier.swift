@@ -12,7 +12,13 @@ private struct GeoKitMapLiveHost<Card: GeoKitLiveMapCard & AXCardItem>: View {
     @ObservedObject var coordinator: GeoKitCardMapCoordinator<Card>
 
     private var liveCard: Card? {
-        coordinator.centerCard(in: collection.cards)
+        let cards = collection.cards
+        if collection.isExpanded || collection.isCollapsing || collection.isTransitioning {
+            let index = collection.currentIndex
+            guard cards.indices.contains(index) else { return nil }
+            return cards[index]
+        }
+        return coordinator.centerCard(in: cards)
     }
 
     private var mapIsTransitioning: Bool {
@@ -70,6 +76,10 @@ private struct GeoKitMapHostModifier<
         if skipSnapshotCapture() { return true }
         if !coordinator.mediaStore.hidesStackUntilInitialFocusedStaticReady { return true }
         if coordinator.mediaStore.hasRevealedCardStack { return true }
+        if let center = coordinator.centerCard(in: collection.cards),
+           center.isMapRendered(for: coordinator.provider) {
+            return true
+        }
         return collection.isFocusedMediaReady(layout: layout)
     }
 

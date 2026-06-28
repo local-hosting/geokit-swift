@@ -34,7 +34,8 @@ struct GeoKitMapSurface: View {
     private var hideLiveMapPins: Bool {
         MapPinTransitionCoverPolicy.hideLiveMapPins(
             mapIsTransitioning: isTransitioning,
-            pinsLayoutSettling: pinsLayoutSettling
+            pinsLayoutSettling: pinsLayoutSettling,
+            livePainted: liveDidRender
         )
     }
 
@@ -144,9 +145,7 @@ struct GeoKitMapSurface: View {
                             lastSettledLayoutSize = size
                         }
                         if !liveDidRender {
-                            withAnimation(.easeInOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed))) {
-                                liveDidRender = true
-                            }
+                            liveDidRender = true
                         }
                         guard !isTransitioning, let cameraState = liveCameraState else { return }
                         let nextFrame = MapCameraFrame(

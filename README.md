@@ -134,7 +134,7 @@ Live map content mounts **inside** the active card slot (stack center or expande
 ### Boot sequence
 
 ```text
-layout size → center peek snapshot → liveCardID → crossfade snapshot out when tiles paint
+layout size → silent static capture → liveCardID → live tiles paint (no center static overlay when live-first)
 ```
 
 Back cards are **static snapshots only** — never live. Only the top stack card (or its expanded overlay) mounts live GPU data via ``liveCardID``. Use ``MapMediaSurfaceLayout.mapContentSize`` with your footer inset for capture/live alignment.
