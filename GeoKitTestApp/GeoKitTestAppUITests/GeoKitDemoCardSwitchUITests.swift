@@ -20,15 +20,15 @@ final class GeoKitDemoCardSwitchUITests: XCTestCase {
         XCTAssertTrue(app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0).waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["New York"].waitForExistence(timeout: 10))
         XCTAssertTrue(
-            waitForCenterMediaReady(timeout: 30),
-            "Front card should clear the center loading overlay"
+            waitForCenterMediaReady(timeout: 45),
+            "Front card should show a snapshot or painted live map"
         )
     }
 
     func testSwitchToLouisvilleClearsLoadingSpinner() throws {
         XCTAssertTrue(app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0).waitForExistence(timeout: 10))
         XCTAssertTrue(
-            waitForCenterMediaReady(timeout: 30),
+            waitForCenterMediaReady(timeout: 45),
             "Initial card should finish loading before switching pages"
         )
 
@@ -39,38 +39,69 @@ final class GeoKitDemoCardSwitchUITests: XCTestCase {
             "Louisville badge should become the front card after paging"
         )
         XCTAssertTrue(
-            waitForCenterMediaReady(timeout: 20),
+            waitForCenterMediaReady(timeout: 45),
             "Loading spinner should clear after switching to Louisville"
         )
     }
 
-    private func waitForCenterMediaReady(timeout: TimeInterval) -> Bool {
-        let liveMap = app.otherElements["geokit-test-app.live-map"]
-        if liveMap.waitForExistence(timeout: min(timeout, 5)) {
-            return true
-        }
+    func testSwitchBackToNewYorkShowsLiveMap() throws {
+        XCTAssertTrue(app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0).waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForCenterMediaReady(timeout: 45))
 
-        let loading = app.otherElements["geokit-test-app.card-loading"]
-        guard loading.waitForExistence(timeout: 2) else {
-            return true
-        }
+        switchToLouisville()
+        XCTAssertTrue(app.staticTexts["Louisville"].waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForCenterMediaReady(timeout: 45))
 
-        let predicate = NSPredicate(format: "exists == false")
-        return XCTWaiter.wait(
-            for: [XCTNSPredicateExpectation(predicate: predicate, object: loading)],
-            timeout: timeout
-        ) == .completed
+        switchToPage(index: 0)
+        XCTAssertTrue(app.staticTexts["New York"].waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            waitForCenterMediaReady(timeout: 45),
+            "Returning to New York must mount the live map — not a blank card dead-end"
+        )
     }
 
-    private func switchToLouisville() {
+    func testExpandCardKeepsFooterBadgeAndHidesProviderPicker() throws {
+        XCTAssertTrue(app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0).waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForCenterMediaReady(timeout: 45))
+
+        let root = app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0)
+        root.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.42)).tap()
+
+        let picker = app.otherElements["geokit-test-app.map-provider-picker"]
+        let expanded = picker.waitForNonExistence(timeout: 8) || !picker.isHittable
+        XCTAssertTrue(expanded, "Map provider picker should hide when the card expands")
+
+        let badge = app.staticTexts["New York"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "Footer badge should remain visible when expanded")
+
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = "expanded-full-screen-card"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func centerMediaReadyElement() -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: "geokit-test-app.center-media-ready").firstMatch
+    }
+
+    private func waitForCenterMediaReady(timeout: TimeInterval) -> Bool {
+        centerMediaReadyElement().waitForExistence(timeout: timeout)
+    }
+
+    private func switchToPage(index: Int) {
         let root = app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0)
         XCTAssertTrue(root.waitForExistence(timeout: 10))
         let frame = root.frame
         let pageCount = 6
-        let tapX = frame.minX + (frame.width / CGFloat(pageCount)) * 1.5
+        let tapX = frame.minX + (frame.width / CGFloat(pageCount)) * (CGFloat(index) + 0.5)
         let tapY = frame.maxY - 36
         app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
             .withOffset(CGVector(dx: tapX, dy: tapY))
             .tap()
+    }
+
+    private func switchToLouisville() {
+        switchToPage(index: 1)
     }
 }

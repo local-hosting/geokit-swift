@@ -8,6 +8,7 @@ Swift counterpart to [`@corio-platforms/geokit`](https://github.com/corio-platfo
 |--------|------|-----------------|
 | **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@geokit` root / `utils/*` |
 | **GeoKitContract** | `GeoKitRuntime`, `MapContentRequest` — linked by host before dlopen | app wiring + `types/` |
+| **GeoKitUIMapbox** | Mapbox provider, snapshots, live surface | optional Mapbox dep |
 | **GeoKitUI** | SwiftUI map surface, markers, snapshots, theme | `@geokit/ui` |
 | **GeoKit** | `dlopen` entry + `GeoKitRegister` | side-effect registration |
 | **GeoKitTestApp** | Standalone iOS demo (`GeoKitTestApp/GeoKitTestApp.xcodeproj`) | geokit Vite demo |
@@ -81,7 +82,9 @@ H3 indexing uses the [`SwiftyH3`](https://github.com/pawelmajcher/SwiftyH3) pack
 
 ```bash
 swift build
-swift test
+swift test --filter GeoKitCoreTests
+swift test --filter GeoKitContractTests
+./scripts/test-ui.sh
 ```
 
 ## Parity fixtures
@@ -117,3 +120,24 @@ MapContentRequest(
 ```
 
 Environment / Info.plist: `GEOKIT_MAP_PROVIDER=apple` or `mapbox` (aliases: `mapkit`, `apple-maps`).
+
+## Map cards — external live host (Places + GeoKitTestApp)
+
+Live map content mounts **inside** the active card slot (stack center or expanded overlay). Expand/collapse animates the card chrome; the map is clipped to that slot — no external host or frame preference bridge.
+
+### Host wiring
+
+1. ``GeoKitCenterCardMediaStore.refreshCenter`` — center peek snapshot, then ``liveCardID``.
+2. Card content: ``GeoKitMapCardSlot`` with ``MapCardMediaPresentationContext`` (static peek for fan/back; live only on top slot).
+3. Expanded overlay uses the same slot via ``CardExpanded`` — live stays in the overlay tree for the collapse spring.
+
+### Boot sequence
+
+```text
+layout size → center peek snapshot → liveCardID → crossfade snapshot out when tiles paint
+```
+
+Back cards are **static snapshots only** — never live. Only the top stack card (or its expanded overlay) mounts live GPU data via ``liveCardID``. Use ``MapMediaSurfaceLayout.mapContentSize`` with your footer inset for capture/live alignment.
+
+GeoKitTestApp is the reference implementation for Places.
+

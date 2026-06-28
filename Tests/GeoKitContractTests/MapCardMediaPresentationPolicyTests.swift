@@ -6,7 +6,7 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
     private func context(
         isStackCenter: Bool = false,
         isStackOneBehind: Bool = false,
-        deckExpanded: Bool = false,
+        collectionExpanded: Bool = false,
         isExpandedOverlaySlot: Bool = false,
         cardIsTransitioning: Bool = false,
         cardIsCollapsing: Bool = false,
@@ -18,7 +18,7 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
         MapCardMediaPresentationContext(
             isStackCenter: isStackCenter,
             isStackOneBehind: isStackOneBehind,
-            deckExpanded: deckExpanded,
+            collectionExpanded: collectionExpanded,
             isExpandedOverlaySlot: isExpandedOverlaySlot,
             cardIsTransitioning: cardIsTransitioning,
             cardIsCollapsing: cardIsCollapsing,
@@ -87,13 +87,13 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
     func testExpandedOverlayReportsSurfaceFrameNotHiddenStackCenter() {
         let hiddenCenter = context(
             isStackCenter: true,
-            deckExpanded: true,
+            collectionExpanded: true,
             isExpandedOverlaySlot: false,
             isLiveEnabled: true,
             isCenteredInStack: true
         )
         let overlay = context(
-            deckExpanded: true,
+            collectionExpanded: true,
             isExpandedOverlaySlot: true,
             isLiveEnabled: true
         )
@@ -102,10 +102,10 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
         XCTAssertTrue(MapCardMediaPresentationPolicy.reportsMediaSurfaceFrame(overlay))
     }
 
-    func testHiddenStackCenterDoesNotReportWhileDeckExpanded() {
+    func testHiddenStackCenterDoesNotReportWhileCollectionExpanded() {
         let ctx = context(
             isStackCenter: true,
-            deckExpanded: true,
+            collectionExpanded: true,
             isExpandedOverlaySlot: false,
             cardIsTransitioning: true,
             isLiveEnabled: true,
@@ -134,12 +134,39 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
         XCTAssertTrue(MapCardMediaPresentationPolicy.shouldShowLoadingOverlay(ctx))
     }
 
-    func testOnlyExpandedOverlayAllowsLiveWhenDeckExpanded() {
-        let collapsedSlot = context(isStackCenter: true, deckExpanded: true, isExpandedOverlaySlot: false)
-        let overlay = context(deckExpanded: true, isExpandedOverlaySlot: true)
+    func testOnlyExpandedOverlayAllowsLiveWhenCollectionExpanded() {
+        let collapsedSlot = context(isStackCenter: true, collectionExpanded: true, isExpandedOverlaySlot: false)
+        let overlay = context(collectionExpanded: true, isExpandedOverlaySlot: true)
 
         XCTAssertFalse(MapCardMediaPresentationPolicy.allowsLiveMount(collapsedSlot))
         XCTAssertTrue(MapCardMediaPresentationPolicy.allowsLiveMount(overlay))
+    }
+
+    func testExpandedOverlayDefersLiveDuringSpringWhenSnapshotReady() {
+        let overlay = context(
+            collectionExpanded: true,
+            isExpandedOverlaySlot: true,
+            cardIsTransitioning: true,
+            isLiveEnabled: true,
+            isMapRendered: false,
+            hasActiveSnapshot: true
+        )
+
+        XCTAssertFalse(MapCardMediaPresentationPolicy.showsLiveMap(overlay))
+        XCTAssertFalse(MapCardMediaPresentationPolicy.liveMapVisible(overlay))
+    }
+
+    func testExpandedOverlayMountsLiveAfterSpringWhenSnapshotReady() {
+        let overlay = context(
+            collectionExpanded: true,
+            isExpandedOverlaySlot: true,
+            cardIsTransitioning: false,
+            isLiveEnabled: true,
+            isMapRendered: false,
+            hasActiveSnapshot: true
+        )
+
+        XCTAssertTrue(MapCardMediaPresentationPolicy.showsLiveMap(overlay))
     }
 
     func testSnapshotLoadAllowedForCenterWithoutSnapshot() {
@@ -167,6 +194,76 @@ final class MapCardMediaPresentationPolicyTests: XCTestCase {
             )
         )
     }
+
+    func testLiveWarmupVisibleDoesNotImplyHostFrameReady() {
+        let ctx = context(
+            isStackCenter: true,
+            isLiveEnabled: true,
+            isMapRendered: false,
+            hasActiveSnapshot: false
+        )
+
+        XCTAssertTrue(MapCardMediaPresentationPolicy.liveMapVisible(ctx))
+        XCTAssertFalse(MapLiveSurfaceFrameResolver.isValidHostFrame(.zero))
+    }
+
+
+    func testFanPeekShowsLiveWhenDragWarmEnabled() {
+        let ctx = context(
+            isStackCenter: false,
+            isStackOneBehind: true,
+            isLiveEnabled: true,
+            isMapRendered: true
+        )
+        XCTAssertFalse(MapCardMediaPresentationPolicy.allowsLiveMount(ctx))
+        XCTAssertTrue(MapCardMediaPresentationPolicy.showsLiveMap(ctx))
+        XCTAssertTrue(
+            MapCardMediaPresentationPolicy.isLiveDataEnabled(
+                liveCardID: "center",
+                warmLiveCardID: "nyc",
+                cardID: "nyc",
+                allowsLiveMount: false
+            )
+        )
+    }
+
+    func testOnlyTopSlotResolvesLiveData() {
+        XCTAssertTrue(
+            MapCardMediaPresentationPolicy.isLiveDataEnabled(
+                liveCardID: "nyc",
+                cardID: "nyc",
+                allowsLiveMount: true
+            )
+        )
+        XCTAssertFalse(
+            MapCardMediaPresentationPolicy.isLiveDataEnabled(
+                liveCardID: "nyc",
+                cardID: "louisville",
+                allowsLiveMount: true
+            )
+        )
+    }
+
+    func testExternalHostUsesTransparentBackdropWhileLoading() {
+        XCTAssertTrue(
+            MapCardMediaPresentationPolicy.usesTransparentExternalHostBackdrop(
+                externalLiveMapHost: true,
+                showsPaintedLiveMap: true
+            )
+        )
+        XCTAssertTrue(
+            MapCardMediaPresentationPolicy.usesTransparentExternalHostBackdrop(
+                externalLiveMapHost: true,
+                showsPaintedLiveMap: false
+            )
+        )
+        XCTAssertFalse(
+            MapCardMediaPresentationPolicy.usesTransparentExternalHostBackdrop(
+                externalLiveMapHost: false,
+                showsPaintedLiveMap: true
+            )
+        )
+    }
 }
 
 final class MapLiveSurfaceFrameResolverTests: XCTestCase {
@@ -178,6 +275,16 @@ final class MapLiveSurfaceFrameResolverTests: XCTestCase {
             MapLiveSurfaceFrameResolver.resolve(reportedFrame: reported, collapsedCardFrame: collapsed),
             reported
         )
+    }
+
+    func testFallbackUsesFullBleedCollapsedFrame() {
+        let collapsed = CGRect(x: 8, y: 16, width: 320, height: 480)
+        let resolved = MapLiveSurfaceFrameResolver.resolve(
+            reportedFrame: .zero,
+            collapsedCardFrame: collapsed,
+            mediaSurfaceFooterInset: 48
+        )
+        XCTAssertEqual(resolved, collapsed)
     }
 
     func testFallsBackToCollapsedCardBeforePreferenceArrives() {
@@ -245,5 +352,19 @@ final class MapLiveSurfaceCenterFrameTests: XCTestCase {
         XCTAssertEqual(roundTrip.origin.y, source.origin.y, accuracy: 0.001)
         XCTAssertEqual(roundTrip.size.width, source.size.width, accuracy: 0.001)
         XCTAssertEqual(roundTrip.size.height, source.size.height, accuracy: 0.001)
+    }
+}
+
+final class MapMediaSurfaceLayoutTests: XCTestCase {
+    func testMapContentSizeIsFullBleed() {
+        let size = CGSize(width: 320, height: 480)
+        XCTAssertEqual(
+            MapMediaSurfaceLayout.mapContentSize(cardContentSize: size, mediaSurfaceFooterInset: 48),
+            size
+        )
+        XCTAssertEqual(
+            MapMediaSurfaceLayout.mapContentSize(cardContentSize: size, mediaSurfaceFooterInset: 500),
+            size
+        )
     }
 }

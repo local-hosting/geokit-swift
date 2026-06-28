@@ -6,13 +6,13 @@ import UIKit
 
 /// Draws peek snapshot pin markers onto a static map image (Mapbox overlay or MapKit composite).
 @MainActor
-enum GeoKitSnapshotPinDraw {
+public enum GeoKitSnapshotPinDraw {
     private static let accentColor = Color(red: 69 / 255, green: 56 / 255, blue: 178 / 255)
     private static let dotDiameter: CGFloat = 14
     /// Matches ``GeoKitPlacePinView`` bottom-anchor lift for the collapsed dot fallback.
     private static let anchorLift: CGFloat = 16
 
-    static func draw(
+    public static func draw(
         pins: [MapPin],
         in context: CGContext,
         pointForCoordinate: (CLLocationCoordinate2D) -> CGPoint,
@@ -41,7 +41,7 @@ enum GeoKitSnapshotPinDraw {
         }
     }
 
-    static func composite(
+    public static func composite(
         baseImage: UIImage,
         pins: [MapPin],
         pointForCoordinate: (CLLocationCoordinate2D) -> CGPoint,

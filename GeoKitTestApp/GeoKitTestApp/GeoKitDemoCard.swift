@@ -1,12 +1,13 @@
 import AccordDesignSystem
 import CoreLocation
 import GeoKitContract
+import GeoKitUI
 #if os(iOS)
 import UIKit
 #endif
 
 @MainActor
-final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
+final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard, GeoKitLiveMapCard {
     let pins: [MapPin]
     let mapProviderSnapshotCache = GeoKitMapProviderSnapshotCache()
 
@@ -50,10 +51,18 @@ final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
     }
 
     func mapSnapshotRequest(provider: MapProviderId, cameraFrame: MapCameraFrame?) -> MapContentRequest {
+        mapSnapshotRequest(provider: provider, cameraFrame: cameraFrame, matchesLiveViewport: false)
+    }
+
+    func mapSnapshotRequest(
+        provider: MapProviderId,
+        cameraFrame: MapCameraFrame?,
+        matchesLiveViewport: Bool
+    ) -> MapContentRequest {
         mapRequest(
-            isExpanded: false,
-            allowsLiveMount: false,
-            isCenterSlot: false,
+            isExpanded: matchesLiveViewport,
+            allowsLiveMount: matchesLiveViewport,
+            isCenterSlot: matchesLiveViewport,
             mapProviderId: provider,
             cameraFrame: cameraFrame
         )
@@ -66,12 +75,15 @@ final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
         mapProviderId: MapProviderId,
         cameraFrame: MapCameraFrame? = nil
     ) -> MapContentRequest {
-        MapContentRequest(
+        let usesLiveStyle = isExpanded || allowsLiveMount
+        return MapContentRequest(
             id: id,
-            phase: (isExpanded || allowsLiveMount) ? .live : .snapshot,
+            phase: usesLiveStyle ? .live : .snapshot,
             isExpanded: isExpanded,
             title: title,
-            mapStyleURI: GeoKitDemoConstants.mapStyleURI,
+            mapStyleURI: usesLiveStyle
+                ? GeoKitDemoConstants.liveMapStyleURI
+                : GeoKitDemoConstants.snapshotMapStyleURI,
             preferredZoom: 12,
             pins: pins,
             showUserPuck: false,
@@ -81,4 +93,19 @@ final class GeoKitDemoCard: AXCardModel, GeoKitMapSnapshotCard {
             snapshotPriority: isCenterSlot ? .top : .background
         )
     }
+
+    func liveMapRequest(
+        isExpanded: Bool,
+        mapProviderId: MapProviderId,
+        cameraFrame: MapCameraFrame? = nil
+    ) -> MapContentRequest {
+        mapRequest(
+            isExpanded: isExpanded,
+            allowsLiveMount: true,
+            isCenterSlot: !isExpanded,
+            mapProviderId: mapProviderId,
+            cameraFrame: cameraFrame
+        )
+    }
 }
+

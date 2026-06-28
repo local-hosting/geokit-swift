@@ -42,6 +42,15 @@ public struct GeoKitSelectedPinIdKey: PreferenceKey {
     }
 }
 
+/// When true, the card slot should keep its peek snapshot (baked pins) over painted live map tiles.
+public struct GeoKitMapSnapshotCoversLiveKey: PreferenceKey {
+    public static var defaultValue = false
+
+    public static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
 /// Latest provider-neutral camera frame from a live map surface — hosts may persist across provider switches.
 public struct GeoKitMapCameraFrameKey: PreferenceKey {
     public static var defaultValue: MapCameraFrame? = nil
@@ -59,6 +68,18 @@ private struct GeoKitMapSurfaceReadyKey: EnvironmentKey {
 
 private struct GeoKitMapIsTransitioningKey: EnvironmentKey {
     static let defaultValue = false
+}
+
+private struct GeoKitCardTransitionBaseSizeKey: EnvironmentKey {
+    static let defaultValue: CGSize = .zero
+}
+
+private struct GeoKitCardTransitionTargetSizeKey: EnvironmentKey {
+    static let defaultValue: CGSize = .zero
+}
+
+private struct GeoKitCardTransitionFullTargetSizeKey: EnvironmentKey {
+    static let defaultValue: CGSize = .zero
 }
 
 #if os(iOS)
@@ -80,6 +101,24 @@ public extension EnvironmentValues {
         set { self[GeoKitMapIsTransitioningKey.self] = newValue }
     }
 
+    /// Collapsed card size when expand/collapse spring begins — drives snapshot vertical reveal.
+    var geokitCardTransitionBaseSize: CGSize {
+        get { self[GeoKitCardTransitionBaseSizeKey.self] }
+        set { self[GeoKitCardTransitionBaseSizeKey.self] = newValue }
+    }
+
+    /// Current spring target card size — pair with ``geokitCardTransitionBaseSize``.
+    var geokitCardTransitionTargetSize: CGSize {
+        get { self[GeoKitCardTransitionTargetSizeKey.self] }
+        set { self[GeoKitCardTransitionTargetSizeKey.self] = newValue }
+    }
+
+    /// Final expanded card size for the active spring — snapshot source height uses this, not the in-flight target.
+    var geokitCardTransitionFullTargetSize: CGSize {
+        get { self[GeoKitCardTransitionFullTargetSizeKey.self] }
+        set { self[GeoKitCardTransitionFullTargetSizeKey.self] = newValue }
+    }
+
 #if os(iOS)
     /// Host-owned static snapshot (e.g. card fan capture) for live-map crossfade on expand/remount.
     var geokitTransitionSnapshot: UIImage? {
@@ -90,7 +129,7 @@ public extension EnvironmentValues {
 }
 
 extension View {
-    func geokitIgnoresSafeArea(when active: Bool) -> some View {
+    public func geokitIgnoresSafeArea(when active: Bool) -> some View {
         modifier(GeoKitConditionalIgnoresSafeArea(active: active))
     }
 }

@@ -2,9 +2,13 @@ import GeoKitContract
 import XCTest
 
 final class MapSnapshotCaptureExecutorTests: XCTestCase {
-    func testExecutorRetriesUntilMaxAttempts() async {
+    private enum TestError: Error {
+        case captureFailed
+    }
+
+    func testExecutorRetriesUntilMaxAttempts() async throws {
         var attempts = 0
-        let result = await MapSnapshotCaptureExecutor.captureWithRetry {
+        let result = try await MapSnapshotCaptureExecutor.captureWithRetry {
             attempts += 1
             return Optional<String>.none
         }
@@ -12,13 +16,26 @@ final class MapSnapshotCaptureExecutorTests: XCTestCase {
         XCTAssertEqual(attempts, MapSnapshotCapturePolicy.maxAttempts)
     }
 
-    func testExecutorReturnsFirstSuccessfulCapture() async {
+    func testExecutorReturnsFirstSuccessfulCapture() async throws {
         var attempts = 0
-        let result = await MapSnapshotCaptureExecutor.captureWithRetry {
+        let result = try await MapSnapshotCaptureExecutor.captureWithRetry {
             attempts += 1
             return attempts == 1 ? nil : "ok"
         }
         XCTAssertEqual(result, "ok")
         XCTAssertEqual(attempts, 2)
+    }
+
+    func testExecutorDoesNotRetryThrownErrors() async throws {
+        var attempts = 0
+        do {
+            _ = try await MapSnapshotCaptureExecutor.captureWithRetry {
+                attempts += 1
+                throw TestError.captureFailed
+            }
+            XCTFail("expected capture to throw")
+        } catch TestError.captureFailed {
+            XCTAssertEqual(attempts, 1)
+        }
     }
 }

@@ -1,11 +1,10 @@
 #if os(iOS)
 import GeoKitContract
-import GeoKitCore
 import UIKit
 
 /// Per-card static snapshot orchestration — one capture at a time per card, event-driven waits (no queue).
 @MainActor
-public final class GeoKitCardMapMediaController {
+public final class GeoKitCardMapMediaController: GeoKitMapSnapshotControlling {
     public static let shared = GeoKitCardMapMediaController()
 
     private let reachability: GeoKitReachabilityMonitor
@@ -22,12 +21,17 @@ public final class GeoKitCardMapMediaController {
         provider: MapProviderId,
         priority: MapSnapshotPriority = .background,
         cameraFrame: MapCameraFrame? = nil,
-        onLoadingChanged: ((Bool) -> Void)? = nil
+        onLoadingChanged: ((Bool) -> Void)? = nil,
+        forceRecapture: Bool = false,
+        matchesLiveViewport: Bool = false
     ) async {
         while !Task.isCancelled {
-            let canStart = canStartSnapshotCapture(for: provider)
+            let canStart = canStartSnapshotCapture(for: provider, priority: priority)
+            let hasSnapshot = forceRecapture
+                ? false
+                : card.hasUsableSnapshot(for: provider, cameraFrame: cameraFrame)
             let action = MapSnapshotRetryPolicy.nextAction(
-                hasSnapshot: card.hasUsableSnapshot(for: provider, cameraFrame: cameraFrame),
+                hasSnapshot: hasSnapshot,
                 isPrefetchScheduled: card.isSnapshotPrefetchScheduled(for: provider),
                 provider: provider,
                 canStartSnapshotCapture: canStart,
@@ -39,7 +43,7 @@ public final class GeoKitCardMapMediaController {
             case .waitForNetwork:
                 await reachability.waitUntilOnline()
             case .waitForLiveMapSafe:
-                await waitUntilSnapshotCaptureAllowed(for: provider)
+                await waitUntilSnapshotCaptureAllowed(for: provider, priority: priority)
             case .capture:
                 await performCapture(
                     card: card,
@@ -47,7 +51,9 @@ public final class GeoKitCardMapMediaController {
                     provider: provider,
                     priority: priority,
                     cameraFrame: cameraFrame,
-                    onLoadingChanged: onLoadingChanged
+                    onLoadingChanged: onLoadingChanged,
+                    matchesLiveViewport: matchesLiveViewport,
+                    forceRecapture: forceRecapture
                 )
                 if card.hasUsableSnapshot(for: provider, cameraFrame: cameraFrame) { return }
                 if !reachability.isOnline {
@@ -65,9 +71,16 @@ public final class GeoKitCardMapMediaController {
         provider: MapProviderId,
         priority: MapSnapshotPriority,
         cameraFrame: MapCameraFrame?,
-        onLoadingChanged: ((Bool) -> Void)?
+        onLoadingChanged: ((Bool) -> Void)?,
+        matchesLiveViewport: Bool,
+        forceRecapture: Bool
     ) async {
-        let captureSize = resolvedCaptureSize(card: card, provider: provider, fallback: size)
+        let captureSize = resolvedCaptureSize(
+            card: card,
+            provider: provider,
+            fallback: size,
+            forceRecapture: forceRecapture
+        )
         guard MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: captureSize) else { return }
 
         card.setSnapshotPrefetchScheduled(true, for: provider)
@@ -81,16 +94,29 @@ public final class GeoKitCardMapMediaController {
             card.setMapSnapshotSize(captureSize, for: provider)
         }
 
-        await waitUntilSnapshotCaptureAllowed(for: provider)
+        await waitUntilSnapshotCaptureAllowed(for: provider, priority: priority)
         guard !Task.isCancelled else { return }
 
-        let request = card.mapSnapshotRequest(provider: provider, cameraFrame: cameraFrame)
-        let image = await MapSnapshotCaptureExecutor.captureWithRetry {
-            await GeoKitCardSnapshotCapture.capture(
-                request: request,
-                size: captureSize,
-                priority: priority
+        let request = card.mapSnapshotRequest(
+            provider: provider,
+            cameraFrame: cameraFrame,
+            matchesLiveViewport: matchesLiveViewport
+        )
+        let image: UIImage?
+        do {
+            image = try await MapSnapshotCaptureExecutor.captureWithRetry {
+                try await GeoKitCardSnapshotCapture.capture(
+                    request: request,
+                    size: captureSize,
+                    priority: priority
+                )
+            }
+        } catch {
+            fputs(
+                "[GeoKitCardMapMediaController] snapshot capture failed card=\(card.id) provider=\(provider.rawValue) error=\(error)\n",
+                stderr
             )
+            return
         }
 
         // Commit a completed capture even if the owning task was cancelled while it ran.
@@ -110,8 +136,12 @@ public final class GeoKitCardMapMediaController {
     private func resolvedCaptureSize(
         card: any GeoKitMapSnapshotCard,
         provider: MapProviderId,
-        fallback: CGSize
+        fallback: CGSize,
+        forceRecapture: Bool
     ) -> CGSize {
+        if forceRecapture {
+            return fallback
+        }
         let storedSize = card.mapSnapshotSize(for: provider)
         if MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: storedSize) {
             return storedSize
@@ -119,15 +149,19 @@ public final class GeoKitCardMapMediaController {
         return fallback
     }
 
-    private func canStartSnapshotCapture(for provider: MapProviderId) -> Bool {
+    private func canStartSnapshotCapture(for provider: MapProviderId, priority: MapSnapshotPriority) -> Bool {
+        // Background (fan) captures fetch a flat image over HTTP — no GPU, so they are
+        // never gated behind the live Metal map.
+        if priority == .background { return true }
         guard MapSnapshotCaptureGate.requiresLiveMapSafeWindow(for: provider) else { return true }
-        return GeoKitMapboxLiveMapRegistry.canStartSnapshotCapture
+        return LiveMapSnapshotCoordinator.canStartSnapshotCapture()
     }
 
-    private func waitUntilSnapshotCaptureAllowed(for provider: MapProviderId) async {
+    private func waitUntilSnapshotCaptureAllowed(for provider: MapProviderId, priority: MapSnapshotPriority) async {
+        if priority == .background { return }
         guard MapSnapshotCaptureGate.requiresLiveMapSafeWindow(for: provider) else { return }
-        guard !GeoKitMapboxLiveMapRegistry.canStartSnapshotCapture else { return }
-        try? await GeoKitMapboxLiveMapRegistry.waitUntilSafeForSnapshot()
+        guard !LiveMapSnapshotCoordinator.canStartSnapshotCapture() else { return }
+        try? await LiveMapSnapshotCoordinator.waitUntilSafeForSnapshot()
     }
 }
 #endif

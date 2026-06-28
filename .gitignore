@@ -9,3 +9,6 @@ Package.resolved
 build/
 **/build/
 .captures/
+/GeoKitTestApp/.derivedData
+/GeoKitTestApp/.logs
+/.logs

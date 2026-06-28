@@ -1,7 +1,7 @@
+import CardMediaContract
 import Foundation
 
-/// Card-stack map staging constants — GeoKit owns peek windows and snapshot scheduling (not ``AX.Map``).
+/// Card-stack map staging constants — re-exports shared peek radius from ``CardMediaStageConstants``.
 public enum GeoKitMapCardStageConstants {
-    /// Cards within ±this index distance of center may receive peek snapshots.
-    public static let peekRadius = 2
+    public static var peekRadius: Int { CardMediaStageConstants.peekRadius }
 }

@@ -1,7 +1,6 @@
 #if os(iOS)
 import CoreLocation
 import GeoKitContract
-import MapboxMaps
 import MapKit
 import SwiftUI
 import UIKit
@@ -12,46 +11,15 @@ public enum GeoKitCardSnapshotCapture {
         request: MapContentRequest,
         size: CGSize,
         priority: MapSnapshotPriority = .background
-    ) async -> UIImage? {
-        let provider = request.mapProviderId ?? .mapbox
-        switch provider {
-        case .mapbox:
-            return await captureMapbox(request: request, size: size, priority: priority)
-        case .apple:
-            return await captureApple(request: request, size: size)
-        }
-    }
-
-    private static func captureMapbox(
-        request: MapContentRequest,
-        size: CGSize,
-        priority: MapSnapshotPriority
-    ) async -> UIImage? {
-        let coordinates = request.pins.map {
-            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-        }
-        let viewport: Viewport
-        if let frame = request.cameraFrame {
-            viewport = GeoKitMapViewport.from(frame)
-        } else {
-            viewport = GeoKitMapViewport.initial(
-                coordinates: coordinates,
-                preferredZoom: request.preferredZoom
-            )
-        }
-        let zoom = request.cameraFrame?.zoom ?? Double(request.preferredZoom)
-        return await GeoKitSnapshotService.capture(
-            viewport: viewport,
+    ) async throws -> UIImage? {
+        try await GeoKitSnapshotCaptureRegistry.capture(
+            request: request,
             size: size,
-            styleURI: request.mapStyleURI,
-            priority: priority,
-            pins: request.pins,
-            selectedPinId: request.selectedPinId,
-            zoom: zoom
+            priority: priority
         )
     }
 
-    private static func captureApple(request: MapContentRequest, size: CGSize) async -> UIImage? {
+    static func captureApple(request: MapContentRequest, size: CGSize) async -> UIImage? {
         let coordinates = request.pins.map {
             CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         }

@@ -1,6 +1,7 @@
 import Foundation
 import GeoKitContract
 import GeoKitUI
+import GeoKitUIMapbox
 
 #if canImport(SwiftUI)
 import SwiftUI
@@ -12,8 +13,12 @@ public enum GeoKitRegister {
 
     @MainActor
     public static func registerMapContent() {
+        #if os(iOS)
+        GeoKitUIRegistration.activate()
+        GeoKitUIMapboxRegistration.activate()
+        #endif
         prepareProviderIfNeeded()
-        #if canImport(SwiftUI)
+        #if os(iOS)
         GeoKitRuntime.mapContent = { request in
             AnyView(GeoKitMapContent(request: request))
         }

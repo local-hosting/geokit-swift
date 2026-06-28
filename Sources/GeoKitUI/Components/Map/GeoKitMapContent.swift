@@ -1,7 +1,8 @@
+#if os(iOS)
 import GeoKitContract
 import SwiftUI
 
-/// Top-level map view — routes to Mapbox or Apple Maps based on provider registry / request override.
+/// Top-level map view — routes to registered map providers (Mapbox via GeoKitUIMapbox, Apple via GeoKitUI).
 public struct GeoKitMapContent: View {
     let request: MapContentRequest
 
@@ -11,17 +12,11 @@ public struct GeoKitMapContent: View {
 
     public var body: some View {
         Group {
-            switch GeoKitMapProviderRegistry.resolve(for: request) {
-            case .mapbox:
-                GeoKitMapboxMapContent(request: request)
-                    .id(MapProviderId.mapbox)
-            case .apple:
-                #if os(iOS)
-                GeoKitMapKitMapContent(request: request)
-                    .id(MapProviderId.apple)
-                #else
-                unsupportedProviderFallback
-                #endif
+            if let content = GeoKitMapProviderContentRegistry.content(for: request) {
+                content
+                    .id(GeoKitMapProviderRegistry.resolve(for: request))
+            } else {
+                missingProviderFallback
             }
         }
         .allowsHitTesting(request.mapAcceptsUserInteraction)
@@ -32,10 +27,10 @@ public struct GeoKitMapContent: View {
         .accessibilityIdentifier("geokit-map-content-\(request.id)")
     }
 
-    private var unsupportedProviderFallback: some View {
+    private var missingProviderFallback: some View {
         ZStack {
             GeoKitMapTheme.placeholderBackground
-            Text("Apple Maps is only available on iOS")
+            Text("Map provider is not registered")
                 .font(GeoKitMapTheme.placeholderTitleFont)
                 .foregroundStyle(.secondary)
         }
@@ -98,3 +93,4 @@ public struct GeoKitMapContentWithLifecycle: View {
         .environment(\.geokitMapIsTransitioning, lifecycle.isTransitioning)
     }
 }
+#endif

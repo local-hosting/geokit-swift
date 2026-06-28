@@ -13,16 +13,16 @@ enum GeoKitDemoCaptureHarness {
     }
 
     @MainActor
-    static func scheduleExpandCapture(deck: GeoKitDemoDeck) {
+    static func scheduleExpandCapture(collection: GeoKitDemoCardCollection) {
         guard isActive else { return }
         Task {
             try? await Task.sleep(for: .seconds(2.5))
-            deck.rotateStackToPage(chicagoPageIndex)
+            collection.rotateStackToPage(chicagoPageIndex)
             try? await Task.sleep(for: .seconds(2.0))
-            guard let center = deck.cards.first else { return }
+            guard let center = collection.cards.first else { return }
             center.selectedPinId = center.pins.first?.id
             try? await Task.sleep(for: .milliseconds(400))
-            deck.expandActiveCard()
+            collection.expandActiveCard()
         }
     }
 }

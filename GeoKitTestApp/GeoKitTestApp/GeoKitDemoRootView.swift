@@ -2,131 +2,81 @@ import AccordDesignSystem
 import GeoKit
 import GeoKitContract
 import GeoKitUI
+import GeoKitUIAccord
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
 
-@MainActor
-final class GeoKitDemoMapProviderStore: ObservableObject {
-    @Published var provider: MapProviderId = .mapbox {
-        didSet {
-            guard oldValue != provider else { return }
+struct GeoKitDemoRootView: View {
+    @StateObject private var collection = GeoKitDemoCardCollection()
+    @StateObject private var coordinator: GeoKitCardMapCoordinator<GeoKitDemoCard>
+    @Namespace private var cardNamespace
+
+    init() {
+        let coordinator = GeoKitCardMapCoordinator<GeoKitDemoCard>()
+        coordinator.onProviderChanged = { provider in
             GeoKitMapProviderRegistry.configure(provider: provider)
             GeoKitMapBootstrap.prepare(provider: provider)
         }
+        _coordinator = StateObject(wrappedValue: coordinator)
     }
-}
 
-struct GeoKitDemoRootView: View {
-    @StateObject private var deck = GeoKitDemoDeck()
-    @StateObject private var mapProviderStore = GeoKitDemoMapProviderStore()
-    @StateObject private var cameraStore: MapCameraStore
-    @StateObject private var mediaStore: GeoKitDemoMediaStore
-
-    init() {
-        let cameraStore = MapCameraStore()
-        _cameraStore = StateObject(wrappedValue: cameraStore)
-        _mediaStore = StateObject(wrappedValue: GeoKitDemoMediaStore(cameraStore: cameraStore))
-    }
-    @Namespace private var cardNamespace
-    @State private var liveMapSurfaceFrame: CGRect = .zero
-    @State private var liveMapSurfaceCornerRadius: CGFloat = AX.Radius.card
-
-    /// Keep main-screen chrome visible while the front card expands on top of the stack.
     private var showsMapProviderPicker: Bool {
-        !deck.isCollapsing
+        !collection.isExpanded
     }
 
-    private var collapsedMapContentSize: CGSize {
-        let measured = deck.collapsedCardFrame.size
-        if AX.Layout.isValidCardMediaLayoutSize(measured) {
-            return measured
-        }
-        let containerWidth = deck.containerWidth > 0 ? deck.containerWidth : UIScreen.main.bounds.width
-        return AX.StackConstants.resolvedCardSize(
-            in: CGSize(width: containerWidth, height: 10_000)
-        )
+    private var centerCard: GeoKitDemoCard? {
+        guard collection.cards.indices.contains(collection.currentIndex) else { return nil }
+        return collection.cards[collection.currentIndex]
+    }
+
+    private var isCenterMediaReady: Bool {
+        coordinator.mediaStore.isInitialCenterPeekReady
+            || coordinator.isCenterMediaReady(centerCard: centerCard)
     }
 
     var body: some View {
         AXBackdropShell {
             ZStack {
                 GeoKitDemoBackdropActivationView()
-
-                persistentMapOverlay
-                    .zIndex(1)
-
                 cardStackRegion
-                    .zIndex(2)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onPreferenceChange(AXCardMediaSurfaceFramePreferenceKey.self) { entries in
-                guard let liveID = mediaStore.liveCardID,
-                      let entry = entries.first(where: { $0.cardID == liveID }),
-                      MapLiveSurfaceFrameResolver.isValidHostFrame(entry.frame) else { return }
-                var transaction = Transaction()
-                if deck.isExpanded || deck.isCollapsing {
-                    transaction.animation = AX.Animation.expansionSpring
-                } else if deck.isTransitioning {
-                    transaction.animation = AX.Animation.deckSpring
-                }
-                withTransaction(transaction) {
-                    liveMapSurfaceFrame = entry.frame
-                    if let radius = entry.cornerRadius {
-                        liveMapSurfaceCornerRadius = radius
-                    }
-                }
-            }
             .axGlassPlacement(.overScene)
         }
         .accessibilityIdentifier("geokit-test-app.root")
-    }
-
-    private var resolvedLiveMapFrame: CGRect {
-        MapLiveSurfaceFrameResolver.resolve(
-            reportedFrame: liveMapSurfaceFrame,
-            collapsedCardFrame: deck.collapsedCardFrame
-        )
-    }
-
-    @ViewBuilder
-    private var persistentMapOverlay: some View {
-        let mapFrame = resolvedLiveMapFrame
-        if let liveID = mediaStore.liveCardID,
-           let card = deck.cards.first(where: { $0.id == liveID }),
-           MapLiveSurfaceFrameResolver.isValidHostFrame(mapFrame) {
-            GeoKitDemoPersistentMapHost(
-                cameraStore: cameraStore,
-                card: card,
-                frame: mapFrame,
-                cornerRadius: liveMapSurfaceCornerRadius,
-                collapsedReferenceFrame: deck.collapsedCardFrame,
-                isExpanded: deck.isExpanded,
-                mapProviderId: mapProviderStore.provider,
-                mapIsTransitioning: deck.isCollapsing || deck.isTransitioning
-            )
+        .overlay(alignment: .topLeading) {
+            Color.clear
+                .frame(width: 12, height: 12)
+                .accessibilityElement()
+                .accessibilityIdentifier(
+                    isCenterMediaReady
+                        ? "geokit-test-app.center-media-ready"
+                        : "geokit-test-app.center-media-pending"
+                )
+                .allowsHitTesting(false)
         }
     }
 
     private var cardStackRegion: some View {
         AX.Stack(
-            viewModel: deck,
+            collection: collection,
             cardNamespace: cardNamespace,
             stackPadding: AX.StackConstants.defaultPadding,
             onBackCardTap: { _, index in
-                let count = deck.cards.count
-                guard !deck.isExpanded, count > 0 else { return }
-                deck.rotateStackToPage((deck.stackPageIndex + index) % count)
+                let count = collection.cards.count
+                guard !collection.isExpanded, count > 0 else { return }
+                collection.rotateStackToPage((collection.stackPageIndex + index) % count)
             },
-            isInteractionBlocked: { _ in deck.isExpanded },
+            isInteractionBlocked: { _ in collection.isExpanded },
             paging: stackPaging
-        ) { card, isExpanded in
-            GeoKitDemoCardContent(
+        ) { card, _ in
+            GeoKitCardMap(
                 card: card,
-                isExpanded: isExpanded,
-                mapProviderId: mapProviderStore.provider,
-                mapContentSize: collapsedMapContentSize
+                loadingAccessibilityIdentifier: "geokit-test-app.card-loading",
+                fanLoadingAccessibilityIdentifier: "geokit-test-app.card-loading-fan",
+                cardAccessibilityIdentifierPrefix: "geokit-test-app.card"
             )
         } headerContent: { card in
             AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
@@ -134,44 +84,34 @@ struct GeoKitDemoRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("geokit-test-app.stack")
+        .geoKitCardMapHost(
+            coordinator: coordinator,
+            collection: collection,
+            layout: .stack,
+            mediaContentSize: { coordinator.collapsedMapContentSize },
+            skipSnapshotCapture: {
+                #if DEBUG
+                GeoKitDemoLaunchArguments.isUITestMode
+                #else
+                false
+                #endif
+            },
+            onAppear: {
+                #if DEBUG
+                if !GeoKitDemoLaunchArguments.isUITestMode {
+                    GeoKitDemoCaptureHarness.scheduleExpandCapture(collection: collection)
+                }
+                #endif
+            }
+        )
         .overlay(alignment: .bottom) {
-            if deck.cards.count > 1 {
+            if collection.cards.count > 1 {
                 Color.clear
                     .frame(height: 28)
                     .accessibilityIdentifier("geokit-test-app.stack-paging")
                     .allowsHitTesting(false)
             }
         }
-        .onAppear {
-            syncFanSnapshots(force: true)
-            #if DEBUG
-            if !GeoKitDemoLaunchArguments.isUITestMode {
-                GeoKitDemoCaptureHarness.scheduleExpandCapture(deck: deck)
-            }
-            #endif
-        }
-        .onChange(of: deck.stackPageIndex) { _, _ in
-            syncFanSnapshots(debounceMs: 0)
-        }
-        .onChange(of: deck.containerWidth) { _, _ in
-            syncFanSnapshots()
-        }
-        .onChange(of: mapProviderStore.provider) { _, _ in
-            mediaStore.prepareForProviderSwitch(in: deck.cards)
-            syncFanSnapshots(force: true)
-        }
-        .onChange(of: deck.collapsedCardFrame.size) { _, size in
-            guard AX.Layout.isValidCardMediaLayoutSize(size) else { return }
-            guard !deck.isExpanded, !deck.isCollapsing else { return }
-            syncFanSnapshots()
-        }
-        .onChange(of: deck.isCollapsing) { wasCollapsing, collapsing in
-            guard wasCollapsing, !collapsing, !deck.isExpanded else { return }
-            finishCollapseMediaHandoff()
-        }
-        .environmentObject(mediaStore)
-        .environmentObject(cameraStore)
-        .environment(\.axCardExternalLiveMapHost, true)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .top, spacing: 0) {
             if showsMapProviderPicker {
@@ -181,39 +121,17 @@ struct GeoKitDemoRootView: View {
     }
 
     private var stackPaging: AXStackPaging? {
-        guard deck.cards.count > 1 else { return nil }
+        guard collection.cards.count > 1 else { return nil }
         return AXStackPaging(
-            pageCount: deck.cards.count,
-            currentIndex: deck.stackPageIndex,
+            pageCount: collection.cards.count,
+            currentIndex: collection.stackPageIndex,
             dotColor: AX.Colors.whiteSmoke,
-            canSelectPage: { _ in !deck.isTransitioning },
+            canSelectPage: { _ in !collection.isTransitioning },
             onPageSelected: { index in
-                if deck.isExpanded {
-                    deck.switchToCardWhileExpanded(index: index)
+                if collection.isExpanded {
+                    collection.switchStackPageWhileExpanded(index)
                 } else {
-                    deck.rotateStackToPage(index)
-                }
-            }
-        )
-    }
-
-    /// Hand stack live back to the front card after the collapse animation finishes.
-    private func finishCollapseMediaHandoff() {
-        mediaStore.syncCenterLiveFromDeck(deck, provider: mapProviderStore.provider)
-    }
-
-    private func syncFanSnapshots(force: Bool = false, debounceMs: Int = 120) {
-        guard AX.Layout.isValidCardMediaLayoutSize(collapsedMapContentSize) else { return }
-        mediaStore.updateMapContentSize(collapsedMapContentSize)
-        mediaStore.scheduleBootstrapFanSnapshots(
-            cards: deck.cards,
-            centerIndex: deck.currentIndex,
-            provider: mapProviderStore.provider,
-            debounceMs: force ? 0 : debounceMs,
-            onMediaReady: { index in
-                deck.handleMediaEvent(.mediaReady(kind: .map), at: index)
-                if index == deck.currentIndex {
-                    mediaStore.syncCenterLiveFromDeck(deck, provider: mapProviderStore.provider)
+                    collection.rotateStackToPage(index)
                 }
             }
         )
@@ -221,7 +139,7 @@ struct GeoKitDemoRootView: View {
 
     private var mapProviderHeader: some View {
         AX.SegmentedControl(
-            selection: $mapProviderStore.provider,
+            selection: $coordinator.provider,
             options: MapProviderId.allCases,
             title: { provider in
                 switch provider {
@@ -246,168 +164,5 @@ private struct GeoKitDemoBackdropActivationView: View {
         Color.clear
             .allowsHitTesting(false)
             .onAppear { backdrop.showActive() }
-    }
-}
-
-private struct GeoKitDemoCardContent: View {
-    @ObservedObject var card: GeoKitDemoCard
-    @EnvironmentObject private var mediaStore: GeoKitDemoMediaStore
-    @EnvironmentObject private var cameraStore: MapCameraStore
-    let isExpanded: Bool
-    let mapProviderId: MapProviderId
-    let mapContentSize: CGSize
-
-    private static let liveCrossFadeDuration: TimeInterval = 0.3
-
-    @Environment(\.axCardIsCentered) private var isCentered
-    @Environment(\.axCardStackOffset) private var stackOffset
-    @Environment(\.axCardDeckExpanded) private var deckExpanded
-    @Environment(\.axCardIsTransitioning) private var cardIsTransitioning
-    @Environment(\.axCardIsCollapsing) private var cardIsCollapsing
-    @Environment(\.axCardMediaLoadAllowed) private var mediaLoadAllowed
-    @Environment(\.axCardMediaLayoutSize) private var cardMediaLayoutSize
-
-    private var isStackCenter: Bool {
-        isCentered && (!deckExpanded || cardIsCollapsing)
-    }
-
-    private var isStackOneBehind: Bool {
-        stackOffset == 1 && !deckExpanded
-    }
-
-    private var effectiveMapSize: CGSize {
-        if AX.Layout.isValidCardMediaLayoutSize(cardMediaLayoutSize) {
-            return cardMediaLayoutSize
-        }
-        return mapContentSize
-    }
-
-    /// Peek image only when camera and pin callout state match the cached capture.
-    private var displaySnapshot: UIImage? {
-        guard card.hasUsableSnapshot(
-            for: mapProviderId,
-            cameraFrame: cameraStore.frame(for: card.id)
-        ) else {
-            return nil
-        }
-        return card.frozenSnapshot(for: mapProviderId)
-    }
-
-    private var presentationContext: MapCardMediaPresentationContext {
-        MapCardMediaPresentationContext(
-            isStackCenter: isStackCenter,
-            isStackOneBehind: isStackOneBehind,
-            deckExpanded: deckExpanded,
-            isExpandedOverlaySlot: isExpanded,
-            cardIsTransitioning: cardIsTransitioning,
-            cardIsCollapsing: cardIsCollapsing,
-            isLiveEnabled: mediaStore.isLiveEnabled(cardID: card.id),
-            isMapRendered: card.isMapRendered(for: mapProviderId),
-            hasActiveSnapshot: displaySnapshot != nil,
-            isCenteredInStack: isCentered
-        )
-    }
-
-    private var showsLiveMap: Bool {
-        MapCardMediaPresentationPolicy.showsLiveMap(presentationContext)
-    }
-
-    private var showsPaintedLiveMap: Bool {
-        showsLiveMap && card.isMapRendered(for: mapProviderId)
-    }
-
-    private var liveMapVisible: Bool {
-        MapCardMediaPresentationPolicy.liveMapVisible(presentationContext)
-    }
-
-    private var shouldShowLoading: Bool {
-        MapCardMediaPresentationPolicy.shouldShowLoadingOverlay(presentationContext)
-    }
-
-    private var showsBlankPlaceholder: Bool {
-        if isExpanded { return false }
-        return !shouldShowLoading && displaySnapshot == nil && !liveMapVisible
-    }
-
-    private var reportsLiveRenderingToCard: Bool {
-        liveMapVisible || displaySnapshot != nil
-    }
-
-    private var reportsMediaSurfaceFrame: Bool {
-        guard MapCardMediaPresentationPolicy.reportsMediaSurfaceFrame(presentationContext) else {
-            return false
-        }
-        if isExpanded { return false }
-        if deckExpanded && !isExpanded { return false }
-        return true
-    }
-
-    private var peekSnapshotLoadAllowed: Bool {
-        guard !isExpanded, !mediaStore.isSnapshotBootstrapping else { return false }
-        if isStackCenter { return displaySnapshot == nil }
-        if stackOffset > 0, !deckExpanded { return displaySnapshot == nil }
-        return false
-    }
-
-    private var cardMediaLoadingChrome: some View {
-        ZStack {
-            if displaySnapshot == nil {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(GeoKitMapTheme.accent)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityLabel("Loading")
-        .accessibilityIdentifier(
-            isStackCenter ? "geokit-test-app.card-loading" : "geokit-test-app.card-loading-fan"
-        )
-    }
-
-    var body: some View {
-        ZStack {
-            GeoKitMapTheme.placeholderBackground
-
-            if let image = displaySnapshot, !isExpanded {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-                    .opacity(showsPaintedLiveMap ? 0 : 1)
-                    .animation(.easeInOut(duration: Self.liveCrossFadeDuration), value: showsPaintedLiveMap)
-                    .allowsHitTesting(false)
-            }
-
-            Color.clear
-                .preference(key: AXCardLiveRenderingKey.self, value: reportsLiveRenderingToCard)
-
-            if showsBlankPlaceholder {
-                GeoKitMapTheme.placeholderBackground
-            }
-
-            if shouldShowLoading {
-                cardMediaLoadingChrome
-            }
-        }
-        .geokitSelfManagedMapMedia(
-            card: card,
-            isCentered: isStackCenter,
-            provider: mapProviderId,
-            mapSize: effectiveMapSize,
-            generation: mediaStore.mapMediaGeneration,
-            loadAllowed: peekSnapshotLoadAllowed,
-            cameraFrame: cameraStore.frame(for: card.id),
-            controller: mediaStore.mapMediaController,
-            onLoadingChanged: { mediaStore.setMapLoading($0, cardID: card.id) }
-        )
-        .axReportsCardMediaSurfaceFrame(cardID: card.id, active: reportsMediaSurfaceFrame)
-        .allowsHitTesting(isExpanded)
-        .onChange(of: showsLiveMap) { wasLive, isLive in
-            if wasLive, !isLive, displaySnapshot == nil {
-                card.setMapRendered(false, for: mapProviderId)
-            }
-        }
-        .accessibilityIdentifier("geokit-test-app.card-\(card.id)")
     }
 }

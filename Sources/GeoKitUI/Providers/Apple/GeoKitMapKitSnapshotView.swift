@@ -89,7 +89,7 @@ struct GeoKitMapKitSnapshotView: View {
         refreshTask = Task {
             let mapStyle = GeoKitMapProviderRegistry.apple.mapStyle
             let capturePosition = resolvedPosition
-            let image = await MapSnapshotCaptureExecutor.captureWithRetry {
+            let image = try? await MapSnapshotCaptureExecutor.captureWithRetry {
                 await GeoKitMapKitSnapshotService.capture(
                     position: capturePosition,
                     request: request,
@@ -140,7 +140,7 @@ enum GeoKitMapKitSnapshotService {
         guard MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: size) else { return nil }
         guard let mapCamera = mkMapCamera(from: position, request: request) else { return nil }
 
-        return await withCheckedContinuation { continuation in
+        let deliveredSnapshot: MKMapSnapshotter.Snapshot? = await withCheckedContinuation { continuation in
             let options = MKMapSnapshotter.Options()
             options.camera = mapCamera
             options.size = size
@@ -153,22 +153,20 @@ enum GeoKitMapKitSnapshotService {
                     continuation.resume(returning: nil)
                     return
                 }
-                guard let snapshot else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let zoom = request.cameraFrame?.zoom ?? Double(request.preferredZoom)
-                let image = DispatchQueue.main.sync {
-                    GeoKitSnapshotPinDraw.composite(
-                        baseImage: snapshot.image,
-                        pins: request.pins,
-                        pointForCoordinate: { snapshot.point(for: $0) },
-                        selectedPinId: request.selectedPinId,
-                        zoom: zoom
-                    )
-                }
-                continuation.resume(returning: image)
+                continuation.resume(returning: snapshot)
             }
+        }
+
+        guard let deliveredSnapshot else { return nil }
+        let zoom = request.cameraFrame?.zoom ?? Double(request.preferredZoom)
+        return await MainActor.run {
+            GeoKitSnapshotPinDraw.composite(
+                baseImage: deliveredSnapshot.image,
+                pins: request.pins,
+                pointForCoordinate: { deliveredSnapshot.point(for: $0) },
+                selectedPinId: request.selectedPinId,
+                zoom: zoom
+            )
         }
     }
 

@@ -73,12 +73,11 @@ private struct GeoKitSelfManagedMapMediaModifier: ViewModifier {
             .task(id: taskID) {
                 guard loadAllowed else { return }
                 guard MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: mapSize) else { return }
-                let priority: MapSnapshotPriority = isCentered ? .top : .background
                 await controller.ensureStaticSnapshot(
                     for: card,
                     size: mapSize,
                     provider: provider,
-                    priority: priority,
+                    priority: MapSnapshotCapturePolicy.bootstrapPeekPriority,
                     cameraFrame: cameraFrame,
                     onLoadingChanged: onLoadingChanged
                 )

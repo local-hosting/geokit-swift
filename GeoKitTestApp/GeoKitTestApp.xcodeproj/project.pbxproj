@@ -9,21 +9,29 @@
 /* Begin PBXBuildFile section */
 		GKTA001 /* GeoKitTestAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA101 /* GeoKitTestAppApp.swift */; };
 		GKTA002 /* GeoKitDemoRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA102 /* GeoKitDemoRootView.swift */; };
-		GKTA003 /* GeoKitDemoDeck.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA103 /* GeoKitDemoDeck.swift */; };
+		GKTA003 /* GeoKitDemoCardCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA103 /* GeoKitDemoCardCollection.swift */; };
 		GKTA004 /* GeoKitDemoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA104 /* GeoKitDemoCard.swift */; };
 		GKTA005 /* GeoKitDemoConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA105 /* GeoKitDemoConstants.swift */; };
-		GKTA00B /* GeoKitDemoMediaCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA109 /* GeoKitDemoMediaCoordinator.swift */; };
-		GKTA00D /* GeoKitDemoCaptureHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA110 /* GeoKitDemoCaptureHarness.swift */; };
-		GKTA00E /* GeoKitDemoPersistentMapHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA111 /* GeoKitDemoPersistentMapHost.swift */; };
-
 		GKTA006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = GKTA106 /* Assets.xcassets */; };
 		GKTA007 /* AccordDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP02 /* AccordDesignSystem */; };
 		GKTA008 /* GeoKit in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP03 /* GeoKit */; };
 		GKTA009 /* GeoKitContract in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP04 /* GeoKitContract */; };
-		GKTA00C /* GeoKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP07 /* GeoKitUI */; };
 		GKTA00A /* GeoKit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP03 /* GeoKit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		GKTA00C /* GeoKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP07 /* GeoKitUI */; };
+		GKTA0H1 /* GeoKitUIAccord in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP08 /* GeoKitUIAccord */; };
+		GKTA00D /* GeoKitDemoCaptureHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA110 /* GeoKitDemoCaptureHarness.swift */; };
 		GKTA010 /* GeoKitDemoCardSwitchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA112 /* GeoKitDemoCardSwitchUITests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		GKTA520 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = GKTA701 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = GKTA501;
+			remoteInfo = GeoKitTestApp;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		GKTA201 /* Embed Frameworks */ = {
@@ -42,15 +50,13 @@
 /* Begin PBXFileReference section */
 		GKTA101 /* GeoKitTestAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitTestAppApp.swift; sourceTree = "<group>"; };
 		GKTA102 /* GeoKitDemoRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoRootView.swift; sourceTree = "<group>"; };
-		GKTA103 /* GeoKitDemoDeck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoDeck.swift; sourceTree = "<group>"; };
+		GKTA103 /* GeoKitDemoCardCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCardCollection.swift; sourceTree = "<group>"; };
 		GKTA104 /* GeoKitDemoCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCard.swift; sourceTree = "<group>"; };
-		GKTA109 /* GeoKitDemoMediaCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoMediaCoordinator.swift; sourceTree = "<group>"; };
 		GKTA105 /* GeoKitDemoConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoConstants.swift; sourceTree = "<group>"; };
 		GKTA106 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		GKTA110 /* GeoKitDemoCaptureHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCaptureHarness.swift; sourceTree = "<group>"; };
-		GKTA111 /* GeoKitDemoPersistentMapHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoPersistentMapHost.swift; sourceTree = "<group>"; };
 		GKTA107 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		GKTA108 /* GeoKitTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoKitTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		GKTA110 /* GeoKitDemoCaptureHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCaptureHarness.swift; sourceTree = "<group>"; };
 		GKTA112 /* GeoKitDemoCardSwitchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCardSwitchUITests.swift; sourceTree = "<group>"; };
 		GKTA113 /* GeoKitTestAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeoKitTestAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -64,6 +70,7 @@
 				GKTA008 /* GeoKit in Frameworks */,
 				GKTA009 /* GeoKitContract in Frameworks */,
 				GKTA00C /* GeoKitUI in Frameworks */,
+				GKTA0H1 /* GeoKitUIAccord in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,12 +98,10 @@
 			children = (
 				GKTA101 /* GeoKitTestAppApp.swift */,
 				GKTA102 /* GeoKitDemoRootView.swift */,
-				GKTA103 /* GeoKitDemoDeck.swift */,
+				GKTA103 /* GeoKitDemoCardCollection.swift */,
 				GKTA104 /* GeoKitDemoCard.swift */,
 				GKTA105 /* GeoKitDemoConstants.swift */,
-				GKTA109 /* GeoKitDemoMediaCoordinator.swift */,
 				GKTA110 /* GeoKitDemoCaptureHarness.swift */,
-				GKTA111 /* GeoKitDemoPersistentMapHost.swift */,
 				GKTA106 /* Assets.xcassets */,
 				GKTA107 /* Info.plist */,
 			);
@@ -142,12 +147,12 @@
 				GKTAP03 /* GeoKit */,
 				GKTAP04 /* GeoKitContract */,
 				GKTAP07 /* GeoKitUI */,
+				GKTAP08 /* GeoKitUIAccord */,
 			);
 			productName = GeoKitTestApp;
 			productReference = GKTA108 /* GeoKitTestApp.app */;
 			productType = "com.apple.product-type.application";
 		};
-
 		GKTA511 /* GeoKitTestAppUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = GKTA611 /* Build configuration list for PBXNativeTarget "GeoKitTestAppUITests" */;
@@ -166,25 +171,6 @@
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
-
-
-/* Begin PBXContainerItemProxy section */
-		GKTA520 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = GKTA701 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = GKTA501;
-			remoteInfo = GeoKitTestApp;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		GKTA521 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = GKTA501 /* GeoKitTestApp */;
-			targetProxy = GKTA520 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		GKTA701 /* Project object */ = {
@@ -244,11 +230,9 @@
 			files = (
 				GKTA001 /* GeoKitTestAppApp.swift in Sources */,
 				GKTA002 /* GeoKitDemoRootView.swift in Sources */,
-				GKTA003 /* GeoKitDemoDeck.swift in Sources */,
+				GKTA003 /* GeoKitDemoCardCollection.swift in Sources */,
 				GKTA004 /* GeoKitDemoCard.swift in Sources */,
-				GKTA00B /* GeoKitDemoMediaCoordinator.swift in Sources */,
 				GKTA00D /* GeoKitDemoCaptureHarness.swift in Sources */,
-				GKTA00E /* GeoKitDemoPersistentMapHost.swift in Sources */,
 				GKTA005 /* GeoKitDemoConstants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -263,11 +247,20 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		GKTA521 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = GKTA501 /* GeoKitTestApp */;
+			targetProxy = GKTA520 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		GKTA901 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -321,6 +314,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -421,7 +415,6 @@
 			};
 			name = Release;
 		};
-
 		GKTA905 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -468,21 +461,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		GKTA801 /* Build configuration list for PBXProject "GeoKitTestApp" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				GKTA901 /* Debug */,
-				GKTA902 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-
 		GKTA611 /* Build configuration list for PBXNativeTarget "GeoKitTestAppUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				GKTA905 /* Debug */,
 				GKTA906 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		GKTA801 /* Build configuration list for PBXProject "GeoKitTestApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				GKTA901 /* Debug */,
+				GKTA902 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -520,6 +512,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = GKTAP01 /* XCLocalSwiftPackageReference ".." */;
 			productName = GeoKitUI;
+		};
+		GKTAP08 /* GeoKitUIAccord */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = GKTAP01 /* XCLocalSwiftPackageReference ".." */;
+			productName = GeoKitUIAccord;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

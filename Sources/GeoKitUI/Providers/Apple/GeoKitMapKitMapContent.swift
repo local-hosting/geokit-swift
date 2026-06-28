@@ -25,11 +25,14 @@ struct GeoKitMapKitMapContent: View {
             .onChange(of: transitionSnapshot) { _, _ in
                 seedTransitionSnapshotIfNeeded()
             }
+            .onChange(of: request.id) { _, _ in
+                resetForCardChange()
+            }
             .onChange(of: request.mapProviderId) { _, _ in
                 resetForProviderChange()
             }
             .onChange(of: request.cameraFrame) { _, frame in
-                guard let frame, !mapIsTransitioning else { return }
+                guard let frame else { return }
                 applyCameraFrame(frame)
             }
             .onChange(of: request.selectedPinId) { _, pinId in
@@ -42,6 +45,13 @@ struct GeoKitMapKitMapContent: View {
     private func seedTransitionSnapshotIfNeeded() {
         guard collapsedSnapshot == nil, let transitionSnapshot else { return }
         collapsedSnapshot = transitionSnapshot
+    }
+
+    private func resetForCardChange() {
+        appliedCameraFrame = nil
+        collapsedSnapshot = nil
+        seedSelectedPinIfNeeded()
+        applyCameraFrame(request.cameraFrame)
     }
 
     private func resetForProviderChange() {

@@ -19,6 +19,41 @@ struct GeoKitMapKitMapSurface: View {
 
     @State private var mapReady = false
     @State private var reportedCameraFrame: MapCameraFrame?
+    @State private var pinsLayoutSettling = false
+    @State private var lastSettledLayoutSize: CGSize = .zero
+
+    private var hideLiveMapPins: Bool {
+        MapPinTransitionCoverPolicy.hideLiveMapPins(
+            mapIsTransitioning: isTransitioning,
+            pinsLayoutSettling: pinsLayoutSettling
+        )
+    }
+
+    private func snapshotCoversLive(mapVisible: Bool) -> Bool {
+        MapPinTransitionCoverPolicy.snapshotCoversLive(
+            mapIsTransitioning: isTransitioning,
+            pinsLayoutSettling: pinsLayoutSettling,
+            livePainted: mapVisible && mapReady
+        )
+    }
+
+    private func noteLayoutSizeChange(_ newSize: CGSize) {
+        if MapPinLayoutSettlingPolicy.shouldBeginSettling(
+            isTransitioning: isTransitioning,
+            previousSize: lastSettledLayoutSize,
+            newSize: newSize,
+            mapReady: mapReady
+        ) {
+            pinsLayoutSettling = true
+        }
+    }
+
+    private func markLayoutSettled(_ size: CGSize) {
+        if MapSurfaceMountPolicy.isValidLayoutSize(size) {
+            lastSettledLayoutSize = size
+        }
+        pinsLayoutSettling = false
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -39,7 +74,7 @@ struct GeoKitMapKitMapSurface: View {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
         // Tile snapshots omit pins — keep them under the live map during card transitions.
-        let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil
+        let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil && !hideLiveMapPins
 
         ZStack {
             GeoKitMapTheme.placeholderBackground
@@ -57,6 +92,7 @@ struct GeoKitMapKitMapSurface: View {
         }
         .frame(width: size.width, height: size.height)
         .onChange(of: size) { _, newSize in
+            noteLayoutSizeChange(newSize)
             syncMapReady(for: newSize)
         }
         .onChange(of: mapSurfaceReady) { _, _ in
@@ -64,13 +100,24 @@ struct GeoKitMapKitMapSurface: View {
         }
         .onAppear {
             syncMapReady(for: size)
+            if MapSurfaceMountPolicy.isValidLayoutSize(size) {
+                lastSettledLayoutSize = size
+            }
         }
         .onDisappear {
             mapReady = false
+            pinsLayoutSettling = false
+            lastSettledLayoutSize = .zero
         }
         .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
-        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !showFrozenUnderlay)
+        .preference(key: GeoKitLiveRenderingKey.self, value: showMap && !hideLiveMapPins)
         .preference(key: GeoKitMapRenderedKey.self, value: showMap || showFrozenUnderlay)
+        .preference(key: GeoKitMapSnapshotCoversLiveKey.self, value: showMap && snapshotCoversLive(mapVisible: showMap))
+        .onChange(of: isTransitioning) { wasTransitioning, transitioning in
+            if transitioning, !wasTransitioning {
+                pinsLayoutSettling = false
+            }
+        }
     }
 
     private func liveMap(size: CGSize) -> some View {
@@ -78,8 +125,10 @@ struct GeoKitMapKitMapSurface: View {
             if request.showUserPuck {
                 UserAnnotation()
             }
-            ForEach(request.pins) { (pin: GeoKitContract.MapPin) in
-                pinAnnotation(for: pin)
+            if !hideLiveMapPins {
+                ForEach(request.pins) { (pin: GeoKitContract.MapPin) in
+                    pinAnnotation(for: pin)
+                }
             }
         }
         .mapStyle(GeoKitMapProviderRegistry.apple.mapStyle.mapKitStyle)
@@ -92,6 +141,11 @@ struct GeoKitMapKitMapSurface: View {
             zoomLevel = Float(zoom)
         }
         .onMapCameraChange(frequency: .onEnd) { context in
+            if pinsLayoutSettling {
+                markLayoutSettled(size)
+            } else if MapSurfaceMountPolicy.isValidLayoutSize(size) {
+                lastSettledLayoutSize = size
+            }
             let nextFrame = GeoKitMapKitCamera.frame(from: context.camera)
             if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
                 reportedCameraFrame = nextFrame

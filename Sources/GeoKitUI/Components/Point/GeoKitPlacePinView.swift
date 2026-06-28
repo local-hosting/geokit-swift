@@ -1,3 +1,4 @@
+#if os(iOS)
 //
 //  PlacePinView.swift
 //  Places
@@ -8,7 +9,7 @@
 import GeoKitContract
 import SwiftUI
 
-enum PinStyle {
+public enum PinStyle {
     case primary
     case secondary
 }
@@ -28,15 +29,15 @@ private enum PinCalloutLayout {
     static var mapPointAnchorLift: CGFloat { dotTouchPadding + dotDiameter / 2 }
 }
 
-struct GeoKitPlacePinView: View {
+public struct GeoKitPlacePinView: View {
     @Environment(\.geokitMapIsTransitioning) private var mapIsTransitioning
     let pin: MapPin
-    let zoom: CGFloat
-    var tap: GeoKitTap
+    public let zoom: CGFloat
+    public var tap: GeoKitTap
     var color: Color = GeoKitMapTheme.ink
     var pinStyle: PinStyle = .primary
-    var onTap: (MapPin, Bool, Bool) -> Void
-    var onInteractionBegan: (() -> Void)?
+    public var onTap: (MapPin, Bool, Bool) -> Void
+    public var onInteractionBegan: (() -> Void)?
     @State var appeared = false
     var selected: Bool
     @State private var opacity: Double = 0.0
@@ -44,6 +45,33 @@ struct GeoKitPlacePinView: View {
     var allowCallout: Bool = true
     var showText: Bool = false
     
+
+    public init(
+        pin: MapPin,
+        zoom: CGFloat,
+        tap: GeoKitTap,
+        color: Color = GeoKitMapTheme.ink,
+        pinStyle: PinStyle = .primary,
+        onTap: @escaping (MapPin, Bool, Bool) -> Void,
+        onInteractionBegan: (() -> Void)? = nil,
+        selected: Bool,
+        visible: Bool = false,
+        allowCallout: Bool = true,
+        showText: Bool = false
+    ) {
+        self.pin = pin
+        self.zoom = zoom
+        self.tap = tap
+        self.color = color
+        self.pinStyle = pinStyle
+        self.onTap = onTap
+        self.onInteractionBegan = onInteractionBegan
+        self.selected = selected
+        self._visible = State(initialValue: visible)
+        self.allowCallout = allowCallout
+        self.showText = showText
+    }
+
     private var headingText: String { pin.pinHeading }
     
     private var subHeadingText: String {
@@ -51,7 +79,7 @@ struct GeoKitPlacePinView: View {
         return subheading.isEmpty ? " " : subheading
     }
     
-    var body: some View {
+    public var body: some View {
         
         let shouldShowCallout = allowCallout && zoom >= 10
         let accentColor = GeoKitMapTheme.accent
@@ -129,10 +157,10 @@ struct GeoKitPlacePinView: View {
         var heading: String?
         var subHeading: String?
         var pinStyle: PinStyle = .primary
-        var tap: GeoKitTap
+        public var tap: GeoKitTap
         var showText: Bool
         
-        var body: some View {
+        public var body: some View {
             if selected && showText {
                 HStack(spacing: PinCalloutLayout.rowSpacing) {
                     GeoKitPinIcon.image(named: icon)
@@ -179,7 +207,7 @@ struct GeoKitPlacePinView: View {
     
     struct ViewAnnotationCallOutView: View {
         var icon: String
-        var tap: GeoKitTap
+        public var tap: GeoKitTap
         var heading: String?
         var subHeading: String?
         var pinStyle: PinStyle = .secondary
@@ -189,7 +217,7 @@ struct GeoKitPlacePinView: View {
         var visible: Bool = false
         var skipIntroAnimation: Bool = false
 
-        var body: some View {
+        public var body: some View {
             if selected {
                 emphasizedPinCallout(
                     isEmphasized: showText,
@@ -279,3 +307,4 @@ private extension View {
         )
     }
 }
+#endif
