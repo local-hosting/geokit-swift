@@ -32,7 +32,7 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 livePainted: true
             )
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             MapPinTransitionCoverPolicy.snapshotCoversLive(
                 mapIsTransitioning: false,
                 pinsLayoutSettling: true,
@@ -80,6 +80,14 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 isTransitioning: false,
                 previousSize: previous,
                 newSize: previous,
+                mapReady: true
+            )
+        )
+        XCTAssertFalse(
+            MapPinLayoutSettlingPolicy.shouldBeginSettling(
+                isTransitioning: false,
+                previousSize: previous,
+                newSize: CGSize(width: previous.width + 1, height: previous.height + 1),
                 mapReady: true
             )
         )

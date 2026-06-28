@@ -11,19 +11,24 @@ public enum MapPinTransitionCoverPolicy {
         mapIsTransitioning || pinsLayoutSettling
     }
 
-    /// Keep the card-slot peek snapshot opaque on top of painted live tiles.
+    /// Keep the card-slot peek snapshot opaque on top of live tiles during card transitions or before first paint.
+    /// Steady-state layout settling hides live pins only — it must not pull the peek snapshot back over painted tiles.
     public static func snapshotCoversLive(
         mapIsTransitioning: Bool,
         pinsLayoutSettling: Bool,
         livePainted: Bool
     ) -> Bool {
-        if mapIsTransitioning || pinsLayoutSettling { return true }
-        return !livePainted
+        if mapIsTransitioning { return true }
+        if !livePainted { return true }
+        return false
     }
 }
 
 /// Detect layout jumps after expand/collapse scale transitions so pins can stay on the snapshot until ``onMapIdle``.
 public enum MapPinLayoutSettlingPolicy {
+    /// Ignore sub-point GeometryReader churn once live is mounted (matches card media refresh threshold).
+    public static let minLayoutSizeDelta: CGFloat = 2
+
     public static func shouldBeginSettling(
         isTransitioning: Bool,
         previousSize: CGSize,
@@ -34,6 +39,8 @@ public enum MapPinLayoutSettlingPolicy {
         guard MapSurfaceMountPolicy.isValidLayoutSize(previousSize),
               MapSurfaceMountPolicy.isValidLayoutSize(newSize)
         else { return false }
-        return previousSize != newSize
+        let widthDelta = abs(newSize.width - previousSize.width)
+        let heightDelta = abs(newSize.height - previousSize.height)
+        return widthDelta > minLayoutSizeDelta || heightDelta > minLayoutSizeDelta
     }
 }

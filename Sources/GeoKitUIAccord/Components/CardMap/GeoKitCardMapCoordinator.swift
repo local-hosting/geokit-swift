@@ -288,8 +288,11 @@ public final class GeoKitCardMapCoordinator<Card: GeoKitLiveMapCard & AXCardItem
     private func updateLayoutSize(from session: AXCardMediaLoadSession) -> Bool {
         let size = collapsedMapContentSize
         guard AX.Layout.isValidCardMediaLayoutSize(size) else { return false }
-        mediaStore.updateMapContentSize(size)
-        lastRefreshLayoutSize = size
+        if lastRefreshLayoutSize == .zero
+            || layoutSizeChangeRequiresMediaRefresh(from: lastRefreshLayoutSize, to: size) {
+            mediaStore.updateMapContentSize(size)
+            lastRefreshLayoutSize = size
+        }
         return true
     }
 
