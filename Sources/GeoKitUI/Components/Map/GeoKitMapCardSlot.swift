@@ -21,6 +21,7 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
     @Environment(\.geokitAnimationSpeed) private var animationSpeed
     @State private var liveSnapshotCoversLive = false
     @State private var snapshotVisibleForHost = false
+    @State private var hasLockedLivePainted = false
 
     public init(
         card: Card,
@@ -79,6 +80,7 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
 
     private var keepsSnapshotVisible: Bool {
         guard peekSnapshot != nil else { return false }
+        if hasLockedLivePainted, !mapIsTransitioning { return false }
         if rendersExternalHostHole {
             return !showsPaintedLiveMap
         }
@@ -108,6 +110,16 @@ public struct GeoKitMapCardSlot<Card: GeoKitLiveMapCard & ObservableObject>: Vie
             }
             .onAppear {
                 snapshotVisibleForHost = keepsSnapshotVisible
+                if showsPaintedLiveMap {
+                    hasLockedLivePainted = true
+                }
+            }
+            .onChange(of: showsPaintedLiveMap) { _, painted in
+                if painted {
+                    hasLockedLivePainted = true
+                } else if mapIsTransitioning {
+                    hasLockedLivePainted = false
+                }
             }
     }
 

@@ -147,6 +147,24 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         card.hasUsableSnapshot(for: provider, cameraFrame: cameraStore.frame(for: card.id))
     }
 
+    /// Steady-state focused slot: live tiles own the viewport — do not re-chase peek capture on camera drift.
+    private func focusedPeekIsSatisfied(_ card: Card, provider: MapProviderId) -> Bool {
+        if cardHasStaticSnapshot(card, provider: provider) { return true }
+        guard liveCardID == card.id else { return false }
+        if card.frozenSnapshot(for: provider) != nil { return true }
+        if let liveCard = card as? any GeoKitLiveMapCard,
+           liveCard.isMapRendered(for: provider) {
+            return true
+        }
+        return false
+    }
+
+    private func shouldDeferFocusedBackgroundPeek(for card: Card, provider: MapProviderId) -> Bool {
+        guard liveCardID == card.id else { return false }
+        guard let liveCard = card as? any GeoKitLiveMapCard else { return false }
+        return liveCard.isMapRendered(for: provider)
+    }
+
     private func visibleStaticCaptureIndices(
         cards: [Card],
         focusedIndex: Int,
@@ -185,7 +203,7 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         }
 
         let focused = cards[focusedIndex]
-        let focusedHasSnapshot = cardHasStaticSnapshot(focused, provider: provider)
+        let focusedHasSnapshot = focusedPeekIsSatisfied(focused, provider: provider)
 
         // Steady state — focused card already owns live; never suspend for layout churn.
         if liveCardID == focused.id {
@@ -195,7 +213,7 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
                 provider: provider,
                 onMediaReady: onMediaReady
             )
-            if !focusedHasSnapshot {
+            if !focusedHasSnapshot, !shouldDeferFocusedBackgroundPeek(for: focused, provider: provider) {
                 captureFocusedStaticInBackground(
                     focused: focused,
                     focusedIndex: focusedIndex,
@@ -376,6 +394,9 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         provider: MapProviderId,
         onMediaReady: @escaping (Int) -> Void
     ) {
+        if shouldDeferFocusedBackgroundPeek(for: focused, provider: provider) {
+            return
+        }
         if focusedCaptureTask != nil,
            let inFlight = focusedCaptureInFlight,
            inFlight.cardID == focused.id,

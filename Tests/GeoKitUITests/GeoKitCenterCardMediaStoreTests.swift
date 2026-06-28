@@ -60,9 +60,13 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
 
         store.syncCollectionMedia(cards: rotated, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
 
-        XCTAssertEqual(store.liveCardID, backCard.id, "live stays mounted while the HTTP peek runs")
+        XCTAssertEqual(store.liveCardID, backCard.id, "live stays mounted while peek capture is deferred")
         await settle()
-        XCTAssertEqual(controller.captureCount(for: backCard.id), 1, "missing peek is captured in the background")
+        XCTAssertEqual(
+            controller.captureCount(for: backCard.id),
+            0,
+            "do not chase peek capture while live tiles already own the focused slot"
+        )
     }
 
     func test_assignedCenterLiveWithoutRenderKeepsLiveDuringRefresh() async {
@@ -240,6 +244,27 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
 
         XCTAssertTrue(readyCalled)
         XCTAssertEqual(controller.captureCount(for: cards[0].id), 1, "syncCollectionMedia must not restart center capture during expand prep")
+    }
+
+    func test_skipsBackgroundPeekCaptureWhileLiveRendered() async {
+        let controller = FakeSnapshotController()
+        let store = GeoKitCenterCardMediaStore<FakeLiveSnapshotCard>(
+            cameraStore: MapCameraStore(defaults: .standard, keyPrefix: "test.\(UUID().uuidString)."),
+            snapshotController: controller
+        )
+        store.updateMapContentSize(layoutSize)
+        let cards = (0..<3).map { FakeLiveSnapshotCard(id: "card-\($0)") }
+        store.syncFocusedLive(cards: cards, focusedIndex: 0)
+        cards[0].setMapRendered(true, for: provider)
+
+        store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
+        await settle()
+
+        XCTAssertEqual(
+            controller.captureCount(for: cards[0].id),
+            0,
+            "steady live must not restart peek capture when camera drifts invalidate the cached snapshot"
+        )
     }
 
     func test_prepareForProviderSwitchKeepsStackVisibleAndSnapshotCache() async {

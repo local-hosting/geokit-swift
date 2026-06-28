@@ -79,8 +79,6 @@ private struct GeoKitCardMapBody<Card: GeoKitLiveMapCard & AXCardItem>: View {
     var fanLoadingAccessibilityIdentifier: String?
     var cardAccessibilityIdentifierPrefix: String?
 
-    @State private var snapshotStillVisible = false
-
     private var role: GeoKitCardSlotRole {
         CardMediaSlotPresentation.slotRole(from: slotEnvironment)
     }
@@ -124,10 +122,8 @@ private struct GeoKitCardMapBody<Card: GeoKitLiveMapCard & AXCardItem>: View {
     }
 
     private var cardLiveRendering: Bool {
-        let showsLive = MapCardMediaPresentationPolicy.showsLiveMap(presentationContext)
-        guard showsLive else { return false }
-        let rendered = card.isMapRendered(for: coordinator.provider)
-        return rendered && !snapshotStillVisible
+        guard MapCardMediaPresentationPolicy.showsLiveMap(presentationContext) else { return false }
+        return card.isMapRendered(for: coordinator.provider)
     }
 
     var body: some View {
@@ -144,7 +140,6 @@ private struct GeoKitCardMapBody<Card: GeoKitLiveMapCard & AXCardItem>: View {
             fanLoadingAccessibilityIdentifier: fanLoadingAccessibilityIdentifier,
             externalLiveMapHost: CardMediaSlotPresentation.usesExternalLiveHost(environment: slotEnvironment)
         )
-        .onPreferenceChange(GeoKitMapSnapshotVisibleKey.self) { snapshotStillVisible = $0 }
         .axReportsCardMediaSurfaceFrame(
             cardID: card.id,
             active: CardMediaSlotPresentation.reportsLiveSurfaceFramePreference(
