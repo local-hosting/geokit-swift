@@ -1,24 +1,32 @@
+import Ch3
 import Foundation
-import SwiftyH3
 
 /// H3 helpers shaped like Node `@corio-platforms/geokit` `/h3`.
+///
+/// Backed directly by Uber's H3 C library (vendored as the `Ch3` binary
+/// framework) so no C source target is compiled into the build graph.
 public enum H3 {
     public static func coordinatesToCell(_ coordinate: LatLon, resolution: Int = 9) throws -> String {
-        let cell = try latLng(coordinate).cell(at: resolutionValue(resolution))
-        return cell.description
+        let res = try resolutionValue(resolution)
+        var location = LatLng(lat: degsToRads(coordinate.latitude), lng: degsToRads(coordinate.longitude))
+        var cell: H3Index = 0
+        try check(latLngToCell(&location, res, &cell))
+        return cellString(cell)
     }
 
     public static func cellToCoordinates(_ cellID: String) throws -> LatLon {
-        let center = try validatedCell(cellID).center
+        var center = LatLng(lat: 0, lng: 0)
+        try check(cellToLatLng(try validatedCell(cellID), &center))
         return latLon(center)
     }
 
     public static func resolution(of cellID: String) throws -> Int {
-        Int(try validatedCell(cellID).resolution.rawValue)
+        Int(getResolution(try validatedCell(cellID)))
     }
 
     public static func isValid(_ cellID: String) -> Bool {
-        H3Cell(cellID)?.isValid ?? false
+        guard let cell = parsedCell(cellID) else { return false }
+        return isValidCell(cell) == 1
     }
 
     public static func snapToCell(_ coordinate: LatLon, resolution: Int = 9) throws -> LatLon {
@@ -26,65 +34,101 @@ public enum H3 {
     }
 
     public static func cellToBoundary(_ cellID: String) throws -> [LatLon] {
-        try validatedCell(cellID).boundary.map(latLon)
+        let cell = try validatedCell(cellID)
+        var boundary = CellBoundary()
+        try check(Ch3.cellToBoundary(cell, &boundary))
+        return withUnsafePointer(to: boundary.verts) { tuple in
+            tuple.withMemoryRebound(to: LatLng.self, capacity: Int(MAX_CELL_BNDRY_VERTS)) { verts in
+                (0 ..< Int(boundary.numVerts)).map { latLon(verts[$0]) }
+            }
+        }
     }
 
     /// Parent cell at a coarser resolution.
     public static func parent(of cellID: String, resolution: Int) throws -> String {
-        let parent = try validatedCell(cellID).parent(at: resolutionValue(resolution))
-        return parent.description
+        let res = try resolutionValue(resolution)
+        var parent: H3Index = 0
+        try check(cellToParent(try validatedCell(cellID), res, &parent))
+        return cellString(parent)
     }
 
     /// Child cells at a finer resolution.
     public static func children(of cellID: String, resolution: Int) throws -> [String] {
-        let children = try validatedCell(cellID).children(at: resolutionValue(resolution))
-        return children.map { $0.description }
+        let cell = try validatedCell(cellID)
+        let res = try resolutionValue(resolution)
+        var count: Int64 = 0
+        try check(cellToChildrenSize(cell, res, &count))
+        var output = [H3Index](repeating: 0, count: Int(max(0, count)))
+        try check(cellToChildren(cell, res, &output))
+        return output.filter { $0 != 0 }.map(cellString)
     }
 
     /// k-ring disk of neighboring cells (includes the origin cell).
     public static func neighbors(of cellID: String, k: Int = 1) throws -> [String] {
         guard k >= 0 else { throw H3Error.invalidRing(k) }
-        let disk = try validatedCell(cellID).gridDisk(distance: Int32(k))
-        return disk.map { $0.description }
+        let cell = try validatedCell(cellID)
+        var count: Int64 = 0
+        try check(maxGridDiskSize(Int32(k), &count))
+        var output = [H3Index](repeating: 0, count: Int(max(0, count)))
+        try check(gridDisk(cell, Int32(k), &output))
+        return output.filter { $0 != 0 }.map(cellString)
     }
 
     public static func areNeighbors(_ cellID1: String, _ cellID2: String) throws -> Bool {
-        try validatedCell(cellID1).isNeighbor(of: validatedCell(cellID2))
+        var result: Int32 = 0
+        try check(areNeighborCells(try validatedCell(cellID1), try validatedCell(cellID2), &result))
+        return result == 1
     }
 
     /// Average hexagon edge length at a resolution (meters).
     public static func edgeLength(resolution: Int) throws -> Double {
-        try resolutionValue(resolution).averageHexagonEdgeLength.value
+        let res = try resolutionValue(resolution)
+        var meters: Double = 0
+        try check(getHexagonEdgeLengthAvgM(res, &meters))
+        return meters
     }
 
     /// Average hexagon area at a resolution (square meters).
     public static func cellArea(resolution: Int) throws -> Double {
-        try resolutionValue(resolution).averageHexagonArea.value
+        let res = try resolutionValue(resolution)
+        var squareMeters: Double = 0
+        try check(getHexagonAreaAvgM2(res, &squareMeters))
+        return squareMeters
     }
 
-    private static func validatedCell(_ cellID: String) throws -> H3Cell {
-        guard let cell = H3Cell(cellID), cell.isValid else {
+    private static func parsedCell(_ cellID: String) -> H3Index? {
+        var cell: H3Index = 0
+        let parsed = cellID.withCString { stringToH3($0, &cell) } == 0
+        return (parsed && cell != 0) ? cell : nil
+    }
+
+    private static func validatedCell(_ cellID: String) throws -> H3Index {
+        guard let cell = parsedCell(cellID), isValidCell(cell) == 1 else {
             throw H3Error.invalidCell(cellID)
         }
         return cell
     }
 
-    private static func latLng(_ coordinate: LatLon) -> H3LatLng {
-        H3LatLng(latitudeDegs: coordinate.latitude, longitudeDegs: coordinate.longitude)
+    private static func cellString(_ cell: H3Index) -> String {
+        var buffer = [CChar](repeating: 0, count: 17) // 16 hex digits + NUL
+        _ = h3ToString(cell, &buffer, buffer.count)
+        return String(cString: buffer)
     }
 
-    private static func latLon(_ coordinate: H3LatLng) -> LatLon {
-        LatLon(latitude: coordinate.latitudeDegs, longitude: coordinate.longitudeDegs)
+    private static func latLon(_ coordinate: LatLng) -> LatLon {
+        LatLon(latitude: radsToDegs(coordinate.lat), longitude: radsToDegs(coordinate.lng))
     }
 
-    private static func resolutionValue(_ resolution: Int) throws -> H3Cell.Resolution {
-        guard
-            (0 ... 15).contains(resolution),
-            let value = H3Cell.Resolution(rawValue: Int32(resolution))
-        else {
+    private static func resolutionValue(_ resolution: Int) throws -> Int32 {
+        guard (0 ... 15).contains(resolution) else {
             throw H3Error.invalidResolution(resolution)
         }
-        return value
+        return Int32(resolution)
+    }
+
+    /// Maps a nonzero H3 `H3Error` status code to ``H3Error/operationFailed(_:)``.
+    private static func check(_ status: UInt32) throws {
+        guard status == 0 else { throw H3Error.operationFailed(status) }
     }
 }
 

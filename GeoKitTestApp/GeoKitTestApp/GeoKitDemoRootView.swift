@@ -1,210 +1,88 @@
-import AccordDesignSystem
 import GeoKit
 import GeoKitContract
 import GeoKitUI
-import GeoKitUIAccord
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
+/// Single live map that animates between a centered card and full screen.
+/// The same map surface is reused across states (one hoisted map), it just resizes.
 struct GeoKitDemoRootView: View {
-    @StateObject private var collection = GeoKitDemoCardCollection()
-    @StateObject private var coordinator: GeoKitCardMapCoordinator<GeoKitDemoCard>
-    @Namespace private var cardNamespace
+    @State private var isExpanded = false
 
-    init() {
-        let coordinator = GeoKitCardMapCoordinator<GeoKitDemoCard>()
-        coordinator.onProviderChanged = { provider in
-            GeoKitMapProviderRegistry.configure(provider: provider)
-            GeoKitMapBootstrap.prepare(provider: provider)
-        }
-        _coordinator = StateObject(wrappedValue: coordinator)
-    }
-
-    private var showsMapProviderPicker: Bool {
-        !collection.isExpanded
-    }
-
-    private var centerCard: GeoKitDemoCard? {
-        guard collection.cards.indices.contains(collection.currentIndex) else { return nil }
-        return collection.cards[collection.currentIndex]
-    }
-
-    private var isCenterMediaReady: Bool {
-        collection.isFocusedMediaReady(layout: .stack)
-            || coordinator.isCenterMediaReady(centerCard: centerCard)
-    }
-
-    private var isSessionExpanded: Bool {
-        collection.isExpanded || collection.isCollapsing
-    }
+    private static let collapsedHeight: CGFloat = 460
+    private static let collapsedCornerRadius: CGFloat = 28
 
     var body: some View {
-        AXBackdropShell {
-            ZStack {
-                GeoKitDemoBackdropActivationView()
-                cardStackRegion
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .axGlassPlacement(.overScene)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            mapCard
         }
-        .environment(\.geokitAnimationSpeed, AX.Animation.speed)
-        .accessibilityIdentifier("geokit-test-app.root")
         .overlay(alignment: .topLeading) {
-            Color.clear
-                .frame(width: 12, height: 12)
-                .accessibilityElement()
-                .accessibilityIdentifier(
-                    isCenterMediaReady
-                        ? "geokit-test-app.center-media-ready"
-                        : "geokit-test-app.center-media-pending"
+            if isExpanded {
+                collapseButton
+                    .padding(.leading, 20)
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .scale))
+            }
+        }
+    }
+
+    private var mapCard: some View {
+        map
+            .allowsHitTesting(isExpanded)
+            .frame(maxWidth: .infinity, maxHeight: isExpanded ? .infinity : Self.collapsedHeight)
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: isExpanded ? 0 : Self.collapsedCornerRadius,
+                    style: .continuous
                 )
-                .allowsHitTesting(false)
-        }
-    }
-
-    private var cardStackRegion: some View {
-        cardStackWithHoistedOverlay
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityIdentifier("geokit-test-app.stack")
+            )
             .overlay(alignment: .bottom) {
-                if collection.cards.count > 1 {
-                    Color.clear
-                        .frame(height: 28)
-                        .accessibilityIdentifier("geokit-test-app.stack-paging")
-                        .allowsHitTesting(false)
-                }
+                if !isExpanded { expandHint }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if showsMapProviderPicker {
-                    mapProviderHeader
-                }
+            .shadow(color: .black.opacity(isExpanded ? 0 : 0.45), radius: 22, y: 12)
+            .padding(isExpanded ? 0 : 20)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if !isExpanded { toggle() }
             }
+            .ignoresSafeArea(edges: isExpanded ? .all : [])
     }
 
-    /// Stack fan + hoisted ``CardExpanded``; expanded map lives in-card so it tracks the spring frame.
-    private var cardStackWithHoistedOverlay: some View {
-        AX.Stack(
-            collection: collection,
-            cardNamespace: cardNamespace,
-            showExpandedOverlay: false,
-            stackPadding: AX.StackConstants.defaultPadding,
-            isInteractionBlocked: { _ in collection.isExpanded },
-            paging: stackPaging
-        ) { card, _ in
-            GeoKitCardMap(
-                card: card,
-                loadingAccessibilityIdentifier: "geokit-test-app.card-loading",
-                fanLoadingAccessibilityIdentifier: "geokit-test-app.card-loading-fan",
-                cardAccessibilityIdentifierPrefix: "geokit-test-app.card"
-            )
-        } headerContent: { card in
-            AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
-                .accessibilityIdentifier("geokit-test-app.card-badge-\(card.id)")
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay {
-            expandedOverlays
-                .zIndex(AX.Constants.ZIndex.overlay)
-        }
-        .geoKitMapHost(
-            coordinator: coordinator,
-            collection: collection,
-            layout: .stack,
-            mediaContentSize: { coordinator.collapsedMapContentSize },
-            skipSnapshotCapture: {
-                #if DEBUG
-                GeoKitDemoLaunchArguments.isUITestMode
-                #else
-                false
-                #endif
-            },
-            onAppear: {
-                #if DEBUG
-                if !GeoKitDemoLaunchArguments.isUITestMode {
-                    GeoKitDemoCaptureHarness.scheduleExpandCapture(collection: collection)
-                }
-                #endif
-            },
-            embedsLiveHost: false
+    private var map: some View {
+        GeoKitMapContentWithLifecycle(
+            id: "home-map",
+            policy: MapStagePolicy(stage: isExpanded ? .expand : .center, isExpanded: isExpanded),
+            lifecycle: MapLifecycleState(isStyleReady: true, isSurfaceReady: true),
+            isExpanded: isExpanded,
+            mapStyleURI: GeoKitDemoConstants.liveMapStyleURI,
+            preferredZoom: 12
         )
     }
 
-    @ViewBuilder
-    private var expandedOverlays: some View {
-        if isSessionExpanded {
-            CardExpanded(
-                model: collection,
-                cardNamespace: cardNamespace,
-                cardConfig: AXCardConfig(
-                    badgeWidthFraction: nil,
-                    showsGradientOverlay: true
-                ),
-                isInteractionBlocked: { _ in true },
-                cardContent: { card, _ in
-                    GeoKitCardMap(
-                        card: card,
-                        loadingAccessibilityIdentifier: "geokit-test-app.card-loading",
-                        fanLoadingAccessibilityIdentifier: "geokit-test-app.card-loading-fan",
-                        cardAccessibilityIdentifierPrefix: "geokit-test-app.card"
-                    )
-                },
-                headerContent: { card in
-                    AXBadge(title: card.title, subtitle: card.subtitle, placement: .cardFooter)
-                        .accessibilityIdentifier("geokit-test-app.card-badge-\(card.id)")
-                }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
-            .accessibilityIdentifier("geokit-test-app.expanded-overlay")
+    private var expandHint: some View {
+        Label("Tap to expand", systemImage: "arrow.up.left.and.arrow.down.right")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.bottom, 18)
+    }
+
+    private var collapseButton: some View {
+        Button(action: toggle) {
+            Image(systemName: "chevron.down")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial, in: Circle())
         }
+        .accessibilityIdentifier("geokit-collapse-button")
     }
 
-    private var stackPaging: AXStackPaging? {
-        guard collection.cards.count > 1 else { return nil }
-        return AXStackPaging(
-            pageCount: collection.cards.count,
-            currentIndex: collection.stackPageIndex,
-            dotColor: AX.Colors.whiteSmoke,
-            canSelectPage: { _ in !collection.isTransitioning },
-            onPageSelected: { index in
-                if collection.isExpanded {
-                    collection.switchStackPageWhileExpanded(index)
-                } else {
-                    collection.rotateStackToPage(index)
-                }
-            }
-        )
-    }
-
-    private var mapProviderHeader: some View {
-        AX.SegmentedControl(
-            selection: $coordinator.provider,
-            options: MapProviderId.allCases,
-            title: { provider in
-                switch provider {
-                case .mapbox: "Mapbox"
-                case .apple: "MapKit"
-                }
-            },
-            horizontalPadding: 0
-        )
-        .frame(width: 220)
-        .frame(maxWidth: .infinity)
-        .padding(.top, AX.Layout.spacingS)
-        .padding(.bottom, AX.Layout.spacingL)
-        .accessibilityIdentifier("geokit-test-app.map-provider-picker")
-    }
-}
-
-private struct GeoKitDemoBackdropActivationView: View {
-    @EnvironmentObject private var backdrop: AXBackdropController
-
-    var body: some View {
-        Color.clear
-            .allowsHitTesting(false)
-            .onAppear { backdrop.showActive() }
+    private func toggle() {
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) {
+            isExpanded.toggle()
+        }
     }
 }

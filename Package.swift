@@ -11,42 +11,33 @@ let package = Package(
         .library(name: "GeoKitCore", targets: ["GeoKitCore"]),
         .library(name: "GeoKitContract", targets: ["GeoKitContract"]),
         .library(name: "GeoKitUI", targets: ["GeoKitUI", "GeoKitContract"]),
-        .library(name: "GeoKitUIAccord", targets: ["GeoKitUIAccord"]),
         .library(name: "GeoKitUIMapbox", targets: ["GeoKitUIMapbox"]),
         .library(name: "GeoKit", type: .dynamic, targets: ["GeoKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", exact: "11.25.0"),
         .package(url: "https://github.com/mapbox/turf-swift.git", from: "4.0.0"),
-        .package(url: "https://github.com/pawelmajcher/SwiftyH3.git", "0.5.0" ..< "0.6.0"),
-        .package(path: "../../../GitHub/places/Packages/design-system"),
     ],
     targets: [
+        // Uber H3 (v4.4.1) as a prebuilt binary so no C source target is compiled —
+        // avoids the Xcode 26 explicit-clang-modules failure for SPM C targets.
+        .binaryTarget(
+            name: "Ch3",
+            path: "Vendor/Ch3.xcframework"
+        ),
         .target(
             name: "GeoKitCore",
             dependencies: [
-                .product(name: "SwiftyH3", package: "SwiftyH3"),
+                "Ch3",
                 .product(name: "Turf", package: "turf-swift"),
             ]
         ),
         .target(
-            name: "GeoKitContract",
-            dependencies: [
-                .product(name: "CardMediaContract", package: "design-system"),
-            ]
+            name: "GeoKitContract"
         ),
         .target(
             name: "GeoKitUI",
             dependencies: ["GeoKitContract"]
-        ),
-        .target(
-            name: "GeoKitUIAccord",
-            dependencies: [
-                "GeoKitUI",
-                "GeoKitContract",
-                .product(name: "CardMediaContract", package: "design-system"),
-                .product(name: "AccordDesignSystem", package: "design-system"),
-            ]
         ),
         .target(
             name: "GeoKitUIMapbox",
@@ -61,7 +52,6 @@ let package = Package(
                 "GeoKitCore",
                 "GeoKitContract",
                 "GeoKitUI",
-                "GeoKitUIAccord",
                 "GeoKitUIMapbox",
             ]
         ),
