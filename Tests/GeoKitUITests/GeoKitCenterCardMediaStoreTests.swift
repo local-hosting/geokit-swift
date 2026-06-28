@@ -83,7 +83,6 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
         await settle()
 
-        XCTAssertTrue(store.isInitialFocusedStaticReady)
         XCTAssertTrue(store.hasRevealedCardStack)
         XCTAssertEqual(controller.captureOrder.first, cards[0].id, "center must be captured first")
         XCTAssertEqual(store.liveCardID, cards[0].id, "center goes live after its snapshot exists")
@@ -100,7 +99,6 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
 
         store.syncCollectionMedia(cards: cards, focusedIndex: 0, provider: provider, onMediaReady: { _ in })
 
-        XCTAssertTrue(store.isInitialFocusedStaticReady)
         XCTAssertTrue(store.hasRevealedCardStack)
         await settle()
         XCTAssertEqual(controller.captureCount(for: cards[0].id), 0)
@@ -261,7 +259,6 @@ final class GeoKitCenterCardMediaStoreTests: XCTestCase {
         store.prepareForProviderSwitch(in: cards)
 
         XCTAssertTrue(store.hasRevealedCardStack, "provider switch must not hide the card stack")
-        XCTAssertTrue(store.isInitialFocusedStaticReady)
         XCTAssertTrue(
             cards[0].hasUsableSnapshot(for: .apple, cameraFrame: appleCamera),
             "other providers' cached peeks must survive a provider switch"

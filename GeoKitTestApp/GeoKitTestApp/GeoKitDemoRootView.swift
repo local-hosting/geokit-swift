@@ -32,7 +32,7 @@ struct GeoKitDemoRootView: View {
     }
 
     private var isCenterMediaReady: Bool {
-        coordinator.mediaStore.isInitialFocusedStaticReady
+        collection.isFocusedMediaReady(layout: .stack)
             || coordinator.isCenterMediaReady(centerCard: centerCard)
     }
 

@@ -21,11 +21,9 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
     @Published public private(set) var liveCardID: String?
     /// Incoming stack card warming live tiles while the user drags the front card.
     @Published public private(set) var warmLiveCardID: String?
-    /// True once the focused card has a static image (or live is allowed without one) — reveals the stack on first load.
-    @Published public private(set) var isInitialFocusedStaticReady = false
     /// After the stack is revealed once, later focus swaps keep the stack visible.
     @Published public private(set) var hasRevealedCardStack = false
-    /// When false, ``GeoKitMapHostModifier`` keeps the stack hidden until ``isInitialFocusedStaticReady``.
+    /// When false, ``GeoKitMapHostModifier`` keeps the stack hidden until the collection reports focused media ready.
     @Published public var hidesStackUntilInitialFocusedStaticReady = true
     /// True while ``prepareCardExpansion`` captures the focused-card static used for expand animation.
     @Published public private(set) var isSnapshotBootstrapping = false
@@ -129,7 +127,6 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         warmLiveCardID = nil
         loadingCardIDs.removeAll()
         if !preserveStackReveal {
-            isInitialFocusedStaticReady = false
             hasRevealedCardStack = false
         }
         for card in cards {
@@ -182,7 +179,7 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
 
         if skipSnapshotCapture {
             assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
-            markStackReady(cards: cards, focusedIndex: focusedIndex, provider: provider, allowWithoutSnapshot: true)
+            markStackRevealed(cards: cards, focusedIndex: focusedIndex, provider: provider, allowWithoutSnapshot: true)
             onMediaReady(focusedIndex)
             return
         }
@@ -308,7 +305,7 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         provider: MapProviderId,
         onMediaReady: @escaping (Int) -> Void
     ) {
-        markStackReady(cards: cards, focusedIndex: focusedIndex, provider: provider)
+        markStackRevealed(cards: cards, focusedIndex: focusedIndex, provider: provider)
         assignLiveToFocused(cards: cards, focusedIndex: focusedIndex)
         warmLiveCardID = nil
         onMediaReady(focusedIndex)
@@ -413,7 +410,7 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
             guard !Task.isCancelled else { return }
             guard !self.isSnapshotBootstrapping else { return }
             guard cards.indices.contains(focusedIndex) else { return }
-            self.markStackReady(cards: cards, focusedIndex: focusedIndex, provider: provider)
+            self.markStackRevealed(cards: cards, focusedIndex: focusedIndex, provider: provider)
             onMediaReady(focusedIndex)
         }
     }
@@ -454,21 +451,17 @@ public final class GeoKitCenterCardMediaStore<Card: GeoKitMapSnapshotCard>: Obse
         }
     }
 
-    private func markStackReady(
+    private func markStackRevealed(
         cards: [Card],
         focusedIndex: Int,
         provider: MapProviderId,
         allowWithoutSnapshot: Bool = false
     ) {
-        guard cards.indices.contains(focusedIndex) else {
-            isInitialFocusedStaticReady = false
-            return
-        }
+        guard cards.indices.contains(focusedIndex) else { return }
         let focused = cards[focusedIndex]
         let hasStatic = cardHasStaticSnapshot(focused, provider: provider)
             || focused.frozenSnapshot(for: provider) != nil
         guard hasStatic || allowWithoutSnapshot else { return }
-        isInitialFocusedStaticReady = true
         hasRevealedCardStack = true
     }
 }

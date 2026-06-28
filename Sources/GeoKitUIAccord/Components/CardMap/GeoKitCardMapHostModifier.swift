@@ -70,7 +70,7 @@ private struct GeoKitMapHostModifier<
         if skipSnapshotCapture() { return true }
         if !coordinator.mediaStore.hidesStackUntilInitialFocusedStaticReady { return true }
         if coordinator.mediaStore.hasRevealedCardStack { return true }
-        return coordinator.mediaStore.isInitialFocusedStaticReady
+        return collection.isFocusedMediaReady(layout: layout)
     }
 
     func body(content: Content) -> some View {
