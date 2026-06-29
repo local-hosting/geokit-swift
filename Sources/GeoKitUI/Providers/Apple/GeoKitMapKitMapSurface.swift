@@ -184,7 +184,7 @@ struct GeoKitMapKitMapSurface: View {
                 pin: pin,
                 zoom: CGFloat(zoomLevel),
                 tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
-                color: GeoKitMapTheme.accent,
+                color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
                 pinStyle: pin.isPrimary ? .primary : .secondary,
                 onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
                 onInteractionBegan: onPinInteractionBegan,

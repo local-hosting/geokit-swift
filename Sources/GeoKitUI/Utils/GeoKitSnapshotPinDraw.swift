@@ -77,7 +77,7 @@ public enum GeoKitSnapshotPinDraw {
             pin: pin,
             zoom: zoom,
             tap: GeoKitTap(id: pin.id, coordinate: coordinate),
-            color: accentColor,
+            color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
             onTap: { _, _, _ in },
             selected: selected,
             visible: true,

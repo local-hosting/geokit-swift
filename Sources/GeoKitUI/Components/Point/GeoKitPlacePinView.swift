@@ -27,6 +27,8 @@ private enum PinCalloutLayout {
     static let dotTouchPadding: CGFloat = 10
     /// Map annotations anchor the view bottom to the coordinate; lift callouts so the tail points at the collapsed dot center.
     static var mapPointAnchorLift: CGFloat { dotTouchPadding + dotDiameter / 2 }
+    /// Reserve layout space above the callout bubble for shadow — ``View.offset`` does not expand annotation bounds.
+    static let calloutShadowBleed: CGFloat = 4
 }
 
 public struct GeoKitPlacePinView: View {
@@ -82,7 +84,7 @@ public struct GeoKitPlacePinView: View {
     public var body: some View {
         
         let shouldShowCallout = allowCallout && zoom >= 10
-        let accentColor = GeoKitMapTheme.accent
+        let accentColor = pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary
         
         if !shouldShowCallout {
             let (size, borderWidth, borderShadowRadius): (CGFloat, CGFloat, CGFloat) = {
@@ -190,7 +192,8 @@ public struct GeoKitPlacePinView: View {
                     cornerRadius: PinCalloutLayout.cornerRadius,
                     borderWidth: PinCalloutLayout.borderWidth
                 )
-                .offset(y: -size/1.6)
+                .padding(.top, PinCalloutLayout.calloutShadowBleed)
+                .padding(.bottom, size / 1.6)
             } else {
                 Circle()
                     .fill(color)
@@ -293,7 +296,8 @@ public struct GeoKitPlacePinView: View {
                 cornerRadius: PinCalloutLayout.cornerRadius,
                 borderWidth: PinCalloutLayout.borderWidth
             )
-            .offset(y: -PinCalloutLayout.mapPointAnchorLift)
+            .padding(.top, PinCalloutLayout.calloutShadowBleed)
+            .padding(.bottom, PinCalloutLayout.mapPointAnchorLift)
         }
     }
 }

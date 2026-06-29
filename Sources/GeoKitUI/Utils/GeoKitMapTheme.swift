@@ -4,6 +4,7 @@ import UIKit
 
 public enum GeoKitMapTheme {
     public static let accent = Color(red: 69 / 255, green: 56 / 255, blue: 178 / 255)
+    public static let secondary = Color(red: 44 / 255, green: 199 / 255, blue: 114 / 255)
     public static let ink = Color(red: 0 / 255, green: 3 / 255, blue: 31 / 255)
     public static let placeholderBackground = Color(red: 0 / 255, green: 3 / 255, blue: 31 / 255)
 
