@@ -16,19 +16,9 @@ enum GeoKitCardSnapshotCaptureMapbox {
         if priority == .background {
             return try await GeoKitMapboxStaticImageService.capture(request: request, size: size)
         }
-        let coordinates = request.pins.map {
-            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-        }
-        let viewport: Viewport
-        if let frame = request.cameraFrame {
-            viewport = GeoKitMapViewport.from(frame)
-        } else {
-            viewport = GeoKitMapViewport.initial(
-                coordinates: coordinates,
-                preferredZoom: request.preferredZoom
-            )
-        }
-        let zoom = request.cameraFrame?.zoom ?? Double(request.preferredZoom)
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        let viewport = GeoKitMapViewport.from(frame)
+        let zoom = frame.zoom
         return await GeoKitSnapshotService.capture(
             viewport: viewport,
             size: size,
