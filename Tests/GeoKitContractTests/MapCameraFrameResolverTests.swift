@@ -32,6 +32,39 @@ final class MapCameraFrameResolverTests: XCTestCase {
         XCTAssertEqual(MapCameraFrameResolver.resolve(for: request), camera)
     }
 
+
+    func testRejectsStoredFrameFarFromPinAnchor() {
+        let montreal = MapCameraFrame(
+            centerLatitude: 45.4295,
+            centerLongitude: -73.5534,
+            zoom: 12,
+            bearing: 0,
+            pitch: MapCameraFrameResolver.defaultPitch
+        )
+        XCTAssertNil(MapCameraFrameResolver.storedFrameIfNearPins(montreal, pins: [pin]))
+    }
+
+    func testResolveIgnoresStaleStoredCameraOnRequest() {
+        let montreal = MapCameraFrame(
+            centerLatitude: 45.4295,
+            centerLongitude: -73.5534,
+            zoom: 12,
+            bearing: 0,
+            pitch: MapCameraFrameResolver.defaultPitch
+        )
+        let request = MapContentRequest(
+            id: "nyc",
+            phase: .live,
+            isExpanded: true,
+            preferredZoom: 12,
+            pins: [pin],
+            cameraFrame: montreal
+        )
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        XCTAssertEqual(frame.centerLatitude, pin.latitude, accuracy: 0.0001)
+        XCTAssertEqual(frame.centerLongitude, pin.longitude, accuracy: 0.0001)
+    }
+
     func testFallsBackToPinCenterWhenCameraMissing() {
         let request = MapContentRequest(
             id: "nyc",
@@ -45,6 +78,18 @@ final class MapCameraFrameResolverTests: XCTestCase {
         XCTAssertEqual(frame.centerLatitude, pin.latitude, accuracy: 0.0001)
         XCTAssertEqual(frame.centerLongitude, pin.longitude, accuracy: 0.0001)
         XCTAssertEqual(frame.zoom, 12)
-        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.defaultPitch)
+        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
+    }
+
+    func testExpandedInitialFrameUsesExpandedPitch() {
+        let request = MapContentRequest(
+            id: "nyc",
+            phase: .live,
+            isExpanded: true,
+            preferredZoom: 12,
+            pins: [pin]
+        )
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.expandedPitch)
     }
 }

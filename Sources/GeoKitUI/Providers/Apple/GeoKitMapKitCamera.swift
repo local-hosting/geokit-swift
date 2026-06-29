@@ -5,7 +5,7 @@ import MapKit
 import SwiftUI
 
 enum GeoKitMapKitCamera {
-    static let collapsedPitch: Double = 50
+    static let collapsedPitch: Double = MapCameraFrameResolver.collapsedPitch
 
     static func initialPosition(
         coordinates: [CLLocationCoordinate2D],

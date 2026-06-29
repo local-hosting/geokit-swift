@@ -74,10 +74,9 @@ struct GeoKitMapKitMapContent: View {
     }
 
     private func applyCameraFrame(_ frame: MapCameraFrame?) {
-        let resolved = frame ?? MapCameraFrameResolver.initialFrame(
-            pins: request.pins,
-            preferredZoom: request.preferredZoom
-        )
+        var draft = request
+        draft.cameraFrame = frame
+        let resolved = MapCameraFrameResolver.resolve(for: draft)
         if let appliedCameraFrame, appliedCameraFrame.isApproximatelyEqual(to: resolved) {
             return
         }

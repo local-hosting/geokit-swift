@@ -2,21 +2,55 @@ import Foundation
 
 /// Derives the provider-neutral camera a map request will render — shared by Mapbox and MapKit.
 public enum MapCameraFrameResolver {
-    public static let defaultPitch: Double = 50
+    /// Collapsed card peeks — flat camera keeps Mapbox style symbol layers (e.g. transit) visible on live GL.
+    public static let collapsedPitch: Double = 0
+    /// Expanded hero — pitched 3D framing.
+    public static let expandedPitch: Double = 50
+    /// Backward-compatible alias for expanded pitch.
+    public static let defaultPitch: Double = expandedPitch
 
     public static func resolve(for request: MapContentRequest) -> MapCameraFrame {
-        if let cameraFrame = request.cameraFrame {
-            return cameraFrame
+        let frame: MapCameraFrame
+        if let cameraFrame = storedFrameIfNearPins(request.cameraFrame, pins: request.pins) {
+            frame = cameraFrame
+        } else {
+            frame = initialFrame(
+                pins: request.pins,
+                preferredZoom: request.preferredZoom,
+                isExpanded: request.isExpanded
+            )
         }
-        return initialFrame(
-            pins: request.pins,
-            preferredZoom: request.preferredZoom
-        )
+        return frameWithStyleLabelPitch(frame)
+    }
+
+    /// Mapbox Standard transit and POI symbol layers drop out under pitched cameras on live GL.
+    private static func frameWithStyleLabelPitch(_ frame: MapCameraFrame) -> MapCameraFrame {
+        var flattened = frame
+        flattened.pitch = collapsedPitch
+        return flattened
+    }
+
+    /// Rejects persisted/style-default cameras that drift far from the card's pin anchor.
+    public static func storedFrameIfNearPins(
+        _ stored: MapCameraFrame?,
+        pins: [MapPin],
+        maxCenterDeltaDegrees: Double = 1.0
+    ) -> MapCameraFrame? {
+        guard let stored else { return nil }
+        guard !pins.isEmpty else { return stored }
+        let anchor = centerCoordinate(from: pins) ?? defaultCenter(from: pins)
+        let latDelta = abs(stored.centerLatitude - anchor.latitude)
+        let lonDelta = abs(stored.centerLongitude - anchor.longitude)
+        guard latDelta <= maxCenterDeltaDegrees, lonDelta <= maxCenterDeltaDegrees else {
+            return nil
+        }
+        return stored
     }
 
     public static func initialFrame(
         pins: [MapPin],
-        preferredZoom: Double
+        preferredZoom: Double,
+        isExpanded: Bool = false
     ) -> MapCameraFrame {
         let center = centerCoordinate(from: pins) ?? defaultCenter(from: pins)
         return MapCameraFrame(
@@ -24,7 +58,7 @@ public enum MapCameraFrameResolver {
             centerLongitude: center.longitude,
             zoom: preferredZoom,
             bearing: 0,
-            pitch: defaultPitch
+            pitch: collapsedPitch
         )
     }
 

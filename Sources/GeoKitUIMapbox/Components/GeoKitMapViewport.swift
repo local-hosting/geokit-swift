@@ -5,7 +5,7 @@ import GeoKitUI
 import MapboxMaps
 
 enum GeoKitMapViewport {
-    static let collapsedPitch: Double = 50
+    static let collapsedPitch: Double = MapCameraFrameResolver.collapsedPitch
 
     static func initial(
         coordinates: [CLLocationCoordinate2D],
