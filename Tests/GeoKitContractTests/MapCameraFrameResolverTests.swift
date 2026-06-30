@@ -29,7 +29,12 @@ final class MapCameraFrameResolverTests: XCTestCase {
             cameraFrame: camera
         )
 
-        XCTAssertEqual(MapCameraFrameResolver.resolve(for: request), camera)
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        XCTAssertEqual(frame.centerLatitude, camera.centerLatitude)
+        XCTAssertEqual(frame.centerLongitude, camera.centerLongitude)
+        XCTAssertEqual(frame.zoom, camera.zoom)
+        XCTAssertEqual(frame.bearing, camera.bearing)
+        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
     }
 
 
@@ -81,7 +86,7 @@ final class MapCameraFrameResolverTests: XCTestCase {
         XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
     }
 
-    func testExpandedInitialFrameUsesExpandedPitch() {
+    func testExpandedInitialFrameUsesCollapsedPitchForTransitLabels() {
         let request = MapContentRequest(
             id: "nyc",
             phase: .live,
@@ -90,6 +95,6 @@ final class MapCameraFrameResolverTests: XCTestCase {
             pins: [pin]
         )
         let frame = MapCameraFrameResolver.resolve(for: request)
-        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.expandedPitch)
+        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
     }
 }

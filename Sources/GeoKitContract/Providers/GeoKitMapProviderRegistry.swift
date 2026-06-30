@@ -26,12 +26,21 @@ public struct AppleMapsProviderConfig: Sendable, Equatable {
 
 /// Global map provider configuration — mirrors `@geokit/ui` `configure({ maptiler, mapbox })`.
 public enum GeoKitMapProviderRegistry {
-    private static var configuredProvider: MapProviderId?
-    private static var mapboxConfig = MapboxProviderConfig()
-    private static var appleConfig = AppleMapsProviderConfig()
+    nonisolated(unsafe) private static var configuredProvider: MapProviderId?
+    nonisolated(unsafe) private static var mapboxConfig = MapboxProviderConfig()
+    nonisolated(unsafe) private static var appleConfig = AppleMapsProviderConfig()
 
     public static var defaultProvider: MapProviderId {
-        configuredProvider ?? MapProviderResolver.fromEnvironment()
+        platformAdjusted(configuredProvider ?? MapProviderResolver.fromEnvironment())
+    }
+
+    /// Mapbox is not linked on tvOS — coerce to Apple MapKit when requested.
+    private static func platformAdjusted(_ provider: MapProviderId) -> MapProviderId {
+        #if os(tvOS) || os(macOS)
+        provider == .mapbox ? .apple : provider
+        #else
+        provider
+        #endif
     }
 
     public static var mapbox: MapboxProviderConfig { mapboxConfig }

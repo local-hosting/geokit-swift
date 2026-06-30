@@ -44,6 +44,15 @@ public enum MapProviderResolver {
         if let provider = normalizeHint(infoPlistValue) {
             return provider
         }
+        return defaultForPlatform()
+    }
+
+    /// `.mapbox` on iOS (including CarPlay), visionOS, and Catalyst; `.apple` on tvOS. See `docs/platforms.md`.
+    public static func defaultForPlatform() -> MapProviderId {
+        #if os(tvOS) || os(macOS)
+        return .apple
+        #else
         return .mapbox
+        #endif
     }
 }
