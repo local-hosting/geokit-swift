@@ -55,33 +55,34 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
         )
     }
 
-    func testWhiteBaseCoverHeldUntilFirstLivePaintWithoutSnapshot() {
+    func testLiveSurfaceCoverHeldUntilFirstLivePaintRegardlessOfSnapshot() {
+        // No snapshot, not yet painted: cover the cold-load base.
         XCTAssertTrue(
-            MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
+            MapPinTransitionCoverPolicy.coversLiveSurface(
                 showMap: true,
-                livePainted: false,
-                hasFrozenSnapshot: false
+                livePainted: false
             )
         )
+        // Painted: reveal the live map underneath.
         XCTAssertFalse(
-            MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
+            MapPinTransitionCoverPolicy.coversLiveSurface(
                 showMap: true,
-                livePainted: true,
-                hasFrozenSnapshot: false
+                livePainted: true
             )
         )
-        XCTAssertFalse(
-            MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
+        // Snapshot present but not yet painted: still cover — the opaque live base composites above the
+        // underlay, so the snapshot must sit on top until the live surface paints (carousel-handoff fix).
+        XCTAssertTrue(
+            MapPinTransitionCoverPolicy.coversLiveSurface(
                 showMap: true,
-                livePainted: false,
-                hasFrozenSnapshot: true
+                livePainted: false
             )
         )
+        // Map not mounted: nothing to cover.
         XCTAssertFalse(
-            MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
+            MapPinTransitionCoverPolicy.coversLiveSurface(
                 showMap: false,
-                livePainted: false,
-                hasFrozenSnapshot: false
+                livePainted: false
             )
         )
     }

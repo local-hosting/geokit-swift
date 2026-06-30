@@ -92,22 +92,33 @@ struct GeoKitMapKitMapSurface: View {
             if showMap {
                 liveMap(size: size)
             }
-            // Mirror the Mapbox surface: hold the dark placeholder above the live map until its first
-            // paint so a cold load can't flash the underlying surface's blank base.
-            GeoKitMapTheme.placeholderBackground
-                .frame(width: size.width, height: size.height)
-                .opacity(
-                    MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
-                        showMap: showMap,
-                        livePainted: liveDidRender,
-                        hasFrozenSnapshot: frozenSnapshot != nil
-                    ) ? 1 : 0
-                )
-                .allowsHitTesting(false)
-                .animation(
-                    .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
-                    value: liveDidRender
-                )
+            // Mirror the Mapbox surface: keep the live map underneath and hold a cover above it until its
+            // first paint so a cold load can't flash the surface's blank base. The cover is the frozen
+            // snapshot when we have one (seamless continuity from the card image), the dark placeholder
+            // otherwise — the underlay alone can't mask an opaque live base that composites above it.
+            Group {
+                if let snapshot = frozenSnapshot {
+                    Image(geoKitImage: snapshot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                } else {
+                    GeoKitMapTheme.placeholderBackground
+                        .frame(width: size.width, height: size.height)
+                }
+            }
+            .opacity(
+                MapPinTransitionCoverPolicy.coversLiveSurface(
+                    showMap: showMap,
+                    livePainted: liveDidRender
+                ) ? 1 : 0
+            )
+            .allowsHitTesting(false)
+            .animation(
+                .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
+                value: liveDidRender
+            )
         }
         .frame(width: size.width, height: size.height)
         .onChange(of: size) { _, newSize in

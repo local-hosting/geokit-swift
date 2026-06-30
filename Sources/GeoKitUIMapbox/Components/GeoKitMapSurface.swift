@@ -4,8 +4,14 @@ import CoreLocation
 import GeoKitContract
 import GeoKitUI
 import MapboxMaps
+import os
 import SwiftUI
 import UIKit
+
+/// TEMP DEBUG: trace the live surface render state to diagnose the center handoff gray. Remove once fixed.
+enum GeoKitMapSurfaceLog {
+    static let logger = Logger(subsystem: "fm.geokit.ui", category: "mapsurface")
+}
 
 /// TEMP DEBUG: overlay frozen snapshot and live GL map at 50% so misalignment is visible.
 enum GeoKitMapSurfaceDebug {
@@ -60,6 +66,24 @@ struct GeoKitMapSurface: View {
         let target = MapCameraFrameResolver.resolve(for: request)
         if MapCameraFrameResolver.isCameraSettledAtTarget(reportedCameraFrame, target: target) {
             initialCameraSettled = true
+        }
+    }
+
+    /// Persist the live camera as the user moves it — not only at idle. A collapse can flip
+    /// `isTransitioning` (and remount the hoisted surface) before the post-pan `onMapIdle` fires; if the
+    /// frame is only reported on idle, the panned camera never reaches the shared store and the remount
+    /// resolves back to the declared camera. Reporting on every interactive change keeps the store current
+    /// so `frame(for:id)` already holds the user's camera before any handoff. The store dedups and debounces.
+    private func reportCameraFrame(_ cameraState: CameraState) {
+        let frame = MapCameraFrame(
+            centerLatitude: cameraState.center.latitude,
+            centerLongitude: cameraState.center.longitude,
+            zoom: cameraState.zoom,
+            bearing: cameraState.bearing,
+            pitch: cameraState.pitch
+        )
+        if reportedCameraFrame?.isApproximatelyEqual(to: frame) != true {
+            reportedCameraFrame = frame
         }
     }
 
@@ -136,8 +160,23 @@ struct GeoKitMapSurface: View {
             // Tile snapshots omit pins — draw them under the live map so annotations stay visible.
             let showFrozenUnderlay = frozenSnapshot != nil && (GeoKitMapSurfaceDebug.overlayLayers || (!liveDidRender && !isTransitioning))
             let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
+            let _ = GeoKitMapSurfaceLog.logger.log("surface \(request.id, privacy: .public) frozen=\(frozenSnapshot != nil) showMap=\(showMap) liveDidRender=\(liveDidRender) isTransitioning=\(isTransitioning) covers=\(MapPinTransitionCoverPolicy.coversLiveSurface(showMap: showMap, livePainted: liveSurfaceRevealed))")
             ZStack {
-                GeoKitMapTheme.placeholderBackground
+                // Base layer: never a gray fill when the card already carries its snapshot. On the carousel
+                // center handoff the hoisted live surface mounts above the card while `isTransitioning` is
+                // true, which suppresses the pin-aware underlay below — a gray base then flashes through until
+                // the first live paint (the "image then vanishes" gray). Paint the snapshot as the base so the
+                // card's own image bridges the cold load. Gray only when there is no snapshot at all.
+                if let snapshot = frozenSnapshot {
+                    Image(uiImage: snapshot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                        .allowsHitTesting(false)
+                } else {
+                    GeoKitMapTheme.placeholderBackground
+                }
                 if let snapshot = frozenSnapshot, showFrozenUnderlay {
                     Image(uiImage: snapshot)
                         .resizable()
@@ -157,28 +196,12 @@ struct GeoKitMapSurface: View {
                                 Puck2D().pulsing(.default)
                             }
                             if !hideLiveMapPins {
-                                ForEvery(request.pins) { pin in
-                                    let isSelected = selectedPinId == pin.id
-                                    MapViewAnnotation(coordinate: pin.coordinate) {
-                                        GeoKitPlacePinView(
-                                            pin: pin,
-                                            zoom: pinZoom,
-                                            tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
-                                            color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
-                                            pinStyle: pin.isPrimary ? .primary : .secondary,
-                                            onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
-                                            onInteractionBegan: onPinInteractionBegan,
-                                            selected: isSelected,
-                                            visible: true,
-                                            allowCallout: true,
-                                            showText: true
-                                        )
-                                    }
-                                    .priority(isSelected ? 1 : 0)
-                                    .allowOverlap(true)
-                                    .allowOverlapWithPuck(true)
-                                    .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
-                                }
+                                // Unselected pins draw as a GPU circle layer (CircleAnnotationGroup → a managed
+                                // CircleLayer). Moving a pin updates the renderer's GeoJSON source, so the dot
+                                // travels on the GPU instead of reflowing a SwiftUI view annotation every frame.
+                                unselectedPinCircles(zoom: pinZoom)
+                                // The selected pin keeps the SwiftUI callout view annotation for its label + tail.
+                                selectedPinAnnotation(zoom: pinZoom)
                             }
                         }
                         .mapStyle(GeoKitMapboxMapStyle.liveMapStyle(styleURI: request.mapStyleURI))
@@ -194,13 +217,16 @@ struct GeoKitMapSurface: View {
                         }
                         .onCameraChanged { event in
                             guard !isTransitioning else { return }
-                            let zoom = event.cameraState.zoom
                             let cameraState = event.cameraState
+                            let zoom = cameraState.zoom
                             liveCameraState = cameraState
                             zoomLevel = Float(zoom)
                             currentZoom = zoom
                             isPlusEnabled = zoom < 19
                             isMinusEnabled = zoom > 10
+                            // The map is the map: persist every interactive move so the shared store is
+                            // current before a collapse can preempt the post-pan idle.
+                            reportCameraFrame(cameraState)
                         }
                         .onMapIdle { _ in
                             if let map = proxy.map {
@@ -217,16 +243,7 @@ struct GeoKitMapSurface: View {
                             // Read the live camera from the proxy: imperative setCamera doesn't emit
                             // onCameraChanged, so liveCameraState can still be nil at the first idle.
                             guard !isTransitioning, let cameraState = liveCameraState ?? proxy.map?.cameraState else { return }
-                            let nextFrame = MapCameraFrame(
-                                centerLatitude: cameraState.center.latitude,
-                                centerLongitude: cameraState.center.longitude,
-                                zoom: cameraState.zoom,
-                                bearing: cameraState.bearing,
-                                pitch: cameraState.pitch
-                            )
-                            if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
-                                reportedCameraFrame = nextFrame
-                            }
+                            reportCameraFrame(cameraState)
                             // The first idle can land at the style's default camera before the fly-to. Only
                             // mark settled once the reported camera reaches the card's pins.
                             noteCameraSettledIfNeeded()
@@ -246,24 +263,34 @@ struct GeoKitMapSurface: View {
                         .opacity(GeoKitMapSurfaceDebug.overlayLayers ? 0.5 : 1)
                     }
                 }
-                // Mapbox's GL surface paints an opaque white base while the style + tiles stream in.
-                // The placeholder behind the map can't mask that, so hold a dark cover *above* the live
-                // surface until the first idle. Without a frozen underlay (cold first load) this is the
-                // only thing standing between the consumer and a white flash.
-                GeoKitMapTheme.placeholderBackground
-                    .frame(width: size.width, height: size.height)
-                    .opacity(
-                        MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
-                            showMap: showMap,
-                            livePainted: liveSurfaceRevealed,
-                            hasFrozenSnapshot: frozenSnapshot != nil
-                        ) ? 1 : 0
-                    )
-                    .allowsHitTesting(false)
-                    .animation(
-                        .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
-                        value: liveSurfaceRevealed
-                    )
+                // Mapbox's GL surface paints an opaque base the instant it mounts, compositing *above* the
+                // frozen underlay below — so that underlay can't mask the cold load (the carousel-handoff
+                // gray flash). Keep the live map underneath and hold this cover *above* it until the surface
+                // has painted and settled, then cross-fade. The cover is the frozen snapshot when we have one
+                // (seamless continuity from the card image), the dark placeholder otherwise (cold first load).
+                Group {
+                    if let snapshot = frozenSnapshot {
+                        Image(uiImage: snapshot)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: size.width, height: size.height)
+                            .clipped()
+                    } else {
+                        GeoKitMapTheme.placeholderBackground
+                            .frame(width: size.width, height: size.height)
+                    }
+                }
+                .opacity(
+                    MapPinTransitionCoverPolicy.coversLiveSurface(
+                        showMap: showMap,
+                        livePainted: liveSurfaceRevealed
+                    ) ? 1 : 0
+                )
+                .allowsHitTesting(false)
+                .animation(
+                    .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
+                    value: liveSurfaceRevealed
+                )
             }
             .frame(width: size.width, height: size.height)
             .overlay(alignment: .top) {
@@ -348,6 +375,49 @@ struct GeoKitMapSurface: View {
         .clipped()
     }
 
+
+    /// GPU-rendered dots for every pin that is not currently selected.
+    @MapContentBuilder
+    private func unselectedPinCircles(zoom: CGFloat) -> some MapContent {
+        let dot = GeoKitPinDotMetrics.unselected(zoom: zoom)
+        CircleAnnotationGroup(request.pins.filter { $0.id != selectedPinId }) { pin in
+            let pinColor = pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary
+            return CircleAnnotation(centerCoordinate: pin.coordinate)
+                .circleColor(StyleColor(UIColor(pinColor)))
+                .circleRadius(Double(dot.diameter) / 2)
+                .circleStrokeColor(StyleColor(UIColor.white))
+                .circleStrokeWidth(Double(dot.strokeWidth))
+                .onTapGesture {
+                    onPinTap(pin, true)
+                }
+        }
+    }
+
+    /// SwiftUI callout view annotation for the selected pin (label + tail can't live on a style layer).
+    @MapContentBuilder
+    private func selectedPinAnnotation(zoom: CGFloat) -> some MapContent {
+        if let selectedPinId, let pin = request.pins.first(where: { $0.id == selectedPinId }) {
+            MapViewAnnotation(coordinate: pin.coordinate) {
+                GeoKitPlacePinView(
+                    pin: pin,
+                    zoom: zoom,
+                    tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
+                    color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
+                    pinStyle: pin.isPrimary ? .primary : .secondary,
+                    onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
+                    onInteractionBegan: onPinInteractionBegan,
+                    selected: true,
+                    visible: true,
+                    allowCallout: true,
+                    showText: true
+                )
+            }
+            .priority(1)
+            .allowOverlap(true)
+            .allowOverlapWithPuck(true)
+            .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
+        }
+    }
 
     private var ornamentOptions: OrnamentOptions {
         GeoKitMapTokens.liveOrnamentOptions(interactiveGestures: request.mapAcceptsUserInteraction)

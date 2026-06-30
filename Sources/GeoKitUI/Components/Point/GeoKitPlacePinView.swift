@@ -32,6 +32,21 @@ private enum PinCalloutLayout {
     static let calloutShadowBleed: CGFloat = 4
 }
 
+/// Diameter + stroke width of an unselected pin dot at a given map zoom.
+///
+/// Shared by ``GeoKitPlacePinView`` (SwiftUI view annotation) and the Mapbox GPU circle layer so both paths
+/// draw the same dot. Keep them in sync by routing every dot through this one helper.
+public enum GeoKitPinDotMetrics {
+    public static func unselected(zoom: CGFloat) -> (diameter: CGFloat, strokeWidth: CGFloat) {
+        if zoom >= 10 { return (PinCalloutLayout.dotDiameter, 2) }
+        if zoom <= 0 { return (2, 1) }
+        if zoom <= 2 { return (3, 1) }
+        if zoom <= 5 { return (5, 1.2) }
+        if zoom <= 8 { return (10, 2) }
+        return (15, 2)
+    }
+}
+
 public struct GeoKitPlacePinView: View {
     @Environment(\.geokitMapIsTransitioning) private var mapIsTransitioning
     let pin: MapPin
@@ -88,20 +103,8 @@ public struct GeoKitPlacePinView: View {
         let accentColor = pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary
         
         if !shouldShowCallout {
-            let (size, borderWidth, borderShadowRadius): (CGFloat, CGFloat, CGFloat) = {
-                if zoom == 0 {
-                    return (2, 1, 1)
-                } else if zoom > 0 && zoom <= 2 {
-                    return (3, 1, 1)
-                } else if zoom > 2 && zoom <= 5 {
-                    return (5, 1.2, 1.2)
-                } else if zoom > 5 && zoom <= 8 {
-                    return (10, 2, 2)
-                } else if zoom > 8 && zoom <= 10 {
-                    return (15, 2, 2)
-                }
-                return (3, 1, 1)
-            }()
+            let dot = GeoKitPinDotMetrics.unselected(zoom: zoom)
+            let (size, borderWidth, borderShadowRadius) = (dot.diameter, dot.strokeWidth, dot.strokeWidth)
 
             CirclePinAnnotation(
                 size: size,
