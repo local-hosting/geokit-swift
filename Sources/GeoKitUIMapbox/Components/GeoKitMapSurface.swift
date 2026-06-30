@@ -40,6 +40,28 @@ struct GeoKitMapSurface: View {
     @State private var pinZoomHold: CGFloat?
     @State private var pinsLayoutSettling = false
     @State private var lastSettledLayoutSize: CGSize = .zero
+    /// One-shot: the live surface is anchored at its shared camera. The live map seeds directly at the
+    /// resolved `saved ?? declared` camera (an imperative `setCamera` jump — the same frame the snapshot
+    /// was captured at), so there is no fly-to to cross and settle is satisfied the moment that camera is
+    /// applied. The dark cover then lifts on the first paint, never revealing an uncentered light map.
+    @State private var initialCameraSettled = false
+
+    /// Cover may lift only once the live surface has painted and reached its target camera (or mid-transition).
+    private var liveSurfaceRevealed: Bool {
+        LiveMapRevealPolicy.revealsLiveSurface(
+            livePainted: liveDidRender,
+            cameraSettledAtTarget: initialCameraSettled,
+            isTransitioning: isTransitioning
+        )
+    }
+
+    private func noteCameraSettledIfNeeded() {
+        guard !initialCameraSettled else { return }
+        let target = MapCameraFrameResolver.resolve(for: request)
+        if MapCameraFrameResolver.isCameraSettledAtTarget(reportedCameraFrame, target: target) {
+            initialCameraSettled = true
+        }
+    }
 
     private var hideLiveMapPins: Bool {
         MapPinTransitionCoverPolicy.hideLiveMapPins(
@@ -98,6 +120,12 @@ struct GeoKitMapSurface: View {
             pitch: frame.pitch
         ))
         didApplyInitialCamera = true
+        // Single shared camera: we jumped the live surface straight to the resolved camera (no fly-to), so
+        // it is already at its target. Record that frame and mark settled now — the imperative jump emits no
+        // `onCameraChanged`/`onMapIdle`, so waiting on a reported match would strand the cover until the
+        // timeout. The cover still holds until the first paint via `liveDidRender`.
+        reportedCameraFrame = frame
+        initialCameraSettled = true
     }
 
     var body: some View {
@@ -186,7 +214,9 @@ struct GeoKitMapSurface: View {
                             if !liveDidRender {
                                 liveDidRender = true
                             }
-                            guard !isTransitioning, let cameraState = liveCameraState else { return }
+                            // Read the live camera from the proxy: imperative setCamera doesn't emit
+                            // onCameraChanged, so liveCameraState can still be nil at the first idle.
+                            guard !isTransitioning, let cameraState = liveCameraState ?? proxy.map?.cameraState else { return }
                             let nextFrame = MapCameraFrame(
                                 centerLatitude: cameraState.center.latitude,
                                 centerLongitude: cameraState.center.longitude,
@@ -197,6 +227,9 @@ struct GeoKitMapSurface: View {
                             if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
                                 reportedCameraFrame = nextFrame
                             }
+                            // The first idle can land at the style's default camera before the fly-to. Only
+                            // mark settled once the reported camera reaches the card's pins.
+                            noteCameraSettledIfNeeded()
                         }
                         .ornamentOptions(ornamentOptions)
                         .gestureOptions(gestureOptions)
@@ -213,6 +246,24 @@ struct GeoKitMapSurface: View {
                         .opacity(GeoKitMapSurfaceDebug.overlayLayers ? 0.5 : 1)
                     }
                 }
+                // Mapbox's GL surface paints an opaque white base while the style + tiles stream in.
+                // The placeholder behind the map can't mask that, so hold a dark cover *above* the live
+                // surface until the first idle. Without a frozen underlay (cold first load) this is the
+                // only thing standing between the consumer and a white flash.
+                GeoKitMapTheme.placeholderBackground
+                    .frame(width: size.width, height: size.height)
+                    .opacity(
+                        MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
+                            showMap: showMap,
+                            livePainted: liveSurfaceRevealed,
+                            hasFrozenSnapshot: frozenSnapshot != nil
+                        ) ? 1 : 0
+                    )
+                    .allowsHitTesting(false)
+                    .animation(
+                        .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
+                        value: liveSurfaceRevealed
+                    )
             }
             .frame(width: size.width, height: size.height)
             .overlay(alignment: .top) {
@@ -234,6 +285,15 @@ struct GeoKitMapSurface: View {
             }
             .onChange(of: request.id) { _, _ in
                 didApplyInitialCamera = false
+                initialCameraSettled = false
+            }
+            .task(id: request.id) {
+                // Never strand the cover: if the camera can't reach the pins (e.g. tiles never load), lift
+                // after a bounded window so the surface isn't hidden forever.
+                try? await Task.sleep(nanoseconds: 6_000_000_000)
+                if !initialCameraSettled {
+                    initialCameraSettled = true
+                }
             }
             .onAppear {
                 syncMapReady(for: size)
@@ -245,6 +305,7 @@ struct GeoKitMapSurface: View {
                 mapReady = false
                 liveDidRender = false
                 didApplyInitialCamera = false
+                initialCameraSettled = false
                 pinsLayoutSettling = false
                 lastSettledLayoutSize = .zero
             }
@@ -253,6 +314,7 @@ struct GeoKitMapSurface: View {
                     GeoKitMapboxLiveMapRegistry.registerLiveMap()
                 } else {
                     liveDidRender = false
+                    initialCameraSettled = false
                     GeoKitMapboxLiveMapRegistry.unregisterLiveMap()
                 }
             }
@@ -265,7 +327,7 @@ struct GeoKitMapSurface: View {
             .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !hideLiveMapPins)
             .preference(
                 key: GeoKitMapRenderedKey.self,
-                value: (showMap && liveDidRender) || showFrozenUnderlay
+                value: (showMap && liveSurfaceRevealed) || showFrozenUnderlay
             )
             .preference(key: GeoKitMapSnapshotCoversLiveKey.self, value: showMap && snapshotCoversLive)
             .onChange(of: isTransitioning) { wasTransitioning, transitioning in

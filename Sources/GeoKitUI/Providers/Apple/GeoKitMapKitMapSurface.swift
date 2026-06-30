@@ -17,6 +17,7 @@ struct GeoKitMapKitMapSurface: View {
 
     @Environment(\.geokitMapSurfaceReady) private var mapSurfaceReady
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
+    @Environment(\.geokitAnimationSpeed) private var animationSpeed
 
     @State private var mapReady = false
     @State private var liveDidRender = false
@@ -73,7 +74,6 @@ struct GeoKitMapKitMapSurface: View {
 
     @ViewBuilder
     private func mapBody(size: CGSize) -> some View {
-        let validSize = MapSurfaceMountPolicy.isValidLayoutSize(size)
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
         // Tile snapshots omit pins — keep them under the live map during card transitions.
@@ -92,6 +92,22 @@ struct GeoKitMapKitMapSurface: View {
             if showMap {
                 liveMap(size: size)
             }
+            // Mirror the Mapbox surface: hold the dark placeholder above the live map until its first
+            // paint so a cold load can't flash the underlying surface's blank base.
+            GeoKitMapTheme.placeholderBackground
+                .frame(width: size.width, height: size.height)
+                .opacity(
+                    MapPinTransitionCoverPolicy.coversLiveSurfaceWhiteBase(
+                        showMap: showMap,
+                        livePainted: liveDidRender,
+                        hasFrozenSnapshot: frozenSnapshot != nil
+                    ) ? 1 : 0
+                )
+                .allowsHitTesting(false)
+                .animation(
+                    .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
+                    value: liveDidRender
+                )
         }
         .frame(width: size.width, height: size.height)
         .onChange(of: size) { _, newSize in

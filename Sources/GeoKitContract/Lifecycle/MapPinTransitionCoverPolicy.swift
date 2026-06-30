@@ -24,6 +24,34 @@ public enum MapPinTransitionCoverPolicy {
         _ = pinsLayoutSettling
         return !livePainted
     }
+
+    /// A live GL surface paints an opaque white base before its first idle. Hold the dark placeholder above
+    /// it until that first paint so cold loads never flash white. A frozen underlay already masks the gap when
+    /// one exists, so only cover when there's no snapshot to show.
+    public static func coversLiveSurfaceWhiteBase(
+        showMap: Bool,
+        livePainted: Bool,
+        hasFrozenSnapshot: Bool
+    ) -> Bool {
+        showMap && !livePainted && !hasFrozenSnapshot
+    }
+}
+
+/// Decides when the dark cover may lift to reveal the live map surface on first load.
+///
+/// Lifting on the *first* `onMapIdle` is wrong: that idle can fire at the style's default/world camera
+/// before the camera flies to the card's pins, revealing an uncentered light map that then animates into
+/// place — read as a white flash. The cover must hold until the live surface has painted **and** settled at
+/// its intended camera. During expand/collapse the host drives framing, so settle-at-target isn't required.
+public enum LiveMapRevealPolicy {
+    public static func revealsLiveSurface(
+        livePainted: Bool,
+        cameraSettledAtTarget: Bool,
+        isTransitioning: Bool
+    ) -> Bool {
+        guard livePainted else { return false }
+        return isTransitioning || cameraSettledAtTarget
+    }
 }
 
 /// Detect layout jumps after expand/collapse scale transitions so pins can stay on the snapshot until ``onMapIdle``.
