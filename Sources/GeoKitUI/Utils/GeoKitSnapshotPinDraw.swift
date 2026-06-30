@@ -22,7 +22,8 @@ public enum GeoKitSnapshotPinDraw {
         pointForCoordinate: (CLLocationCoordinate2D) -> CGPoint,
         selectedPinId: UUID?,
         zoom: Double,
-        scale: CGFloat
+        scale: CGFloat,
+        renderPinImages: Bool = true
     ) {
         guard !pins.isEmpty else { return }
         let pinZoom = CGFloat(zoom)
@@ -37,7 +38,7 @@ public enum GeoKitSnapshotPinDraw {
             let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
             let anchor = pointForCoordinate(coordinate)
             let selected = pin.id == selectedPinId
-            if let image = renderPinImage(for: pin, coordinate: coordinate, selected: selected, zoom: pinZoom, scale: scale) {
+            if renderPinImages, let image = renderPinImage(for: pin, coordinate: coordinate, selected: selected, zoom: pinZoom, scale: scale) {
                 drawPinImage(image, anchor: anchor)
             } else {
                 drawDot(in: context, anchor: anchor, scale: scale)
