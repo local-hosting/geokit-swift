@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 @MainActor
 public enum GeoKitUIMapboxRegistration {
     public static func activate() {

@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import CoreLocation
 import GeoKitContract
 import GeoKitUI
@@ -35,6 +36,7 @@ struct GeoKitMapSurface: View {
     @State private var mapReady = false
     @State private var reportedCameraFrame: MapCameraFrame?
     @State private var liveDidRender = false
+    @State private var didApplyInitialCamera = false
     @State private var pinZoomHold: CGFloat?
     @State private var pinsLayoutSettling = false
     @State private var lastSettledLayoutSize: CGSize = .zero
@@ -83,6 +85,19 @@ struct GeoKitMapSurface: View {
     private func syncMapReady(for size: CGSize) {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         mapReady = canMount
+    }
+
+    /// One-shot assert after style/map load — the Mapbox style default camera can win before the viewport binding applies.
+    private func applyInitialCameraIfNeeded(on map: MapboxMap) {
+        guard !didApplyInitialCamera else { return }
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        map.setCamera(to: CameraOptions(
+            center: CLLocationCoordinate2D(latitude: frame.centerLatitude, longitude: frame.centerLongitude),
+            zoom: frame.zoom,
+            bearing: frame.bearing,
+            pitch: frame.pitch
+        ))
+        didApplyInitialCamera = true
     }
 
     var body: some View {
@@ -142,10 +157,12 @@ struct GeoKitMapSurface: View {
                         .onStyleLoaded { _ in
                             guard let map = proxy.map else { return }
                             GeoKitMapboxStyleImportConfigurator.applyTransitLabels(on: map)
+                            applyInitialCameraIfNeeded(on: map)
                         }
                         .onMapLoaded { _ in
                             guard let map = proxy.map else { return }
                             GeoKitMapboxStyleImportConfigurator.applyTransitLabels(on: map)
+                            applyInitialCameraIfNeeded(on: map)
                         }
                         .onCameraChanged { event in
                             guard !isTransitioning else { return }
@@ -215,6 +232,9 @@ struct GeoKitMapSurface: View {
             .onChange(of: mapSurfaceReady) { _, _ in
                 syncMapReady(for: size)
             }
+            .onChange(of: request.id) { _, _ in
+                didApplyInitialCamera = false
+            }
             .onAppear {
                 syncMapReady(for: size)
                 if MapSurfaceMountPolicy.isValidLayoutSize(size) {
@@ -224,6 +244,7 @@ struct GeoKitMapSurface: View {
             .onDisappear {
                 mapReady = false
                 liveDidRender = false
+                didApplyInitialCamera = false
                 pinsLayoutSettling = false
                 lastSettledLayoutSize = .zero
             }

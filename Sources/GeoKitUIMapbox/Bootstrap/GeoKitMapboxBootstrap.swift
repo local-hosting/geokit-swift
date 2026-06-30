@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import GeoKitContract
 import GeoKitUI
 import MapboxCommon
