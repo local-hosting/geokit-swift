@@ -1,3 +1,4 @@
+#if os(iOS) || os(macOS)
 import Ch3
 import Foundation
 
@@ -138,3 +139,4 @@ public enum H3Error: Error, Equatable {
     case invalidRing(Int)
     case operationFailed(UInt32)
 }
+#endif
