@@ -23,6 +23,24 @@ public enum MapCameraFrameResolver {
         )
     }
 
+    /// A persisted camera only overrides a card's declared camera when it is a genuine refinement of the *same*
+    /// place — i.e. close to the declared center. A saved camera far from the declared coordinates is stale
+    /// (e.g. left over from a reused card id) and must not hijack the card's real lat/long on launch. The card
+    /// content is the source of truth; persistence only remembers the user's own pan/zoom around it.
+    public static func validStoredFrame(
+        _ stored: MapCameraFrame?,
+        declared: MapCameraFrame,
+        maxCenterDeltaDegrees: Double = 1.0
+    ) -> MapCameraFrame? {
+        guard let stored else { return nil }
+        let latDelta = abs(stored.centerLatitude - declared.centerLatitude)
+        let lonDelta = abs(stored.centerLongitude - declared.centerLongitude)
+        guard latDelta <= maxCenterDeltaDegrees, lonDelta <= maxCenterDeltaDegrees else {
+            return nil
+        }
+        return stored
+    }
+
     /// Whether the live camera has arrived at its target (the card's declared/persisted camera). Used to hold
     /// the cold-load cover through the fly-to: the style's far-away default camera isn't approximately equal to
     /// the target, so the cover stays up until the map settles on the real camera.
