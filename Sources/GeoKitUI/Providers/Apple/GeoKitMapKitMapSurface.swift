@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import CoreLocation
 import GeoKitContract
 import MapKit
@@ -12,7 +13,7 @@ struct GeoKitMapKitMapSurface: View {
     let onPinTap: (GeoKitContract.MapPin, Bool) -> Void
     let onPinInteractionBegan: () -> Void
     var onPinInteractionEnded: (() -> Void)?
-    var frozenSnapshot: UIImage?
+    var frozenSnapshot: GeoKitPlatformImage?
 
     @Environment(\.geokitMapSurfaceReady) private var mapSurfaceReady
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
@@ -81,7 +82,7 @@ struct GeoKitMapKitMapSurface: View {
         ZStack {
             GeoKitMapTheme.placeholderBackground
             if showFrozenUnderlay, let snapshot = frozenSnapshot {
-                Image(uiImage: snapshot)
+                Image(geoKitImage: snapshot)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)

@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import GeoKitContract
 
 public enum GeoKitMapBootstrap {

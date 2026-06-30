@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import CoreLocation
 import GeoKitContract
 import MapKit
@@ -10,7 +11,7 @@ struct GeoKitMapKitMapContent: View {
     @Environment(\.geokitTransitionSnapshot) private var transitionSnapshot
     @Environment(\.geokitMapIsTransitioning) private var mapIsTransitioning
     @State private var position: MapCameraPosition = .automatic
-    @State private var collapsedSnapshot: UIImage?
+    @State private var collapsedSnapshot: GeoKitPlatformImage?
     @State private var zoomLevel: Float = 12
     @State private var selectedPinId: UUID?
     @State private var appliedCameraFrame: MapCameraFrame?
