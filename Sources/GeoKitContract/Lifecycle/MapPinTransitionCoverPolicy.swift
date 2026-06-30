@@ -27,14 +27,12 @@ public enum MapPinTransitionCoverPolicy {
 
     /// A live GL surface paints an opaque base the instant it mounts, compositing *above* any frozen
     /// underlay — so the underlay can never mask that base (the carousel-handoff gray flash). Keep the live
-    /// map underneath and hold a cover *above* it until the surface has painted, then cross-fade. The cover
-    /// shows the frozen snapshot when one exists (seamless continuity from the card image) and the dark
-    /// placeholder otherwise (cold first load); the caller picks the content, this only gates visibility.
-    public static func coversLiveSurface(
-        showMap: Bool,
-        livePainted: Bool
-    ) -> Bool {
-        showMap && !livePainted
+    /// map underneath and hold a single cover *above* it until the surface has painted, then cross-fade. The
+    /// cover spans both the pre-mount window and the mounted-but-unpainted window, so it is the only snapshot
+    /// layer the surface needs. It shows the frozen snapshot when one exists (seamless continuity from the
+    /// card image) and the dark placeholder otherwise (cold first load); the caller picks the content.
+    public static func coversLiveSurface(livePainted: Bool) -> Bool {
+        !livePainted
     }
 }
 

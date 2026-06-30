@@ -76,19 +76,12 @@ struct GeoKitMapKitMapSurface: View {
     private func mapBody(size: CGSize) -> some View {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
         let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-        // Tile snapshots omit pins — keep them under the live map during card transitions.
+        // Reported to the host so it can lift the in-card cover once the surface shows map content.
         let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil && !liveDidRender
 
         ZStack {
+            // Backstop only — the snapshot cover below spans the pre-mount and unpainted windows.
             GeoKitMapTheme.placeholderBackground
-            if showFrozenUnderlay, let snapshot = frozenSnapshot {
-                Image(geoKitImage: snapshot)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size.width, height: size.height)
-                    .clipped()
-                    .allowsHitTesting(false)
-            }
             if showMap {
                 liveMap(size: size)
             }
@@ -110,7 +103,6 @@ struct GeoKitMapKitMapSurface: View {
             }
             .opacity(
                 MapPinTransitionCoverPolicy.coversLiveSurface(
-                    showMap: showMap,
                     livePainted: liveDidRender
                 ) ? 1 : 0
             )

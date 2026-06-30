@@ -143,34 +143,15 @@ struct GeoKitMapSurface: View {
             let size = geo.size
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
             let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-            // Tile snapshots omit pins — draw them under the live map so annotations stay visible.
+            // Reported to the host so it can lift the in-card cover once the surface shows map content — true
+            // while the snapshot cover bridges the cold load, even before the live surface paints.
             let showFrozenUnderlay = frozenSnapshot != nil && !liveDidRender && !isTransitioning
             let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
             ZStack {
-                // Base layer: never a gray fill when the card already carries its snapshot. On the carousel
-                // center handoff the hoisted live surface mounts above the card while `isTransitioning` is
-                // true, which suppresses the pin-aware underlay below — a gray base then flashes through until
-                // the first live paint (the "image then vanishes" gray). Paint the snapshot as the base so the
-                // card's own image bridges the cold load. Gray only when there is no snapshot at all.
-                if let snapshot = frozenSnapshot {
-                    Image(uiImage: snapshot)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
-                        .clipped()
-                        .allowsHitTesting(false)
-                } else {
-                    GeoKitMapTheme.placeholderBackground
-                }
-                if let snapshot = frozenSnapshot, showFrozenUnderlay {
-                    Image(uiImage: snapshot)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
-                        .clipped()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
-                }
+                // Backstop only — the snapshot cover below sits above the live map and spans both the
+                // pre-mount and mounted-but-unpainted windows, so this is seen only if neither ever paints.
+                GeoKitMapTheme.placeholderBackground
+                    .frame(width: size.width, height: size.height)
                 if showMap {
                     MapReader { proxy in
                         MapboxMaps.Map(viewport: $viewport) {
@@ -263,7 +244,6 @@ struct GeoKitMapSurface: View {
                 }
                 .opacity(
                     MapPinTransitionCoverPolicy.coversLiveSurface(
-                        showMap: showMap,
                         livePainted: liveSurfaceRevealed
                     ) ? 1 : 0
                 )
