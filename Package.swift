@@ -6,11 +6,13 @@ let package = Package(
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
+        .tvOS(.v17),
+        .visionOS(.v1),
     ],
     products: [
         .library(name: "GeoKitCore", targets: ["GeoKitCore"]),
         .library(name: "GeoKitContract", targets: ["GeoKitContract"]),
-        .library(name: "GeoKitUI", targets: ["GeoKitUI", "GeoKitContract"]),
+        .library(name: "GeoKitUI", targets: ["GeoKitUI"]),
         .library(name: "GeoKitUIMapbox", targets: ["GeoKitUIMapbox"]),
         .library(name: "GeoKit", type: .dynamic, targets: ["GeoKit"]),
     ],
@@ -28,7 +30,7 @@ let package = Package(
         .target(
             name: "GeoKitCore",
             dependencies: [
-                "Ch3",
+                .target(name: "Ch3", condition: .when(platforms: [.iOS, .macOS])),
                 .product(name: "Turf", package: "turf-swift"),
             ]
         ),
@@ -43,7 +45,7 @@ let package = Package(
             name: "GeoKitUIMapbox",
             dependencies: [
                 "GeoKitUI",
-                .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS])),
+                .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS, .visionOS])),
             ]
         ),
         .target(
@@ -52,7 +54,7 @@ let package = Package(
                 "GeoKitCore",
                 "GeoKitContract",
                 "GeoKitUI",
-                "GeoKitUIMapbox",
+                .target(name: "GeoKitUIMapbox", condition: .when(platforms: [.iOS, .visionOS])),
             ]
         ),
         .testTarget(
@@ -66,7 +68,8 @@ let package = Package(
         ),
         .testTarget(
             name: "GeoKitUITests",
-            dependencies: ["GeoKitUI", "GeoKitContract"]
+            dependencies: ["GeoKitUI", "GeoKitContract"],
+            resources: [.process("Fixtures")]
         ),
     ]
 )
