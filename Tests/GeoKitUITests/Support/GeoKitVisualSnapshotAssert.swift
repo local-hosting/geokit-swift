@@ -1,6 +1,6 @@
 #if os(iOS) || os(macOS)
 
-import GeoKitUI
+@testable import GeoKitUI
 import XCTest
 
 enum GeoKitVisualSnapshotAssert {
@@ -40,8 +40,7 @@ enum GeoKitVisualSnapshotAssert {
 
         guard let referenceURL = Bundle.module.url(
             forResource: resourceName,
-            withExtension: "png",
-            subdirectory: "Fixtures/Visual"
+            withExtension: "png"
         ) else {
             XCTFail(
                 "Missing reference PNG \(resourceName).png — run with GEOKIT_RECORD_VISUALS=1",
@@ -126,12 +125,12 @@ enum GeoKitVisualSnapshotAssert {
         let pixelCount = width * height
         for index in 0..<pixelCount {
             let offset = index * 4
-            let channelsMatch =
-                abs(Int(expectedBytes[offset]) - Int(actualBytes[offset])) <= maxChannelDelta &&
-                abs(Int(expectedBytes[offset + 1]) - Int(actualBytes[offset + 1])) <= maxChannelDelta &&
-                abs(Int(expectedBytes[offset + 2]) - Int(actualBytes[offset + 2])) <= maxChannelDelta &&
-                abs(Int(expectedBytes[offset + 3]) - Int(actualBytes[offset + 3])) <= maxChannelDelta
-            if channelsMatch {
+            if channelsMatch(
+                expected: expectedBytes,
+                actual: actualBytes,
+                offset: offset,
+                maxDelta: maxChannelDelta
+            ) {
                 matching += 1
                 diffBytes[offset] = expectedBytes[offset]
                 diffBytes[offset + 1] = expectedBytes[offset + 1]
@@ -187,6 +186,22 @@ enum GeoKitVisualSnapshotAssert {
         let rep = NSBitmapImageRep(cgImage: cgImage)
         return rep.representation(using: .png, properties: [:])
         #endif
+    }
+
+
+    private static func channelsMatch(
+        expected: [UInt8],
+        actual: [UInt8],
+        offset: Int,
+        maxDelta: UInt8
+    ) -> Bool {
+        for channel in 0..<4 {
+            let delta = abs(Int(expected[offset + channel]) - Int(actual[offset + channel]))
+            if delta > maxDelta {
+                return false
+            }
+        }
+        return true
     }
 
     private static func attachArtifacts(
