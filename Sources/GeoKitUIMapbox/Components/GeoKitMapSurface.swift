@@ -4,22 +4,8 @@ import CoreLocation
 import GeoKitContract
 import GeoKitUI
 import MapboxMaps
-import os
 import SwiftUI
 import UIKit
-
-/// TEMP DEBUG: trace the live surface render state to diagnose the center handoff gray. Remove once fixed.
-enum GeoKitMapSurfaceLog {
-    static let logger = Logger(subsystem: "fm.geokit.ui", category: "mapsurface")
-}
-
-/// TEMP DEBUG: overlay frozen snapshot and live GL map at 50% so misalignment is visible.
-enum GeoKitMapSurfaceDebug {
-    /// Dim + tint + force the frozen underlay so both layers composite (muddy — diagnosis only).
-    static let overlayLayers = false
-    /// Lightweight on-map readout of pin count + render state (clean — no dimming).
-    static let showReadout = false
-}
 
 struct GeoKitMapSurface: View {
     let request: MapContentRequest
@@ -158,9 +144,8 @@ struct GeoKitMapSurface: View {
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
             let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
             // Tile snapshots omit pins — draw them under the live map so annotations stay visible.
-            let showFrozenUnderlay = frozenSnapshot != nil && (GeoKitMapSurfaceDebug.overlayLayers || (!liveDidRender && !isTransitioning))
+            let showFrozenUnderlay = frozenSnapshot != nil && !liveDidRender && !isTransitioning
             let pinZoom = resolvedPinZoom(isTransitioning: isTransitioning)
-            let _ = GeoKitMapSurfaceLog.logger.log("surface \(request.id, privacy: .public) frozen=\(frozenSnapshot != nil) showMap=\(showMap) liveDidRender=\(liveDidRender) isTransitioning=\(isTransitioning) covers=\(MapPinTransitionCoverPolicy.coversLiveSurface(showMap: showMap, livePainted: liveSurfaceRevealed))")
             ZStack {
                 // Base layer: never a gray fill when the card already carries its snapshot. On the carousel
                 // center handoff the hoisted live surface mounts above the card while `isTransitioning` is
@@ -183,8 +168,6 @@ struct GeoKitMapSurface: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: size.width, height: size.height)
                         .clipped()
-                        .overlay(GeoKitMapSurfaceDebug.overlayLayers ? Color.red.opacity(0.18) : Color.clear)
-                        .opacity(GeoKitMapSurfaceDebug.overlayLayers ? 0.5 : 1)
                         .allowsHitTesting(false)
                         .transition(.opacity)
                 }
@@ -259,8 +242,6 @@ struct GeoKitMapSurface: View {
                             onBegan: onPinInteractionBegan,
                             onEnded: onPinInteractionEnded
                         )
-                        .overlay(GeoKitMapSurfaceDebug.overlayLayers ? Color.green.opacity(0.18) : Color.clear)
-                        .opacity(GeoKitMapSurfaceDebug.overlayLayers ? 0.5 : 1)
                     }
                 }
                 // Mapbox's GL surface paints an opaque base the instant it mounts, compositing *above* the
@@ -293,16 +274,6 @@ struct GeoKitMapSurface: View {
                 )
             }
             .frame(width: size.width, height: size.height)
-            .overlay(alignment: .top) {
-                if GeoKitMapSurfaceDebug.showReadout {
-                    Text("pins:\(request.pins.count) show:\(showMap ? 1 : 0) live:\(liveDidRender ? 1 : 0) z:\(String(format: "%.1f", Double(zoomLevel)))")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
-                        .padding(4)
-                        .background(Color.black.opacity(0.7))
-                        .allowsHitTesting(false)
-                }
-            }
             .onChange(of: size) { _, newSize in
                 noteLayoutSizeChange(newSize)
                 syncMapReady(for: newSize)
