@@ -39,12 +39,15 @@ let package = Package(
         ),
         .target(
             name: "GeoKitUI",
-            dependencies: ["GeoKitContract"]
+            dependencies: [
+                .target(name: "GeoKitContract"),
+            ]
         ),
         .target(
             name: "GeoKitUIMapbox",
             dependencies: [
-                "GeoKitUI",
+                .target(name: "GeoKitContract"),
+                .target(name: "GeoKitUI"),
                 .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS, .visionOS])),
             ]
         ),
