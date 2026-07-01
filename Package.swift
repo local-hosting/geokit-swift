@@ -24,13 +24,13 @@ let package = Package(
         // Uber H3 (v4.4.1) as a prebuilt binary so no C source target is compiled —
         // avoids the Xcode 26 explicit-clang-modules failure for SPM C targets.
         .binaryTarget(
-            name: "Ch3",
+            name: "GeoKitCh3",
             path: "Vendor/Ch3.xcframework"
         ),
         .target(
             name: "GeoKitCore",
             dependencies: [
-                .target(name: "Ch3", condition: .when(platforms: [.iOS, .macOS])),
+                .target(name: "GeoKitCh3", condition: .when(platforms: [.iOS, .macOS])),
                 .product(name: "Turf", package: "turf-swift"),
             ]
         ),

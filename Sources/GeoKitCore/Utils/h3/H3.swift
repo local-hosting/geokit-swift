@@ -1,10 +1,10 @@
 #if os(iOS) || os(macOS)
-import Ch3
+import GeoKitCh3
 import Foundation
 
 /// H3 helpers shaped like Node `@corio-platforms/geokit` `/h3`.
 ///
-/// Backed directly by Uber's H3 C library (vendored as the `Ch3` binary
+/// Backed directly by Uber's H3 C library (vendored as the `GeoKitCh3` binary
 /// framework) so no C source target is compiled into the build graph.
 public enum H3 {
     public static func coordinatesToCell(_ coordinate: LatLon, resolution: Int = 9) throws -> String {
@@ -37,7 +37,7 @@ public enum H3 {
     public static func cellToBoundary(_ cellID: String) throws -> [LatLon] {
         let cell = try validatedCell(cellID)
         var boundary = CellBoundary()
-        try check(Ch3.cellToBoundary(cell, &boundary))
+        try check(GeoKitCh3.cellToBoundary(cell, &boundary))
         return withUnsafePointer(to: boundary.verts) { tuple in
             tuple.withMemoryRebound(to: LatLng.self, capacity: Int(MAX_CELL_BNDRY_VERTS)) { verts in
                 (0 ..< Int(boundary.numVerts)).map { latLon(verts[$0]) }

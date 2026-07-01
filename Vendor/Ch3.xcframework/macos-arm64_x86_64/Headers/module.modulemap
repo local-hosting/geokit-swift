@@ -1,4 +1,4 @@
-module Ch3 {
+module GeoKitCh3 {
   header "h3api.h"
   export *
 }

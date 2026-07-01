@@ -34,7 +34,7 @@ Requires Apple's CarPlay navigation entitlement and scene delegate wiring in the
 
 ## H3 (GeoKitCore)
 
-Uber H3 (`Ch3.xcframework`) links on **iOS and macOS** only. On tvOS and visionOS, `H3` APIs throw `H3Error.unavailableOnPlatform`.
+Uber H3 (`Ch3.xcframework` (SPM target `GeoKitCh3`)) links on **iOS and macOS** only. On tvOS and visionOS, `H3` APIs throw `H3Error.unavailableOnPlatform`.
 
 ## References
 

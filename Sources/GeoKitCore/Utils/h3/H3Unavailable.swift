@@ -1,7 +1,7 @@
 #if !os(iOS) && !os(macOS)
 import Foundation
 
-/// H3 is backed by the Ch3 binary framework on iOS and macOS only.
+/// H3 is backed by the GeoKitCh3 binary framework on iOS and macOS only.
 public enum H3 {
     public static func coordinatesToCell(_ coordinate: LatLon, resolution: Int = 9) throws -> String {
         throw H3Error.unavailableOnPlatform
