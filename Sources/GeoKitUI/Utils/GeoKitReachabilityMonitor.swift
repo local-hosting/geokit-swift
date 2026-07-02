@@ -49,8 +49,9 @@ public final class GeoKitReachabilityMonitor {
     public func waitUntilOnline() async {
         guard !isOnline else { return }
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let id = onBecameSatisfied {
-                GeoKitReachabilityMonitor.shared.removeHandler(id)
+            let id = UUID()
+            satisfiedHandlers[id] = {
+                self.removeHandler(id)
                 continuation.resume()
             }
         }
