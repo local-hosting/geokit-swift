@@ -25,7 +25,9 @@ public struct GeoKitMapContent: View {
             key: GeoKitMapInteractiveGesturesKey.self,
             value: request.mapAcceptsUserInteraction
         )
-        .accessibilityIdentifier("geokit-map-content-\(request.id)")
+#if canImport(UIKit)
+        .geokitIsolatePlatformMapAccessibility()
+#endif
     }
 
     private var missingProviderFallback: some View {

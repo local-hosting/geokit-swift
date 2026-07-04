@@ -223,6 +223,7 @@ struct GeoKitMapSurface: View {
                             onBegan: onPinInteractionBegan,
                             onEnded: onPinInteractionEnded
                         )
+                        .geokitIsolatePlatformMapAccessibility()
                     }
                 }
                 // Mapbox's GL surface paints an opaque base the instant it mounts, compositing *above* the

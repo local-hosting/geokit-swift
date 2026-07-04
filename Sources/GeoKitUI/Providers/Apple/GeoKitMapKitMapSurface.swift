@@ -194,6 +194,9 @@ struct GeoKitMapKitMapSurface: View {
         )
         .frame(width: size.width, height: size.height)
         .clipped()
+#if canImport(UIKit)
+        .geokitIsolatePlatformMapAccessibility()
+#endif
     }
 
     @MapContentBuilder
