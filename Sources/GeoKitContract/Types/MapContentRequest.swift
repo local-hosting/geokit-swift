@@ -23,6 +23,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
     public var selectedPinId: UUID?
     /// Front-card captures jump ahead of peek/background snapshot work.
     public var snapshotPriority: MapSnapshotPriority
+    /// Host-owned token bumped when live pin coordinates change — forces map content refresh.
+    public var livePinGeometryEpoch: Int
 
     public init(
         id: String,
@@ -36,7 +38,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         mapProviderId: MapProviderId? = nil,
         cameraFrame: MapCameraFrame? = nil,
         selectedPinId: UUID? = nil,
-        snapshotPriority: MapSnapshotPriority = .background
+        snapshotPriority: MapSnapshotPriority = .background,
+        livePinGeometryEpoch: Int = 0
     ) {
         self.id = id
         self.phase = phase
@@ -50,6 +53,7 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         self.cameraFrame = cameraFrame
         self.selectedPinId = selectedPinId
         self.snapshotPriority = snapshotPriority
+        self.livePinGeometryEpoch = livePinGeometryEpoch
     }
 
     /// Full-screen live maps only — collapsed cards and transition snapshots pass touches to host chrome.

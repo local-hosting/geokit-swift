@@ -33,11 +33,13 @@ public enum GeoKitSnapshotCaptureRegistry {
         size: CGSize,
         priority: MapSnapshotPriority = .background
     ) async throws -> GeoKitPlatformImage? {
-        let provider = request.mapProviderId ?? GeoKitMapProviderRegistry.defaultProvider
+        let provider = MapProviderResolver.resolve(for: request)
+        var resolved = request
+        resolved.mapProviderId = provider
         guard let handler = handlers[provider] else {
             throw CaptureError.noHandler(provider)
         }
-        return try await handler(request, size, priority)
+        return try await handler(resolved, size, priority)
     }
 
     public static func resetForTesting() {

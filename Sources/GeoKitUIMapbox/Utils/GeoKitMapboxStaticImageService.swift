@@ -21,6 +21,7 @@ enum GeoKitMapboxStaticImageService {
         case urlConstruction
         case httpError(Int)
         case imageDecoding
+        case blankPlate
 
         var description: String {
             switch self {
@@ -30,12 +31,13 @@ enum GeoKitMapboxStaticImageService {
             case .urlConstruction: "failed to construct Static Images API URL"
             case .httpError(let code): "Mapbox Static Images API returned HTTP \(code)"
             case .imageDecoding: "response data could not be decoded as UIImage"
+            case .blankPlate: "Mapbox Static Images API returned a uniform blank plate"
             }
         }
     }
 
     static func capture(request: MapContentRequest, size: CGSize) async throws -> UIImage {
-        guard size.width >= 1, size.height >= 1 else {
+guard size.width >= 1, size.height >= 1 else {
             throw CaptureError.invalidSize(size)
         }
         let token = accessToken()
@@ -80,6 +82,9 @@ enum GeoKitMapboxStaticImageService {
         }
         guard let image = UIImage(data: data) else {
             throw CaptureError.imageDecoding
+        }
+        guard GeoKitMapboxStaticImageValidator.hasVisibleMapContent(image) else {
+            throw CaptureError.blankPlate
         }
         return image
     }

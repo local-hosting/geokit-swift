@@ -52,6 +52,7 @@ public struct GeoKitMapContentWithLifecycle: View {
     let pins: [MapPin]
     let showUserPuck: Bool
     let mapProviderId: MapProviderId?
+    let selectedPinId: UUID?
 
     public init(
         id: String,
@@ -63,7 +64,8 @@ public struct GeoKitMapContentWithLifecycle: View {
         preferredZoom: Double = 12,
         pins: [MapPin] = [],
         showUserPuck: Bool = false,
-        mapProviderId: MapProviderId? = nil
+        mapProviderId: MapProviderId? = nil,
+        selectedPinId: UUID? = nil
     ) {
         self.id = id
         self.policy = policy
@@ -75,6 +77,7 @@ public struct GeoKitMapContentWithLifecycle: View {
         self.pins = pins
         self.showUserPuck = showUserPuck
         self.mapProviderId = mapProviderId
+        self.selectedPinId = selectedPinId
     }
 
     public var body: some View {
@@ -89,7 +92,8 @@ public struct GeoKitMapContentWithLifecycle: View {
                 preferredZoom: preferredZoom,
                 pins: pins,
                 showUserPuck: showUserPuck,
-                mapProviderId: mapProviderId
+                mapProviderId: mapProviderId,
+                selectedPinId: selectedPinId
             )
         )
         .environment(\.geokitMapSurfaceReady, lifecycle.isSurfaceReady)

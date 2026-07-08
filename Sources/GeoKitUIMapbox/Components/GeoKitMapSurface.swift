@@ -31,6 +31,8 @@ struct GeoKitMapSurface: View {
     @State private var didApplyInitialCamera = false
     @State private var pinZoomHold: CGFloat?
     @State private var pinsLayoutSettling = false
+    @State private var pinGeometryRevision = 0
+    @State private var renderedPins: [MapPin] = []
     @State private var lastSettledLayoutSize: CGSize = .zero
     /// One-shot: the live surface is anchored at its shared camera. The live map seeds directly at the
     /// resolved `saved ?? declared` camera (an imperative `setCamera` jump — the same frame the snapshot
@@ -71,6 +73,16 @@ struct GeoKitMapSurface: View {
         if reportedCameraFrame?.isApproximatelyEqual(to: frame) != true {
             reportedCameraFrame = frame
         }
+    }
+
+    private func syncRenderedPinsFromRequest() {
+        renderedPins = request.pins
+    }
+
+    private var pinCoordinateSignature: String {
+        renderedPins
+            .map { "\($0.id.uuidString):\($0.latitude):\($0.longitude)" }
+            .joined(separator: "|")
     }
 
     private var hideLiveMapPins: Bool {
@@ -160,12 +172,7 @@ struct GeoKitMapSurface: View {
                                 Puck2D().pulsing(.default)
                             }
                             if !hideLiveMapPins {
-                                // Unselected pins draw as a GPU circle layer (CircleAnnotationGroup → a managed
-                                // CircleLayer). Moving a pin updates the renderer's GeoJSON source, so the dot
-                                // travels on the GPU instead of reflowing a SwiftUI view annotation every frame.
-                                unselectedPinCircles(zoom: pinZoom)
-                                // The selected pin keeps the SwiftUI callout view annotation for its label + tail.
-                                selectedPinAnnotation(zoom: pinZoom)
+                                livePinAnnotations(zoom: pinZoom)
                             }
                         }
                         .mapStyle(GeoKitMapboxMapStyle.liveMapStyle(styleURI: request.mapStyleURI))
@@ -255,6 +262,48 @@ struct GeoKitMapSurface: View {
                 )
             }
             .frame(width: size.width, height: size.height)
+            .onAppear {
+                syncRenderedPinsFromRequest()
+            }
+            .onChange(of: request.pins) { _, _ in
+                syncRenderedPinsFromRequest()
+            }
+            .onChange(of: request.livePinGeometryEpoch) { _, epoch in
+                syncRenderedPinsFromRequest()
+                if epoch != 0, epoch % 60 == 0 {
+                    // #region agent log
+                    GeoKitMapDebugSessionLog.write(
+                        location: "GeoKitMapSurface:livePinGeometryEpoch",
+                        message: "geokit epoch pin refresh",
+                        hypothesisId: "H17",
+                        data: [
+                            "mapID": request.id,
+                            "epoch": String(epoch),
+                            "pinCount": String(renderedPins.count),
+                            "firstPinLat": renderedPins.first.map { String(format: "%.6f", $0.latitude) } ?? "nil",
+                        ]
+                    )
+                    // #endregion
+                }
+            }
+            .onChange(of: pinCoordinateSignature) { _, signature in
+                pinGeometryRevision &+= 1
+                if pinGeometryRevision % 60 == 0 {
+                    // #region agent log
+                    GeoKitMapDebugSessionLog.write(
+                        location: "GeoKitMapSurface:pinCoordinateSignature",
+                        message: "geokit pin geometry refresh",
+                        hypothesisId: "H16",
+                        data: [
+                            "mapID": request.id,
+                            "signature": signature,
+                            "revision": String(pinGeometryRevision),
+                            "selectedPinId": selectedPinId?.uuidString ?? "nil",
+                        ]
+                    )
+                    // #endregion
+                }
+            }
             .onChange(of: size) { _, newSize in
                 noteLayoutSizeChange(newSize)
                 syncMapReady(for: newSize)
@@ -328,46 +377,62 @@ struct GeoKitMapSurface: View {
     }
 
 
-    /// GPU-rendered dots for every pin that is not currently selected.
+    /// Primary pins use SwiftUI view annotations so live coordinate updates stay visible; secondary pins stay on GPU circles.
     @MapContentBuilder
-    private func unselectedPinCircles(zoom: CGFloat) -> some MapContent {
+    private func livePinAnnotations(zoom: CGFloat) -> some MapContent {
+        let _ = pinGeometryRevision
         let dot = GeoKitPinDotMetrics.unselected(zoom: zoom)
-        CircleAnnotationGroup(request.pins.filter { $0.id != selectedPinId }) { pin in
-            let pinColor = pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary
-            return CircleAnnotation(centerCoordinate: pin.coordinate)
-                .circleColor(StyleColor(UIColor(pinColor)))
-                .circleRadius(Double(dot.diameter) / 2)
-                .circleStrokeColor(StyleColor(UIColor.white))
-                .circleStrokeWidth(Double(dot.strokeWidth))
-                .onTapGesture {
-                    onPinTap(pin, true)
+        ForEvery(renderedPins) { pin in
+            if pin.id == selectedPinId {
+                MapViewAnnotation(coordinate: pin.coordinate) {
+                    GeoKitPlacePinView(
+                        pin: pin,
+                        zoom: zoom,
+                        tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
+                        color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
+                        pinStyle: pin.isPrimary ? .primary : .secondary,
+                        onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
+                        onInteractionBegan: onPinInteractionBegan,
+                        selected: true,
+                        visible: true,
+                        allowCallout: true,
+                        showText: true
+                    )
                 }
-        }
-    }
-
-    /// SwiftUI callout view annotation for the selected pin (label + tail can't live on a style layer).
-    @MapContentBuilder
-    private func selectedPinAnnotation(zoom: CGFloat) -> some MapContent {
-        if let selectedPinId, let pin = request.pins.first(where: { $0.id == selectedPinId }) {
-            MapViewAnnotation(coordinate: pin.coordinate) {
-                GeoKitPlacePinView(
-                    pin: pin,
-                    zoom: zoom,
-                    tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
-                    color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
-                    pinStyle: pin.isPrimary ? .primary : .secondary,
-                    onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
-                    onInteractionBegan: onPinInteractionBegan,
-                    selected: true,
-                    visible: true,
-                    allowCallout: true,
-                    showText: true
-                )
+                .priority(1)
+                .allowOverlap(true)
+                .allowOverlapWithPuck(true)
+                .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
+            } else if pin.isPrimary {
+                MapViewAnnotation(coordinate: pin.coordinate) {
+                    GeoKitPlacePinView(
+                        pin: pin,
+                        zoom: zoom,
+                        tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
+                        color: GeoKitMapTheme.accent,
+                        pinStyle: .primary,
+                        onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
+                        onInteractionBegan: onPinInteractionBegan,
+                        selected: false,
+                        visible: true,
+                        allowCallout: false,
+                        showText: false
+                    )
+                }
+                .priority(1)
+                .allowOverlap(true)
+                .allowOverlapWithPuck(true)
+                .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
+            } else {
+                CircleAnnotation(centerCoordinate: pin.coordinate)
+                    .circleColor(StyleColor(UIColor(GeoKitMapTheme.secondary)))
+                    .circleRadius(Double(dot.diameter) / 2)
+                    .circleStrokeColor(StyleColor(UIColor.white))
+                    .circleStrokeWidth(Double(dot.strokeWidth))
+                    .onTapGesture {
+                        onPinTap(pin, true)
+                    }
             }
-            .priority(1)
-            .allowOverlap(true)
-            .allowOverlapWithPuck(true)
-            .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
         }
     }
 
@@ -422,4 +487,53 @@ private struct MapSurfaceTouchShieldModifier: ViewModifier {
         }
     }
 }
+
+// #region agent log
+private enum GeoKitMapDebugSessionLog {
+    private static let sessionId = "14cea8"
+    private static let logPath = "/Users/westlane/Documents/GitHub/places/Packages/design-system/.cursor/debug-14cea8.log"
+    private static let ingestURL = URL(string: "http://127.0.0.1:7929/ingest/030c82bd-083a-4697-9195-aa3abd88d2f9")!
+
+    static func write(
+        location: String,
+        message: String,
+        hypothesisId: String,
+        data: [String: String],
+        runId: String = "peek-v5"
+    ) {
+        let payload: [String: Any] = [
+            "sessionId": sessionId,
+            "runId": runId,
+            "hypothesisId": hypothesisId,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000),
+        ]
+        guard JSONSerialization.isValidJSONObject(payload),
+              let body = try? JSONSerialization.data(withJSONObject: payload),
+              let line = String(data: body, encoding: .utf8)
+        else { return }
+        fputs("[debug-14cea8] \(line)\n", stderr)
+        let directory = (logPath as NSString).deletingLastPathComponent
+        try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        if FileManager.default.fileExists(atPath: logPath) {
+            if let handle = FileHandle(forWritingAtPath: logPath) {
+                handle.seekToEndOfFile()
+                handle.write(Data((line + "\n").utf8))
+                try? handle.close()
+            }
+        } else {
+            try? (line + "\n").write(toFile: logPath, atomically: true, encoding: .utf8)
+        }
+        var request = URLRequest(url: ingestURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "X-Debug-Session-Id")
+        request.httpBody = body
+        URLSession.shared.dataTask(with: request).resume()
+    }
+}
+// #endregion
+
 #endif

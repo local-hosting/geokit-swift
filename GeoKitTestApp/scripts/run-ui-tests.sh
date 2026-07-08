@@ -5,15 +5,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="$ROOT/GeoKitTestApp.xcodeproj"
 SCHEME="GeoKitTestApp"
 DESTINATION="${GEOKIT_UI_TEST_DESTINATION:-platform=iOS Simulator,id=0F4AABDD-22FE-4EAE-9242-50E7329712C4}"
-TARGET="GeoKitTestAppUITests/GeoKitDemoCardSwitchUITests"
+CARD_SWITCH="GeoKitTestAppUITests/GeoKitDemoCardSwitchUITests"
+REGRESSION="GeoKitTestAppUITests/GeoKitDemoMapRegressionUITests"
 
 case "${1:-all}" in
-  smoke)   TEST="$TARGET/testAppLaunchesAndShowsRoot" ;;
-  launch)  TEST="$TARGET/testLaunchFrontCardClearsLoadingSpinner" ;;
-  switch)  TEST="$TARGET/testSwitchToLouisvilleClearsLoadingSpinner" ;;
-  all)     TEST="$TARGET" ;;
+  smoke)   TEST="$CARD_SWITCH/testAppLaunchesAndShowsRoot" ;;
+  launch)  TEST="$CARD_SWITCH/testLaunchFrontCardClearsLoadingSpinner" ;;
+  switch)  TEST="$CARD_SWITCH/testSwitchToLouisvilleClearsLoadingSpinner" ;;
+  regression) TEST="$REGRESSION" ;;
+  all)     TEST="GeoKitTestAppUITests" ;;
   *)
-    echo "usage: $0 [smoke|launch|switch|all]" >&2
+    echo "usage: $0 [smoke|launch|switch|regression|all]" >&2
     exit 1
     ;;
 esac

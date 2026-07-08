@@ -48,6 +48,18 @@ public enum MapProviderResolver {
     }
 
     /// `.mapbox` on iOS (including CarPlay), visionOS, and Catalyst; `.apple` on tvOS. See `docs/platforms.md`.
+
+    /// Infer provider from an explicit id or a Mapbox-style URI before snapshot/live dispatch.
+    public static func resolve(for request: MapContentRequest) -> MapProviderId {
+        if let provider = request.mapProviderId { return provider }
+        return resolve(styleURI: request.mapStyleURI)
+    }
+
+    public static func resolve(styleURI: String) -> MapProviderId {
+        if styleURI.hasPrefix("mapbox://") { return .mapbox }
+        return defaultForPlatform()
+    }
+
     public static func defaultForPlatform() -> MapProviderId {
         #if os(tvOS) || os(macOS)
         return .apple

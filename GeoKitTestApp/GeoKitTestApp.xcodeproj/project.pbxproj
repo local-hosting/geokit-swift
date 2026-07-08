@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		GKTA001 /* GeoKitTestAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA101 /* GeoKitTestAppApp.swift */; };
 		GKTA002 /* GeoKitDemoRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA102 /* GeoKitDemoRootView.swift */; };
+		GKTA003 /* GeoKitDemoPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA103 /* GeoKitDemoPlaces.swift */; };
 		GKTA005 /* GeoKitDemoConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA105 /* GeoKitDemoConstants.swift */; };
 		GKTA006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = GKTA106 /* Assets.xcassets */; };
 		GKTA008 /* GeoKit in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP03 /* GeoKit */; };
@@ -16,6 +17,7 @@
 		GKTA00A /* GeoKit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP03 /* GeoKit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		GKTA00C /* GeoKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = GKTAP07 /* GeoKitUI */; };
 		GKTA010 /* GeoKitDemoCardSwitchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA112 /* GeoKitDemoCardSwitchUITests.swift */; };
+		GKTA011 /* GeoKitDemoMapRegressionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTA114 /* GeoKitDemoMapRegressionUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,11 +47,13 @@
 /* Begin PBXFileReference section */
 		GKTA101 /* GeoKitTestAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitTestAppApp.swift; sourceTree = "<group>"; };
 		GKTA102 /* GeoKitDemoRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoRootView.swift; sourceTree = "<group>"; };
+		GKTA103 /* GeoKitDemoPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoPlaces.swift; sourceTree = "<group>"; };
 		GKTA105 /* GeoKitDemoConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoConstants.swift; sourceTree = "<group>"; };
 		GKTA106 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		GKTA107 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		GKTA108 /* GeoKitTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoKitTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		GKTA112 /* GeoKitDemoCardSwitchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoCardSwitchUITests.swift; sourceTree = "<group>"; };
+		GKTA114 /* GeoKitDemoMapRegressionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoKitDemoMapRegressionUITests.swift; sourceTree = "<group>"; };
 		GKTA113 /* GeoKitTestAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeoKitTestAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -88,6 +92,7 @@
 			children = (
 				GKTA101 /* GeoKitTestAppApp.swift */,
 				GKTA102 /* GeoKitDemoRootView.swift */,
+				GKTA103 /* GeoKitDemoPlaces.swift */,
 				GKTA105 /* GeoKitDemoConstants.swift */,
 				GKTA106 /* Assets.xcassets */,
 				GKTA107 /* Info.plist */,
@@ -108,6 +113,7 @@
 			isa = PBXGroup;
 			children = (
 				GKTA112 /* GeoKitDemoCardSwitchUITests.swift */,
+				GKTA114 /* GeoKitDemoMapRegressionUITests.swift */,
 			);
 			path = GeoKitTestAppUITests;
 			sourceTree = "<group>";
@@ -214,6 +220,7 @@
 			files = (
 				GKTA001 /* GeoKitTestAppApp.swift in Sources */,
 				GKTA002 /* GeoKitDemoRootView.swift in Sources */,
+				GKTA003 /* GeoKitDemoPlaces.swift in Sources */,
 				GKTA005 /* GeoKitDemoConstants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -223,6 +230,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				GKTA010 /* GeoKitDemoCardSwitchUITests.swift in Sources */,
+				GKTA011 /* GeoKitDemoMapRegressionUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

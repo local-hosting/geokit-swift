@@ -7,6 +7,9 @@ import MapboxMaps
 import UIKit
 
 enum GeoKitCardSnapshotCaptureMapbox {
+    /// Unit tests inject a deterministic bitmap — production leaves this nil.
+    static var testingBackgroundCapture: ((MapContentRequest, CGSize) async throws -> UIImage?)?
+
     static func capture(
         request: MapContentRequest,
         size: CGSize,
@@ -15,6 +18,9 @@ enum GeoKitCardSnapshotCaptureMapbox {
         // Back/fan cards fetch a flat image over HTTP so they never run the GPU
         // Snapshotter — only the live front card (.top) uses the on-device path.
         if priority == .background {
+            if let testingBackgroundCapture {
+                return try await testingBackgroundCapture(request, size)
+            }
             return try await GeoKitMapboxStaticImageService.capture(request: request, size: size)
         }
         let frame = MapCameraFrameResolver.resolve(for: request)

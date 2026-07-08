@@ -72,5 +72,14 @@ let package = Package(
             dependencies: ["GeoKitUI", "GeoKitContract"],
             resources: [.process("Fixtures")]
         ),
+        .testTarget(
+            name: "GeoKitUIMapboxTests",
+            dependencies: [
+                "GeoKitContract",
+                "GeoKitUI",
+                "GeoKitUIMapbox",
+                .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS, .visionOS])),
+            ]
+        ),
     ]
 )
