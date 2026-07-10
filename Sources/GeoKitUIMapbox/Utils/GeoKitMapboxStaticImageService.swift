@@ -13,6 +13,8 @@ import UIKit
 /// omitted — only the live front card draws pins.
 enum GeoKitMapboxStaticImageService {
     private static let maxDimension = 1280
+    /// Mapbox Static Images URL suffix — actual pixel size is this factor times width×height.
+    private static let urlRetinaScale: CGFloat = 2
 
     enum CaptureError: Error, CustomStringConvertible {
         case invalidSize(CGSize)
@@ -37,7 +39,7 @@ enum GeoKitMapboxStaticImageService {
     }
 
     static func capture(request: MapContentRequest, size: CGSize) async throws -> UIImage {
-guard size.width >= 1, size.height >= 1 else {
+        guard size.width >= 1, size.height >= 1 else {
             throw CaptureError.invalidSize(size)
         }
         let token = accessToken()
@@ -54,8 +56,17 @@ guard size.width >= 1, size.height >= 1 else {
         let bearing = frame.bearing
         let pitch = frame.pitch
 
-        let width = min(max(Int(size.width.rounded()), 1), maxDimension)
-        let height = min(max(Int(size.height.rounded()), 1), maxDimension)
+        let displayScale = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.screen.nativeScale ?? UIScreen.main.scale
+        let width = min(
+            max(Int(ceil(size.width * displayScale / urlRetinaScale)), 1),
+            maxDimension
+        )
+        let height = min(
+            max(Int(ceil(size.height * displayScale / urlRetinaScale)), 1),
+            maxDimension
+        )
 
         let camera = String(
             format: "%.6f,%.6f,%.2f,%.2f,%.2f",

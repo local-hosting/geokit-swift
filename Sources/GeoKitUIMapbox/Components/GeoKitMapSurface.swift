@@ -263,53 +263,25 @@ struct GeoKitMapSurface: View {
             }
             .frame(width: size.width, height: size.height)
             .onAppear {
-                syncRenderedPinsFromRequest()
+                DispatchQueue.main.async { syncRenderedPinsFromRequest() }
             }
             .onChange(of: request.pins) { _, _ in
-                syncRenderedPinsFromRequest()
+                DispatchQueue.main.async { syncRenderedPinsFromRequest() }
             }
-            .onChange(of: request.livePinGeometryEpoch) { _, epoch in
-                syncRenderedPinsFromRequest()
-                if epoch != 0, epoch % 60 == 0 {
-                    // #region agent log
-                    GeoKitMapDebugSessionLog.write(
-                        location: "GeoKitMapSurface:livePinGeometryEpoch",
-                        message: "geokit epoch pin refresh",
-                        hypothesisId: "H17",
-                        data: [
-                            "mapID": request.id,
-                            "epoch": String(epoch),
-                            "pinCount": String(renderedPins.count),
-                            "firstPinLat": renderedPins.first.map { String(format: "%.6f", $0.latitude) } ?? "nil",
-                        ]
-                    )
-                    // #endregion
-                }
+            .onChange(of: request.livePinGeometryEpoch) { _, _ in
+                DispatchQueue.main.async { syncRenderedPinsFromRequest() }
             }
-            .onChange(of: pinCoordinateSignature) { _, signature in
-                pinGeometryRevision &+= 1
-                if pinGeometryRevision % 60 == 0 {
-                    // #region agent log
-                    GeoKitMapDebugSessionLog.write(
-                        location: "GeoKitMapSurface:pinCoordinateSignature",
-                        message: "geokit pin geometry refresh",
-                        hypothesisId: "H16",
-                        data: [
-                            "mapID": request.id,
-                            "signature": signature,
-                            "revision": String(pinGeometryRevision),
-                            "selectedPinId": selectedPinId?.uuidString ?? "nil",
-                        ]
-                    )
-                    // #endregion
-                }
+            .onChange(of: pinCoordinateSignature) { _, _ in
+                DispatchQueue.main.async { pinGeometryRevision &+= 1 }
             }
             .onChange(of: size) { _, newSize in
-                noteLayoutSizeChange(newSize)
-                syncMapReady(for: newSize)
+                DispatchQueue.main.async {
+                    noteLayoutSizeChange(newSize)
+                    syncMapReady(for: newSize)
+                }
             }
             .onChange(of: mapSurfaceReady) { _, _ in
-                syncMapReady(for: size)
+                DispatchQueue.main.async { syncMapReady(for: size) }
             }
             .onChange(of: request.id) { _, _ in
                 didApplyInitialCamera = false
@@ -324,9 +296,11 @@ struct GeoKitMapSurface: View {
                 }
             }
             .onAppear {
-                syncMapReady(for: size)
-                if MapSurfaceMountPolicy.isValidLayoutSize(size) {
-                    lastSettledLayoutSize = size
+                DispatchQueue.main.async {
+                    syncMapReady(for: size)
+                    if MapSurfaceMountPolicy.isValidLayoutSize(size) {
+                        lastSettledLayoutSize = size
+                    }
                 }
             }
             .onDisappear {
@@ -488,52 +462,5 @@ private struct MapSurfaceTouchShieldModifier: ViewModifier {
     }
 }
 
-// #region agent log
-private enum GeoKitMapDebugSessionLog {
-    private static let sessionId = "14cea8"
-    private static let logPath = "/Users/westlane/Documents/GitHub/places/Packages/design-system/.cursor/debug-14cea8.log"
-    private static let ingestURL = URL(string: "http://127.0.0.1:7929/ingest/030c82bd-083a-4697-9195-aa3abd88d2f9")!
-
-    static func write(
-        location: String,
-        message: String,
-        hypothesisId: String,
-        data: [String: String],
-        runId: String = "peek-v5"
-    ) {
-        let payload: [String: Any] = [
-            "sessionId": sessionId,
-            "runId": runId,
-            "hypothesisId": hypothesisId,
-            "location": location,
-            "message": message,
-            "data": data,
-            "timestamp": Int(Date().timeIntervalSince1970 * 1000),
-        ]
-        guard JSONSerialization.isValidJSONObject(payload),
-              let body = try? JSONSerialization.data(withJSONObject: payload),
-              let line = String(data: body, encoding: .utf8)
-        else { return }
-        fputs("[debug-14cea8] \(line)\n", stderr)
-        let directory = (logPath as NSString).deletingLastPathComponent
-        try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
-        if FileManager.default.fileExists(atPath: logPath) {
-            if let handle = FileHandle(forWritingAtPath: logPath) {
-                handle.seekToEndOfFile()
-                handle.write(Data((line + "\n").utf8))
-                try? handle.close()
-            }
-        } else {
-            try? (line + "\n").write(toFile: logPath, atomically: true, encoding: .utf8)
-        }
-        var request = URLRequest(url: ingestURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(sessionId, forHTTPHeaderField: "X-Debug-Session-Id")
-        request.httpBody = body
-        URLSession.shared.dataTask(with: request).resume()
-    }
-}
-// #endregion
 
 #endif
