@@ -63,6 +63,37 @@ public enum GeoKitMapSnapshotContentPolicy {
             : hasVisibleMapContent(image)
     }
 
+
+    /// Trailing band fraction probed for trailing fan-peek snapshots.
+    public static let trailingPeekBandFraction: CGFloat = 0.22
+
+    /// Trailing fan peek requires visible tiles in the trailing sliver, not just the full bitmap.
+    public static func acceptsTrailingPeekBitmap(_ image: UIImage) -> Bool {
+        acceptsPersistedMapBitmap(image)
+            && hasVisibleMapContent(image)
+            && trailingPeekSliverHasVisibleContent(image)
+    }
+
+    public static func trailingPeekDisplaySnapshot(from image: UIImage) -> UIImage {
+        guard let cgImage = image.cgImage, let crop = trailingPeekSliverRect(for: cgImage) else { return image }
+        guard let cropped = cgImage.cropping(to: crop) else { return image }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    private static func trailingPeekSliverRect(for cgImage: CGImage) -> CGRect? {
+        let width = CGFloat(cgImage.width)
+        let height = CGFloat(cgImage.height)
+        guard width > 8, height > 8 else { return nil }
+        let band = max(4, width * trailingPeekBandFraction)
+        return CGRect(x: width - band, y: height * 0.18, width: band, height: height * 0.55).integral
+    }
+
+    private static func trailingPeekSliverHasVisibleContent(_ image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage, let crop = trailingPeekSliverRect(for: cgImage) else { return false }
+        guard let cropped = cgImage.cropping(to: crop) else { return false }
+        return hasVisibleMapContent(UIImage(cgImage: cropped))
+    }
+
     private static func sampleGrid(from image: UIImage) -> [UInt8]? {
         guard let cgImage = image.cgImage else { return nil }
         guard cgImage.width > 4, cgImage.height > 4 else { return nil }

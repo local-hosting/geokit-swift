@@ -1,16 +1,18 @@
 import CoreGraphics
 import Foundation
 
+/// Layout-agnostic host composition inputs — callers map collection UI (deck, carousel, etc.) to these flags.
+
 /// Provider-neutral rules for when a host-owned inline map surface mounts, transitions, or passes through live tiles.
 public enum MapHostInlineSurfacePolicy {
     /// Root hoisted host owns the one live GeoKit surface during expand/collapse hero morph.
     public static func rootHostOwnsLiveSurface(
-        usesLocalLiveSlice: Bool,
+        usesInlineLiveSlice: Bool,
         usesExternalLiveHost: Bool,
         isExpandedOverlay: Bool,
         isExpandLiveHandoff: Bool = false
     ) -> Bool {
-        guard usesLocalLiveSlice, usesExternalLiveHost, !isExpandedOverlay else { return false }
+        guard usesInlineLiveSlice, usesExternalLiveHost, !isExpandedOverlay else { return false }
         guard !isExpandLiveHandoff else { return false }
         return false
     }
@@ -31,19 +33,19 @@ public enum MapHostInlineSurfacePolicy {
 
     /// Inline maps track card transforms every frame — collection swipe is not a GeoKit layout morph.
     public static func isTransitioning(
-        usesLocalLiveSlice: Bool,
+        usesInlineLiveSlice: Bool,
         isExpanded: Bool,
         isCollapsing: Bool,
         collectionIsTransitioning: Bool
     ) -> Bool {
-        guard usesLocalLiveSlice, !isExpanded else {
+        guard usesInlineLiveSlice, !isExpanded else {
             return collectionIsTransitioning || isCollapsing
         }
         return isCollapsing
     }
 
     public static func paintsInlinePeekSnapshot(
-        usesLocalLiveSlice: Bool,
+        usesInlineLiveSlice: Bool,
         usesExternalLiveHost: Bool,
         isExpanded: Bool,
         isFocused: Bool,
@@ -51,12 +53,12 @@ public enum MapHostInlineSurfacePolicy {
     ) -> Bool {
         guard usesExternalLiveHost, !isExpanded else { return false }
         guard isVisiblePeek, !isFocused else { return false }
-        guard usesLocalLiveSlice || isVisiblePeek else { return false }
+        guard usesInlineLiveSlice || isVisiblePeek else { return false }
         return true
     }
 
     public static func keepsInlineLiveMapMounted(
-        usesLocalLiveSlice: Bool,
+        usesInlineLiveSlice: Bool,
         usesExternalLiveHost: Bool,
         isExpanded: Bool,
         isExpandedOverlay: Bool,
@@ -73,11 +75,11 @@ public enum MapHostInlineSurfacePolicy {
         isExpandLiveHandoff: Bool = false,
         cardDragOffset: CGFloat
     ) -> Bool {
-        guard usesLocalLiveSlice, usesExternalLiveHost, !isExpanded else { return false }
+        guard usesInlineLiveSlice, usesExternalLiveHost, !isExpanded else { return false }
         if isCollapsing { return false }
         if isVisiblePeek, !isFocused { return false }
         let rootOwns = rootHostOwnsLiveSurface(
-            usesLocalLiveSlice: usesLocalLiveSlice,
+            usesInlineLiveSlice: usesInlineLiveSlice,
             usesExternalLiveHost: usesExternalLiveHost,
             isExpandedOverlay: isExpandedOverlay,
             isExpandLiveHandoff: isExpandLiveHandoff

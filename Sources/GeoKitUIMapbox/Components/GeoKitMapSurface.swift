@@ -234,7 +234,7 @@ struct GeoKitMapSurface: View {
                     }
                 }
                 // Mapbox's GL surface paints an opaque base the instant it mounts, compositing *above* the
-                // frozen underlay below — so that underlay can't mask the cold load (the carousel-handoff
+                // frozen underlay below — so that underlay can't mask the cold load (the host handoff
                 // gray flash). Keep the live map underneath and hold this cover *above* it until the surface
                 // has painted and settled, then cross-fade. The cover is the frozen snapshot when we have one
                 // (seamless continuity from the card image), the dark placeholder otherwise (cold first load).

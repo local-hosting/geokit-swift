@@ -6,7 +6,7 @@ import UIKit
 ///
 /// Host apps (Accord ``ax-map-live-surface``, ``ax-media-slot-shell``) own semantic probes.
 /// Platform map views can publish screen-space accessibility frames that lag SwiftUI card
-/// transforms during deck/stack drag — XCTest then reads stale geometry for the live map.
+/// transforms during collection drag — XCTest then reads stale geometry for the live map.
 enum GeoKitPlatformMapAccessibilitySuppressor {
     static func suppress(in view: UIView) {
         view.isAccessibilityElement = false

@@ -5,7 +5,7 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
     func testCollapseUnmountsInlineLiveMap() {
         XCTAssertFalse(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
-                usesLocalLiveSlice: true,
+                usesInlineLiveSlice: true,
                 usesExternalLiveHost: true,
                 isExpanded: false,
                 isExpandedOverlay: false,
@@ -25,7 +25,7 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
     func testExpandLiveHandoffKeepsInlineMountedDuringHeroMorph() {
         XCTAssertTrue(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
-                usesLocalLiveSlice: true,
+                usesInlineLiveSlice: true,
                 usesExternalLiveHost: true,
                 isExpanded: false,
                 isExpandedOverlay: false,
@@ -60,10 +60,10 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
         )
     }
 
-    func testDeckInlineIgnoresCollectionSwipeTransition() {
+    func testInlineLiveSliceIgnoresCollectionSwipeTransition() {
         XCTAssertFalse(
             MapHostInlineSurfacePolicy.isTransitioning(
-                usesLocalLiveSlice: true,
+                usesInlineLiveSlice: true,
                 isExpanded: false,
                 isCollapsing: false,
                 collectionIsTransitioning: true

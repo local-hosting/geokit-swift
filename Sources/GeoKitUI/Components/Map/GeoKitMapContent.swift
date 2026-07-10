@@ -40,7 +40,7 @@ public struct GeoKitMapContent: View {
     }
 }
 
-/// Host-driven map content that resolves placeholder / snapshot / live from stack policy.
+/// Host-driven map content that resolves placeholder / snapshot / live from host composition policy.
 public struct GeoKitMapContentWithLifecycle: View {
     let id: String
     let policy: MapStagePolicy

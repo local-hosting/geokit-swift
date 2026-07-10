@@ -119,7 +119,7 @@ struct GeoKitMapboxMapContent: View {
                 onPinTap: { pin, _ in togglePinSelection(pin) },
                 onPinInteractionBegan: {},
                 // Fall back to the bridged transition snapshot directly: `collapsedSnapshot` is only seeded in
-                // `onAppear`/`onChange`, which SwiftUI defers while `isTransitioning` is true. On the carousel center
+                // `onAppear`/`onChange`, which SwiftUI defers while `isTransitioning` is true. On the focused center slot
                 // handoff that leaves it nil for the live surface's first frames, so the base layer would paint gray
                 // ("image then vanishes"). The environment snapshot is available at construction, bridging that gap.
                 frozenSnapshot: collapsedSnapshot ?? transitionSnapshot
