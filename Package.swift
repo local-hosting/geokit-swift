@@ -39,7 +39,9 @@ let package = Package(
         ),
         .target(
             name: "GeoKitUI",
-            dependencies: ["GeoKitContract"]
+            dependencies: [
+                .target(name: "GeoKitContract"),
+            ]
         ),
         .target(
             name: "GeoKitUIMapbox",
