@@ -26,6 +26,7 @@ public struct GeoKitMapContent: View {
             value: request.mapAcceptsUserInteraction
         )
 #if canImport(UIKit)
+        .geokitPlatformMapUserInteraction(request.mapAcceptsUserInteraction)
         .geokitIsolatePlatformMapAccessibility()
 #endif
     }

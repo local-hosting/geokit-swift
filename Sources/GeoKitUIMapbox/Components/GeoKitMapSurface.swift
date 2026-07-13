@@ -230,6 +230,8 @@ struct GeoKitMapSurface: View {
                             onBegan: onPinInteractionBegan,
                             onEnded: onPinInteractionEnded
                         )
+                        // Mapbox MapView ignores SwiftUI allowsHitTesting — force UIKit off when collapsed.
+                        .geokitPlatformMapUserInteraction(request.mapAcceptsUserInteraction)
                         .geokitIsolatePlatformMapAccessibility()
                     }
                 }
@@ -461,6 +463,7 @@ private struct MapSurfaceTouchShieldModifier: ViewModifier {
         }
     }
 }
+
 
 
 #endif
