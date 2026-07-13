@@ -85,18 +85,29 @@ enum GeoKitMapboxStaticImageService {
         guard let url = components.url else {
             throw CaptureError.urlConstruction
         }
+        let styleId = style.styleId
+        let requestId = request.id
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        // Never reuse a cached blank plate — Mapbox can 200 a uniform gray for a miss, and
+        // URLSession would then serve that forever for the same camera URL (~15ms "retries").
+        var urlRequest = URLRequest(url: url)
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard (200..<300).contains(status) else {
             throw CaptureError.httpError(status)
         }
-        guard let image = UIImage(data: data) else {
-            throw CaptureError.imageDecoding
-        }
-        guard GeoKitMapboxStaticImageValidator.hasVisibleMapContent(image) else {
-            throw CaptureError.blankPlate
-        }
+        // Decode + plate check off the main actor — MainActor warmers await this during settle.
+        let image: UIImage = try await Task.detached(priority: .utility) {
+            guard let decoded = UIImage(data: data) else {
+                throw CaptureError.imageDecoding
+            }
+            let accepted = GeoKitMapboxStaticImageValidator.hasVisibleMapContent(decoded)
+            guard accepted else {
+                throw CaptureError.blankPlate
+            }
+            return decoded
+        }.value
         return image
     }
 
