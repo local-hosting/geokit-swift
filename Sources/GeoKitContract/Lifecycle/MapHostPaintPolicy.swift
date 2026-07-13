@@ -49,20 +49,20 @@ public enum MapHostPaintPolicy {
         isVisiblePeek: Bool = false,
         mediaLoadAllowed: Bool = true
     ) -> Bool {
+        // Never mount a second GeoKit/Mapbox engine for bootstrap.
+        // Collapsed = static poster; expanded live mounts once via the root host.
+        _ = isExpandedOverlay
+        _ = isFocused
+        _ = showsLiveHole
+        _ = isLiveCard
+        _ = hasCoverPoster
+        _ = usesInlineLiveSlice
         _ = isCollapsing
         _ = isCollapseLiveHandoff
         _ = isMapRendered
+        _ = isVisiblePeek
         _ = mediaLoadAllowed
-        if isExpandedOverlay {
-            return false
-        }
-        if usesInlineLiveSlice, !isFocused, isVisiblePeek {
-            return false
-        }
-        guard isFocused else { return false }
-        if usesInlineLiveSlice, showsLiveHole, isLiveCard { return false }
-        if showsLiveHole, isLiveCard, hasCoverPoster { return false }
-        return true
+        return false
     }
 
     public static func paintsStaticMapboxBitmap(
@@ -103,6 +103,7 @@ public enum MapHostPaintPolicy {
     ) -> Bool {
         if usesInlineLiveSlice, isVisiblePeek, !isFocused { return false }
         if usesInlineLiveSlice, paintsInlinePeekSnapshot { return false }
+        if usesInlineLiveSlice, isFocused, !paintsInlineLiveMap { return false }
         return rootHostOwnsLiveSurface || !paintsInlineLiveMap
     }
 
@@ -113,6 +114,7 @@ public enum MapHostPaintPolicy {
         hasGeneralCover: Bool,
         mediaLoadAllowed: Bool,
         isMapRendered: Bool,
+        paintsVisibleInlineLiveMap: Bool,
         paintsInCardSnapshotBootstrap: Bool,
         isVisiblePeek: Bool,
         isExpandedOverlay: Bool,
@@ -124,7 +126,7 @@ public enum MapHostPaintPolicy {
             if hasPeekSnapshot { return .peekSnapshot }
             if mediaLoadAllowed || paintsInlinePeekSnapshot { return .peekLoading }
         }
-        if isMapRendered { return .liveClear }
+        if isMapRendered, paintsVisibleInlineLiveMap { return .liveClear }
         if hasPeekSnapshot || hasGeneralCover { return .snapshotPoster }
         if paintsInCardSnapshotBootstrap { return .runtimeBootstrap }
         if isVisiblePeek { return .visiblePeekClear }

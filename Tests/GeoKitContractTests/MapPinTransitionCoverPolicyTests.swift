@@ -24,7 +24,7 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
         )
     }
 
-    func testSnapshotCoversLiveOnlyBeforeFirstPaint() {
+    func testSnapshotCoversLiveOnlyBeforeFirstPaintUnlessMorphFreeze() {
         XCTAssertTrue(
             MapPinTransitionCoverPolicy.snapshotCoversLive(
                 mapIsTransitioning: true,
@@ -37,6 +37,14 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 mapIsTransitioning: true,
                 pinsLayoutSettling: false,
                 livePainted: true
+            )
+        )
+        XCTAssertTrue(
+            MapPinTransitionCoverPolicy.snapshotCoversLive(
+                mapIsTransitioning: true,
+                pinsLayoutSettling: false,
+                livePainted: true,
+                hasMorphFreeze: true
             )
         )
         XCTAssertFalse(
@@ -55,19 +63,22 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
         )
     }
 
-    func testLiveSurfaceCoverHeldUntilFirstLivePaint() {
-        // Not yet painted: the single cover holds above the live map (pre-mount and unpainted windows alike).
+    func testLiveSurfaceCoverHeldUntilFirstLivePaintOrMorphFreeze() {
         XCTAssertTrue(
             MapPinTransitionCoverPolicy.coversLiveSurface(livePainted: false)
         )
-        // Painted: reveal the live map underneath.
         XCTAssertFalse(
             MapPinTransitionCoverPolicy.coversLiveSurface(livePainted: true)
+        )
+        XCTAssertTrue(
+            MapPinTransitionCoverPolicy.coversLiveSurface(
+                livePainted: true,
+                hasMorphFreeze: true
+            )
         )
     }
 
     func testLiveSurfaceStaysCoveredUntilPaintedAndCentered() {
-        // Painted but not yet centered: the first idle fired at the default camera, cover must hold.
         XCTAssertFalse(
             LiveMapRevealPolicy.revealsLiveSurface(
                 livePainted: true,
@@ -75,7 +86,6 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 isTransitioning: false
             )
         )
-        // Painted and centered on the pins: safe to reveal.
         XCTAssertTrue(
             LiveMapRevealPolicy.revealsLiveSurface(
                 livePainted: true,
@@ -83,7 +93,6 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 isTransitioning: false
             )
         )
-        // Not painted yet: never reveal, regardless of camera.
         XCTAssertFalse(
             LiveMapRevealPolicy.revealsLiveSurface(
                 livePainted: false,
@@ -91,12 +100,21 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 isTransitioning: false
             )
         )
-        // Mid expand/collapse: host drives framing, so painted alone reveals without waiting on settle.
+        // Mid expand/collapse without latch: host-driven reveal (cold / no capture).
         XCTAssertTrue(
             LiveMapRevealPolicy.revealsLiveSurface(
                 livePainted: true,
                 cameraSettledAtTarget: false,
                 isTransitioning: true
+            )
+        )
+        // Warm morph with live-frame latch: keep cover until latch clears.
+        XCTAssertFalse(
+            LiveMapRevealPolicy.revealsLiveSurface(
+                livePainted: true,
+                cameraSettledAtTarget: false,
+                isTransitioning: true,
+                hasMorphFreeze: true
             )
         )
     }

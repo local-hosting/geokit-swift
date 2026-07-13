@@ -31,6 +31,19 @@ public enum MapHostInlineSurfacePolicy {
         return true
     }
 
+    /// Hoisted root host: true for expand/collapse hero morph so GeoKit can latch a live-frame freeze.
+    /// Do **not** pass card-drag ``mapLayoutTransitioning`` here — drag offset also flips that flag and would
+    /// trigger an expensive live ``captureSnapshot`` on every swipe.
+    public static func hoistedGeoKitIsTransitioning(
+        isHeroMorphing: Bool,
+        isMapRendered: Bool,
+        mapIsTransitioning: Bool
+    ) -> Bool {
+        if isHeroMorphing { return true }
+        guard !isMapRendered else { return false }
+        return mapIsTransitioning
+    }
+
     /// Inline maps track card transforms every frame — collection swipe is not a GeoKit layout morph.
     public static func isTransitioning(
         usesInlineLiveSlice: Bool,
@@ -75,22 +88,25 @@ public enum MapHostInlineSurfacePolicy {
         isExpandLiveHandoff: Bool = false,
         cardDragOffset: CGFloat
     ) -> Bool {
-        guard usesInlineLiveSlice, usesExternalLiveHost, !isExpanded else { return false }
-        if isCollapsing { return false }
-        if isVisiblePeek, !isFocused { return false }
-        let rootOwns = rootHostOwnsLiveSurface(
-            usesInlineLiveSlice: usesInlineLiveSlice,
-            usesExternalLiveHost: usesExternalLiveHost,
-            isExpandedOverlay: isExpandedOverlay,
-            isExpandLiveHandoff: isExpandLiveHandoff
-        )
-        if isMapRendered, isFocused || isLiveCard || mediaKeepAlive {
-            guard !rootOwns else { return false }
-            return true
-        }
-        guard !rootOwns else { return false }
-        if isFocused || isLiveCard || mediaKeepAlive { return true }
-        guard isMapRendered else { return false }
-        return collectionIsTransitioning || abs(cardDragOffset) > 1
+        // Video-style: never mount inline Mapbox Metal in-card.
+        // Collapsed stays static poster (swipe-safe). Expanded live paints from the root
+        // ``AXMapMediaHost`` only — mounting both inline + root remount-fights GeoKit.
+        _ = usesInlineLiveSlice
+        _ = usesExternalLiveHost
+        _ = isExpanded
+        _ = isExpandedOverlay
+        _ = isFocused
+        _ = isVisiblePeek
+        _ = isLiveCard
+        _ = mediaKeepAlive
+        _ = isMapRendered
+        _ = collectionExpanded
+        _ = isCollapsing
+        _ = isHeroFrameMorphing
+        _ = collectionIsTransitioning
+        _ = isCollapseLiveHandoff
+        _ = isExpandLiveHandoff
+        _ = cardDragOffset
+        return false
     }
 }

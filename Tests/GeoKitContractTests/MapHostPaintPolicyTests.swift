@@ -28,8 +28,8 @@ final class MapHostPaintPolicyTests: XCTestCase {
         )
     }
 
-    func testFocusedNonLiveSlotStillBootstrapsSnapshot() {
-        XCTAssertTrue(
+    func testFocusedCollapsedSlotNeverBootstrapsSnapshot() {
+        XCTAssertFalse(
             MapHostPaintPolicy.paintsInCardSnapshotBootstrap(
                 isExpandedOverlay: false,
                 isFocused: true,
@@ -49,6 +49,7 @@ final class MapHostPaintPolicyTests: XCTestCase {
                 hasGeneralCover: false,
                 mediaLoadAllowed: true,
                 isMapRendered: false,
+                paintsVisibleInlineLiveMap: false,
                 paintsInCardSnapshotBootstrap: false,
                 isVisiblePeek: false,
                 isExpandedOverlay: true,

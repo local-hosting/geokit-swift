@@ -14,25 +14,35 @@ public enum MapPinTransitionCoverPolicy {
         return false
     }
 
-    /// Peek snapshot covers live tiles only until the first live paint — never again after.
+    /// Peek / morph snapshot covers live tiles until the first live paint, and while a morph freeze latch is held.
     public static func snapshotCoversLive(
         mapIsTransitioning: Bool,
         pinsLayoutSettling: Bool,
-        livePainted: Bool
+        livePainted: Bool,
+        hasMorphFreeze: Bool = false
     ) -> Bool {
         _ = mapIsTransitioning
         _ = pinsLayoutSettling
+        if hasMorphFreeze { return true }
         return !livePainted
+    }
+
+    /// Hold an opaque cover above live GL while a morph freeze latch is active.
+    public static func holdsMorphFreezeCover(hasMorphFreeze: Bool) -> Bool {
+        hasMorphFreeze
     }
 
     /// A live GL surface paints an opaque base the instant it mounts, compositing *above* any frozen
     /// underlay — so the underlay can never mask that base (the host handoff gray flash). Keep the live
-    /// map underneath and hold a single cover *above* it until the surface has painted, then cross-fade. The
-    /// cover spans both the pre-mount window and the mounted-but-unpainted window, so it is the only snapshot
-    /// layer the surface needs. It shows the frozen snapshot when one exists (seamless continuity from the
-    /// card image) and the dark placeholder otherwise (cold first load); the caller picks the content.
-    public static func coversLiveSurface(livePainted: Bool) -> Bool {
-        !livePainted
+    /// map underneath and hold a single cover *above* it until the surface has painted, then cross-fade.
+    /// During expand/collapse, a live-frame latch (`hasMorphFreeze`) keeps the cover up so the map can
+    /// resize underneath without visible tile thrash.
+    public static func coversLiveSurface(
+        livePainted: Bool,
+        hasMorphFreeze: Bool = false
+    ) -> Bool {
+        if hasMorphFreeze { return true }
+        return !livePainted
     }
 }
 
@@ -41,14 +51,17 @@ public enum MapPinTransitionCoverPolicy {
 /// Lifting on the *first* `onMapIdle` is wrong: that idle can fire at the style's default/world camera
 /// before the camera flies to the card's pins, revealing an uncentered light map that then animates into
 /// place — read as a white flash. The cover must hold until the live surface has painted **and** settled at
-/// its intended camera. During expand/collapse the host drives framing, so settle-at-target isn't required.
+/// its intended camera. During expand/collapse with a morph freeze latch, the cover stays until the latch
+/// clears; without a latch, host-driven framing may reveal while transitioning (cold path).
 public enum LiveMapRevealPolicy {
     public static func revealsLiveSurface(
         livePainted: Bool,
         cameraSettledAtTarget: Bool,
-        isTransitioning: Bool
+        isTransitioning: Bool,
+        hasMorphFreeze: Bool = false
     ) -> Bool {
         guard livePainted else { return false }
+        if hasMorphFreeze { return false }
         return isTransitioning || cameraSettledAtTarget
     }
 }
