@@ -23,12 +23,49 @@ public enum MapHostInlineSurfacePolicy {
         isMapRendered: Bool,
         rootHostOwnsLiveSurface: Bool,
         isCollapsing: Bool = false,
-        isCollapseLiveHandoff: Bool = false
+        isCollapseLiveHandoff: Bool = false,
+        isHeroFrameMorphing: Bool = false,
+        isExpandLiveHandoff: Bool = false,
+        isTransitioning: Bool = false,
+        collapsePosterMatchesLiveCamera: Bool = false
     ) -> Bool {
+        if keepsExpandedOverlaySnapshotDuringMorph(
+            isExpandedOverlay: isExpandedOverlay,
+            isCollapsing: isCollapsing,
+            isCollapseLiveHandoff: isCollapseLiveHandoff,
+            isHeroFrameMorphing: isHeroFrameMorphing,
+            isExpandLiveHandoff: isExpandLiveHandoff,
+            isTransitioning: isTransitioning,
+            isMapRendered: isMapRendered,
+            collapsePosterMatchesLiveCamera: collapsePosterMatchesLiveCamera
+        ) {
+            return false
+        }
+        guard isExpandedOverlay else { return false }
         if rootHostOwnsLiveSurface, isMapRendered { return true }
-        guard isExpandedOverlay, isMapRendered else { return false }
-        if isCollapsing || isCollapseLiveHandoff { return false }
-        return true
+        return isMapRendered
+    }
+
+    /// Expand morph and post-freeze collapse keep a static snapshot in the card hole.
+    /// Collapse starts with live tiles visible; swap to poster once ``isMapRendered`` clears.
+    public static func keepsExpandedOverlaySnapshotDuringMorph(
+        isExpandedOverlay: Bool,
+        isCollapsing: Bool,
+        isCollapseLiveHandoff: Bool,
+        isHeroFrameMorphing: Bool,
+        isExpandLiveHandoff: Bool,
+        isTransitioning: Bool,
+        isMapRendered: Bool = false,
+        collapsePosterMatchesLiveCamera: Bool = false
+    ) -> Bool {
+        if isCollapseLiveHandoff { return true }
+        if isCollapsing {
+            guard isExpandedOverlay else { return false }
+            if collapsePosterMatchesLiveCamera { return true }
+            return !isMapRendered
+        }
+        guard isExpandedOverlay else { return false }
+        return isHeroFrameMorphing || isExpandLiveHandoff || isTransitioning
     }
 
     /// Hoisted root host: true for expand/collapse hero morph so GeoKit can latch a live-frame freeze.

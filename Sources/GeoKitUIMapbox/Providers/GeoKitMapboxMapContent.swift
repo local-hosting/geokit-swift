@@ -21,6 +21,7 @@ struct GeoKitMapboxMapContent: View {
     @State private var liveCameraState: CameraState?
     @State private var selectedPinId: UUID?
     @State private var appliedCameraFrame: MapCameraFrame?
+    @State private var trackedIdentity: LiveMapRequestIdentity?
 
     var body: some View {
         phaseContent
@@ -28,12 +29,13 @@ struct GeoKitMapboxMapContent: View {
                 seedTransitionSnapshotIfNeeded()
                 seedViewportIfNeeded()
                 seedSelectedPinIfNeeded()
+                trackedIdentity = LiveMapRequestIdentity(request: request)
             }
             .onChange(of: transitionSnapshot) { _, _ in
                 seedTransitionSnapshotIfNeeded()
             }
             .onChange(of: request.id) { _, _ in
-                resetForCardChange()
+                handleCardIdentityChange()
             }
             .onChange(of: request.mapProviderId) { _, _ in
                 resetForProviderChange()
@@ -54,6 +56,29 @@ struct GeoKitMapboxMapContent: View {
         collapsedSnapshot = transitionSnapshot
     }
 
+    private func handleCardIdentityChange() {
+        let next = LiveMapRequestIdentity(request: request)
+        let action = LiveMapRetargetPolicy.cardChangeAction(previous: trackedIdentity, next: next)
+        switch action {
+        case .retargetCameraAndPins:
+            retargetForCardChange()
+        case .reloadStyle:
+            resetForCardChange()
+        }
+        trackedIdentity = next
+    }
+
+    /// Session-global surface: jump camera and swap pins without tearing down Mapbox.
+    private func retargetForCardChange() {
+        liveCameraState = nil
+        appliedCameraFrame = nil
+        seedSelectedPinIfNeeded()
+        applyCameraFrame(request.cameraFrame)
+        if let transitionSnapshot {
+            collapsedSnapshot = transitionSnapshot
+        }
+    }
+
     private func resetForCardChange() {
         appliedCameraFrame = nil
         collapsedSnapshot = nil
@@ -61,7 +86,6 @@ struct GeoKitMapboxMapContent: View {
         seedSelectedPinIfNeeded()
         applyCameraFrame(request.cameraFrame)
     }
-
 
     private func resetForProviderChange() {
         collapsedSnapshot = nil

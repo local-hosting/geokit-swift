@@ -34,6 +34,7 @@ struct GeoKitMapSurface: View {
     @State private var pinGeometryRevision = 0
     @State private var renderedPins: [MapPin] = []
     @State private var lastSettledLayoutSize: CGSize = .zero
+    @State private var trackedIdentity:  LiveMapRequestIdentity?
     /// One-shot: the live surface is anchored at its shared camera. The live map seeds directly at the
     /// resolved `saved ?? declared` camera (an imperative `setCamera` jump — the same frame the snapshot
     /// was captured at), so there is no fly-to to cross and settle is satisfied the moment that camera is
@@ -131,6 +132,34 @@ struct GeoKitMapSurface: View {
         mapReady = canMount
     }
 
+    private func reloadForStyleChange() {
+        didApplyInitialCamera = false
+        initialCameraSettled = false
+        liveDidRender = false
+        syncRenderedPinsFromRequest()
+    }
+
+    private func retargetForCardChange() {
+        syncRenderedPinsFromRequest()
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        reportedCameraFrame = frame
+        if LiveMapRetargetPolicy.keepsLivePaintedOnRetarget(liveAlreadyPainted: liveDidRender) {
+            initialCameraSettled = true
+        }
+    }
+
+    private func handleCardIdentityChange() {
+        let next = LiveMapRequestIdentity(request: request)
+        let action = LiveMapRetargetPolicy.cardChangeAction(previous: trackedIdentity, next: next)
+        switch action {
+        case .retargetCameraAndPins:
+            retargetForCardChange()
+        case .reloadStyle:
+            reloadForStyleChange()
+        }
+        trackedIdentity = next
+    }
+
     /// One-shot assert after style/map load — the Mapbox style default camera can win before the viewport binding applies.
     private func applyInitialCameraIfNeeded(on map: MapboxMap) {
         guard !didApplyInitialCamera else { return }
@@ -154,7 +183,12 @@ struct GeoKitMapSurface: View {
         GeometryReader { geo in
             let size = geo.size
             let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
-            let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
+            let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(
+                canMount: canMount,
+                mapReady: mapReady,
+                isTransitioning: isTransitioning,
+                liveAlreadyPainted: liveDidRender
+            )
             // Reported to the host so it can lift the in-card cover once the surface shows map content — true
             // while the snapshot cover bridges the cold load, even before the live surface paints.
             let showFrozenUnderlay = frozenSnapshot != nil && !liveDidRender && !isTransitioning
@@ -189,15 +223,19 @@ struct GeoKitMapSurface: View {
                         .onCameraChanged { event in
                             guard !isTransitioning else { return }
                             let cameraState = event.cameraState
-                            let zoom = cameraState.zoom
-                            liveCameraState = cameraState
-                            zoomLevel = Float(zoom)
-                            currentZoom = zoom
-                            isPlusEnabled = zoom < 19
-                            isMinusEnabled = zoom > 10
-                            // The map is the map: persist every interactive move so the shared store is
-                            // current before a collapse can preempt the post-pan idle.
-                            reportCameraFrame(cameraState)
+                            // Mapbox can emit camera changes synchronously while SwiftUI is applying the
+                            // viewport binding mid view-update; defer the writes to the next runloop turn.
+                            DispatchQueue.main.async {
+                                let zoom = cameraState.zoom
+                                liveCameraState = cameraState
+                                zoomLevel = Float(zoom)
+                                currentZoom = zoom
+                                isPlusEnabled = zoom < 19
+                                isMinusEnabled = zoom > 10
+                                // The map is the map: persist every interactive move so the shared store is
+                                // current before a collapse can preempt the post-pan idle.
+                                reportCameraFrame(cameraState)
+                            }
                         }
                         .onMapIdle { _ in
                             if let map = proxy.map {
@@ -266,6 +304,7 @@ struct GeoKitMapSurface: View {
             .frame(width: size.width, height: size.height)
             .onAppear {
                 DispatchQueue.main.async { syncRenderedPinsFromRequest() }
+                trackedIdentity = LiveMapRequestIdentity(request: request)
             }
             .onChange(of: request.pins) { _, _ in
                 DispatchQueue.main.async { syncRenderedPinsFromRequest() }
@@ -286,8 +325,7 @@ struct GeoKitMapSurface: View {
                 DispatchQueue.main.async { syncMapReady(for: size) }
             }
             .onChange(of: request.id) { _, _ in
-                didApplyInitialCamera = false
-                initialCameraSettled = false
+                handleCardIdentityChange()
             }
             .task(id: request.id) {
                 // Never strand the cover: if the camera can't reach the pins (e.g. tiles never load), lift
@@ -317,6 +355,10 @@ struct GeoKitMapSurface: View {
                 if isShowing {
                     GeoKitMapboxLiveMapRegistry.registerLiveMap()
                 } else {
+                    guard !MapSurfaceMountPolicy.retainsWarmMountDuringTransitionGap(
+                        isTransitioning: isTransitioning,
+                        liveAlreadyPainted: liveDidRender
+                    ) else { return }
                     liveDidRender = false
                     initialCameraSettled = false
                     GeoKitMapboxLiveMapRegistry.unregisterLiveMap()

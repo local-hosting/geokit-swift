@@ -15,6 +15,7 @@ struct GeoKitMapKitMapContent: View {
     @State private var zoomLevel: Float = 12
     @State private var selectedPinId: UUID?
     @State private var appliedCameraFrame: MapCameraFrame?
+    @State private var trackedIdentity: LiveMapRequestIdentity?
 
     var body: some View {
         phaseContent
@@ -22,12 +23,13 @@ struct GeoKitMapKitMapContent: View {
                 seedTransitionSnapshotIfNeeded()
                 seedPositionIfNeeded()
                 seedSelectedPinIfNeeded()
+                trackedIdentity = LiveMapRequestIdentity(request: request)
             }
             .onChange(of: transitionSnapshot) { _, _ in
                 seedTransitionSnapshotIfNeeded()
             }
             .onChange(of: request.id) { _, _ in
-                resetForCardChange()
+                handleCardIdentityChange()
             }
             .onChange(of: request.mapProviderId) { _, _ in
                 resetForProviderChange()
@@ -46,6 +48,27 @@ struct GeoKitMapKitMapContent: View {
     private func seedTransitionSnapshotIfNeeded() {
         guard collapsedSnapshot == nil, let transitionSnapshot else { return }
         collapsedSnapshot = transitionSnapshot
+    }
+
+    private func handleCardIdentityChange() {
+        let next = LiveMapRequestIdentity(request: request)
+        let action = LiveMapRetargetPolicy.cardChangeAction(previous: trackedIdentity, next: next)
+        switch action {
+        case .retargetCameraAndPins:
+            retargetForCardChange()
+        case .reloadStyle:
+            resetForCardChange()
+        }
+        trackedIdentity = next
+    }
+
+    private func retargetForCardChange() {
+        appliedCameraFrame = nil
+        seedSelectedPinIfNeeded()
+        applyCameraFrame(request.cameraFrame)
+        if let transitionSnapshot {
+            collapsedSnapshot = transitionSnapshot
+        }
     }
 
     private func resetForCardChange() {

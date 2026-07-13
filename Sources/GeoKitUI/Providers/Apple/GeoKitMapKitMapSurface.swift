@@ -24,6 +24,7 @@ struct GeoKitMapKitMapSurface: View {
     @State private var reportedCameraFrame: MapCameraFrame?
     @State private var pinsLayoutSettling = false
     @State private var lastSettledLayoutSize: CGSize = .zero
+    @State private var trackedIdentity: LiveMapRequestIdentity?
 
     private var hideLiveMapPins: Bool {
         MapPinTransitionCoverPolicy.hideLiveMapPins(
@@ -59,6 +60,29 @@ struct GeoKitMapKitMapSurface: View {
         pinsLayoutSettling = false
     }
 
+    private func handleCardIdentityChange() {
+        let next = LiveMapRequestIdentity(request: request)
+        let action = LiveMapRetargetPolicy.cardChangeAction(previous: trackedIdentity, next: next)
+        switch action {
+        case .retargetCameraAndPins:
+            retargetForCardChange()
+        case .reloadStyle:
+            reloadForStyleChange()
+        }
+        trackedIdentity = next
+    }
+
+    private func retargetForCardChange() {
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        if reportedCameraFrame?.isApproximatelyEqual(to: frame) != true {
+            reportedCameraFrame = frame
+        }
+    }
+
+    private func reloadForStyleChange() {
+        liveDidRender = false
+    }
+
     var body: some View {
         GeometryReader { geo in
             mapBody(size: geo.size)
@@ -75,7 +99,12 @@ struct GeoKitMapKitMapSurface: View {
     @ViewBuilder
     private func mapBody(size: CGSize) -> some View {
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
-        let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
+        let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(
+            canMount: canMount,
+            mapReady: mapReady,
+            isTransitioning: isTransitioning,
+            liveAlreadyPainted: liveDidRender
+        )
         // Reported to the host so it can lift the in-card cover once the surface shows map content.
         let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil && !liveDidRender
 
@@ -125,6 +154,7 @@ struct GeoKitMapKitMapSurface: View {
             if MapSurfaceMountPolicy.isValidLayoutSize(size) {
                 lastSettledLayoutSize = size
             }
+            trackedIdentity = LiveMapRequestIdentity(request: request)
         }
         .onDisappear {
             mapReady = false
@@ -132,8 +162,15 @@ struct GeoKitMapKitMapSurface: View {
             pinsLayoutSettling = false
             lastSettledLayoutSize = .zero
         }
+        .onChange(of: request.id) { _, _ in
+            handleCardIdentityChange()
+        }
         .onChange(of: showMap) { _, isShowing in
             if !isShowing {
+                guard !MapSurfaceMountPolicy.retainsWarmMountDuringTransitionGap(
+                    isTransitioning: isTransitioning,
+                    liveAlreadyPainted: liveDidRender
+                ) else { return }
                 liveDidRender = false
             }
         }

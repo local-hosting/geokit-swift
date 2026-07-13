@@ -2,6 +2,17 @@ import GeoKitContract
 import XCTest
 
 final class MapHostInlineSurfacePolicyTests: XCTestCase {
+
+    func testCollapsedSkipsTransparentPassThroughEvenWhenLiveRendered() {
+        XCTAssertFalse(
+            MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
+                isExpandedOverlay: false,
+                isMapRendered: true,
+                rootHostOwnsLiveSurface: true
+            )
+        )
+    }
+
     func testCollapseUnmountsInlineLiveMap() {
         XCTAssertFalse(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
@@ -39,6 +50,96 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
                 collectionIsTransitioning: false,
                 isExpandLiveHandoff: true,
                 cardDragOffset: 0
+            )
+        )
+    }
+
+
+
+
+    func testCollapseMorphUsesInCardPosterWhenItMatchesLiveCamera() {
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.keepsExpandedOverlaySnapshotDuringMorph(
+                isExpandedOverlay: true,
+                isCollapsing: true,
+                isCollapseLiveHandoff: false,
+                isHeroFrameMorphing: false,
+                isExpandLiveHandoff: false,
+                isTransitioning: true,
+                isMapRendered: true,
+                collapsePosterMatchesLiveCamera: true
+            )
+        )
+        XCTAssertFalse(
+            MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
+                isExpandedOverlay: true,
+                isMapRendered: true,
+                rootHostOwnsLiveSurface: false,
+                isCollapsing: true,
+                isTransitioning: true,
+                collapsePosterMatchesLiveCamera: true
+            )
+        )
+    }
+
+    func testCollapseMorphKeepsLivePassThroughUntilPosterLands() {
+        XCTAssertFalse(
+            MapHostInlineSurfacePolicy.keepsExpandedOverlaySnapshotDuringMorph(
+                isExpandedOverlay: true,
+                isCollapsing: true,
+                isCollapseLiveHandoff: false,
+                isHeroFrameMorphing: false,
+                isExpandLiveHandoff: false,
+                isTransitioning: true,
+                isMapRendered: true
+            )
+        )
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
+                isExpandedOverlay: true,
+                isMapRendered: true,
+                rootHostOwnsLiveSurface: false,
+                isCollapsing: true,
+                isTransitioning: true
+            )
+        )
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.keepsExpandedOverlaySnapshotDuringMorph(
+                isExpandedOverlay: true,
+                isCollapsing: true,
+                isCollapseLiveHandoff: false,
+                isHeroFrameMorphing: false,
+                isExpandLiveHandoff: false,
+                isTransitioning: true,
+                isMapRendered: false
+            )
+        )
+    }
+
+    func testExpandMorphKeepsSnapshotInHoleInsteadOfTransparentPassThrough() {
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.keepsExpandedOverlaySnapshotDuringMorph(
+                isExpandedOverlay: true,
+                isCollapsing: false,
+                isCollapseLiveHandoff: false,
+                isHeroFrameMorphing: true,
+                isExpandLiveHandoff: false,
+                isTransitioning: false
+            )
+        )
+        XCTAssertFalse(
+            MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
+                isExpandedOverlay: true,
+                isMapRendered: true,
+                rootHostOwnsLiveSurface: false,
+                isHeroFrameMorphing: true
+            )
+        )
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
+                isExpandedOverlay: true,
+                isMapRendered: true,
+                rootHostOwnsLiveSurface: false
             )
         )
     }
