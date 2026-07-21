@@ -1,7 +1,6 @@
 import CoreGraphics
 import Foundation
 
-/// Pure mount gates shared by Mapbox and Apple map surfaces — keeps blank white frames testable.
 public enum MapSurfaceMountPolicy {
     public static let minLayoutSize: CGFloat = 128
 
@@ -17,7 +16,6 @@ public enum MapSurfaceMountPolicy {
         canMount && mapReady
     }
 
-    /// Hero morph may briefly invalidate layout gates — keep a warm GL surface mounted.
     public static func retainsWarmMountDuringTransitionGap(
         isTransitioning: Bool,
         liveAlreadyPainted: Bool

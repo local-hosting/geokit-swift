@@ -1,11 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Layout-agnostic host composition inputs — callers map collection UI (deck, carousel, etc.) to these flags.
-
-/// Provider-neutral rules for when a host-owned inline map surface mounts, transitions, or passes through live tiles.
 public enum MapHostInlineSurfacePolicy {
-    /// Root hoisted host owns the one live GeoKit surface during expand/collapse hero morph.
     public static func rootHostOwnsLiveSurface(
         usesInlineLiveSlice: Bool,
         usesExternalLiveHost: Bool,
@@ -17,7 +13,6 @@ public enum MapHostInlineSurfacePolicy {
         return false
     }
 
-    /// Expanded hero overlay keeps a transparent hole once live tiles exist so the root host is visible.
     public static func showsTransparentRootLivePassThrough(
         isExpandedOverlay: Bool,
         isMapRendered: Bool,
@@ -46,8 +41,6 @@ public enum MapHostInlineSurfacePolicy {
         return isMapRendered
     }
 
-    /// Expand morph and post-freeze collapse keep a static snapshot in the card hole.
-    /// Collapse starts with live tiles visible; swap to poster once ``isMapRendered`` clears.
     public static func keepsExpandedOverlaySnapshotDuringMorph(
         isExpandedOverlay: Bool,
         isCollapsing: Bool,

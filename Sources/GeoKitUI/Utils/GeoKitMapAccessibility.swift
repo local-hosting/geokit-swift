@@ -23,8 +23,6 @@ enum GeoKitPlatformMapAccessibilitySuppressor {
         }
     }
 
-    /// Mapbox ``MapView`` keeps UIKit hit-testing even when SwiftUI ``allowsHitTesting(false)``.
-    /// Disable the platform subtree so collapsed inline maps do not steal card taps/drags.
     static func setMapSurfaceUserInteractionEnabled(_ enabled: Bool, from anchor: UIView) {
         let root = hostingRoot(from: anchor)
         applyMapSurfaceUserInteraction(enabled, in: root)
@@ -130,7 +128,6 @@ public extension View {
             .background(GeoKitPlatformMapAccessibilityAnchor())
     }
 
-    /// Collapsed maps must not steal card chrome taps — Mapbox ignores SwiftUI ``allowsHitTesting(false)``.
     func geokitPlatformMapUserInteraction(_ enabled: Bool) -> some View {
         background(GeoKitPlatformMapUserInteractionAnchor(enabled: enabled))
     }
