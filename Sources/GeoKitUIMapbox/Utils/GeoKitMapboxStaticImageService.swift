@@ -50,7 +50,9 @@ enum GeoKitMapboxStaticImageService {
             throw CaptureError.invalidStyleURI(request.mapStyleURI)
         }
 
-        let frame = MapCameraFrameResolver.resolve(for: request)
+        let frame = MapboxStaticImageCameraLimits.clamped(
+            forStaticImages: MapCameraFrameResolver.resolve(for: request)
+        )
         let center = CLLocationCoordinate2D(latitude: frame.centerLatitude, longitude: frame.centerLongitude)
         let zoom = frame.zoom
         let bearing = frame.bearing

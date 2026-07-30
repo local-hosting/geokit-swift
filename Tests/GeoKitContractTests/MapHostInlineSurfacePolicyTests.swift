@@ -116,7 +116,7 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
         )
     }
 
-    func testExpandMorphKeepsSnapshotInHoleInsteadOfTransparentPassThrough() {
+    func testExpandMorphKeepsSnapshotOnlyWhenLiveIsCold() {
         XCTAssertTrue(
             MapHostInlineSurfacePolicy.keepsExpandedOverlaySnapshotDuringMorph(
                 isExpandedOverlay: true,
@@ -124,10 +124,31 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
                 isCollapseLiveHandoff: false,
                 isHeroFrameMorphing: true,
                 isExpandLiveHandoff: false,
-                isTransitioning: false
+                isTransitioning: false,
+                isMapRendered: false
             )
         )
         XCTAssertFalse(
+            MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
+                isExpandedOverlay: true,
+                isMapRendered: false,
+                rootHostOwnsLiveSurface: false,
+                isHeroFrameMorphing: true
+            )
+        )
+        // Warm live map: transparent hole during expand morph (framing continuity).
+        XCTAssertFalse(
+            MapHostInlineSurfacePolicy.keepsExpandedOverlaySnapshotDuringMorph(
+                isExpandedOverlay: true,
+                isCollapsing: false,
+                isCollapseLiveHandoff: false,
+                isHeroFrameMorphing: true,
+                isExpandLiveHandoff: false,
+                isTransitioning: false,
+                isMapRendered: true
+            )
+        )
+        XCTAssertTrue(
             MapHostInlineSurfacePolicy.showsTransparentRootLivePassThrough(
                 isExpandedOverlay: true,
                 isMapRendered: true,

@@ -218,6 +218,7 @@ struct GeoKitMapKitMapSurface: View {
                 liveDidRender = true
             }
             let nextFrame = GeoKitMapKitCamera.frame(from: context.camera)
+            GeoKitLiveCameraCache.note(nextFrame, for: request.id)
             if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
                 reportedCameraFrame = nextFrame
             }

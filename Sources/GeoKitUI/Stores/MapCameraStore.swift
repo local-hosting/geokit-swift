@@ -71,3 +71,9 @@ public final class MapCameraStore: ObservableObject {
         }
     }
 }
+
+extension MapCameraStore: GeoKitLiveCameraStoreWriting {
+    public func setLiveCameraFrame(_ frame: MapCameraFrame, for mapID: String) {
+        setFrame(frame, for: mapID)
+    }
+}

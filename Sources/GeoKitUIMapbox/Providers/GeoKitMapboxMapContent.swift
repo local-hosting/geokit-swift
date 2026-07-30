@@ -42,6 +42,12 @@ struct GeoKitMapboxMapContent: View {
             }
             .onChange(of: request.cameraFrame) { _, frame in
                 guard let frame else { return }
+                // Never jump the live map backward to a lagging store/request frame. The user may
+                // already be looking at a newer pan held in ``GeoKitLiveCameraCache``.
+                if let live = GeoKitLiveCameraCache.frame(for: request.id),
+                   !live.isApproximatelyEqual(to: frame) {
+                    return
+                }
                 applyCameraFrame(frame)
             }
             .onChange(of: request.selectedPinId) { _, pinId in

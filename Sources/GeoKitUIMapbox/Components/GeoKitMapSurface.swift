@@ -64,16 +64,22 @@ struct GeoKitMapSurface: View {
     /// resolves back to the declared camera. Reporting on every interactive change keeps the store current
     /// so `frame(for:id)` already holds the user's camera before any handoff. The store dedups and debounces.
     private func reportCameraFrame(_ cameraState: CameraState) {
-        let frame = MapCameraFrame(
+        let frame = mapCameraFrame(from: cameraState)
+        // Synchronous cache — collapse can start before deferred preference → store writes land.
+        GeoKitLiveCameraCache.note(frame, for: request.id)
+        if reportedCameraFrame?.isApproximatelyEqual(to: frame) != true {
+            reportedCameraFrame = frame
+        }
+    }
+
+    private func mapCameraFrame(from cameraState: CameraState) -> MapCameraFrame {
+        MapCameraFrame(
             centerLatitude: cameraState.center.latitude,
             centerLongitude: cameraState.center.longitude,
             zoom: cameraState.zoom,
             bearing: cameraState.bearing,
             pitch: cameraState.pitch
         )
-        if reportedCameraFrame?.isApproximatelyEqual(to: frame) != true {
-            reportedCameraFrame = frame
-        }
     }
 
     private func syncRenderedPinsFromRequest() {
@@ -177,6 +183,7 @@ struct GeoKitMapSurface: View {
         // timeout. The cover still holds until the first paint via `liveDidRender`.
         reportedCameraFrame = frame
         initialCameraSettled = true
+        GeoKitLiveCameraCache.note(frame, for: request.id)
     }
 
     var body: some View {
@@ -221,10 +228,12 @@ struct GeoKitMapSurface: View {
                             applyInitialCameraIfNeeded(on: map)
                         }
                         .onCameraChanged { event in
-                            guard !isTransitioning else { return }
                             let cameraState = event.cameraState
+                            // Stash immediately — collapse may begin before the deferred SwiftUI writes run.
+                            GeoKitLiveCameraCache.note(mapCameraFrame(from: cameraState), for: request.id)
+                            guard !isTransitioning else { return }
                             // Mapbox can emit camera changes synchronously while SwiftUI is applying the
-                            // viewport binding mid view-update; defer the writes to the next runloop turn.
+                            // viewport binding mid view-update; defer the @State / preference writes.
                             DispatchQueue.main.async {
                                 let zoom = cameraState.zoom
                                 liveCameraState = cameraState
@@ -378,6 +387,16 @@ struct GeoKitMapSurface: View {
             .preference(key: GeoKitMapSnapshotCoversLiveKey.self, value: showMap && snapshotCoversLive)
             .onChange(of: isTransitioning) { wasTransitioning, transitioning in
                 if transitioning, !wasTransitioning {
+                    // Flush the last live camera before reporting gates close — collapse can flip
+                    // transitioning before a deferred onCameraChanged lands in the store.
+                    if let cameraState = liveCameraState {
+                        reportCameraFrame(cameraState)
+                    } else if let cached = GeoKitLiveCameraCache.frame(for: request.id) {
+                        GeoKitLiveCameraCache.note(cached, for: request.id)
+                        if reportedCameraFrame?.isApproximatelyEqual(to: cached) != true {
+                            reportedCameraFrame = cached
+                        }
+                    }
                     pinZoomHold = currentZoom > 0 ? currentZoom : CGFloat(zoomLevel)
                     pinsLayoutSettling = false
                 }

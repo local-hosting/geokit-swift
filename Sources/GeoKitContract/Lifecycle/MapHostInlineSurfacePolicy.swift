@@ -46,8 +46,10 @@ public enum MapHostInlineSurfacePolicy {
         return isMapRendered
     }
 
-    /// Expand morph and post-freeze collapse keep a static snapshot in the card hole.
-    /// Collapse starts with live tiles visible; swap to poster once ``isMapRendered`` clears.
+    /// Cold expand morph and post-freeze collapse keep a static snapshot in the card hole.
+    /// Warm expand morph clears the snapshot so framing-continuity scale+clip can show live tiles.
+    /// Collapse / handoff starts with live tiles visible; swap to poster once it matches the live camera
+    /// (or live has not painted yet).
     public static func keepsExpandedOverlaySnapshotDuringMorph(
         isExpandedOverlay: Bool,
         isCollapsing: Bool,
@@ -58,13 +60,15 @@ public enum MapHostInlineSurfacePolicy {
         isMapRendered: Bool = false,
         collapsePosterMatchesLiveCamera: Bool = false
     ) -> Bool {
-        if isCollapseLiveHandoff { return true }
-        if isCollapsing {
-            guard isExpandedOverlay else { return false }
+        if isCollapseLiveHandoff || isCollapsing {
+            guard isExpandedOverlay || isCollapseLiveHandoff else { return false }
             if collapsePosterMatchesLiveCamera { return true }
+            // Warm live still owns the view — keep the hole clear until the matching poster lands.
             return !isMapRendered
         }
         guard isExpandedOverlay else { return false }
+        // Warm live map: transparent hole during expand morph (host applies framing continuity).
+        if isMapRendered { return false }
         return isHeroFrameMorphing || isExpandLiveHandoff || isTransitioning
     }
 

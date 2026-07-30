@@ -36,6 +36,10 @@ struct GeoKitMapKitMapContent: View {
             }
             .onChange(of: request.cameraFrame) { _, frame in
                 guard let frame else { return }
+                if let live = GeoKitLiveCameraCache.frame(for: request.id),
+                   !live.isApproximatelyEqual(to: frame) {
+                    return
+                }
                 applyCameraFrame(frame)
             }
             .onChange(of: request.selectedPinId) { _, pinId in
