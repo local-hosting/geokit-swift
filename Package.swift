@@ -17,7 +17,7 @@ let package = Package(
         .library(name: "GeoKit", type: .dynamic, targets: ["GeoKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", exact: "11.25.0"),
+        .package(url: "https://github.com/mapbox/mapbox-maps-ios.git", exact: "11.26.0"),
         .package(url: "https://github.com/mapbox/turf-swift.git", from: "4.0.0"),
     ],
     targets: [
