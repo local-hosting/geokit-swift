@@ -27,6 +27,11 @@ public enum MapCameraFrameResolver {
     /// place — i.e. close to the declared center. A saved camera far from the declared coordinates is stale
     /// (e.g. left over from a reused card id) and must not hijack the card's real lat/long on launch. The card
     /// content is the source of truth; persistence only remembers the user's own pan/zoom around it.
+    /// True for the pre-venue cold-mount sentinel at (0, 0) — not a user pan.
+    public static func isNullIsland(_ frame: MapCameraFrame) -> Bool {
+        abs(frame.centerLatitude) < 1e-4 && abs(frame.centerLongitude) < 1e-4
+    }
+
     public static func validStoredFrame(
         _ stored: MapCameraFrame?,
         declared: MapCameraFrame,

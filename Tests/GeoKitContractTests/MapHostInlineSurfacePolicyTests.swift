@@ -203,7 +203,24 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
 
 
     func testInlineLiveMapStaysMountedWhileCardDragging() {
-        XCTAssertFalse(
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
+                usesInlineLiveSlice: true,
+                usesExternalLiveHost: true,
+                isExpanded: false,
+                isExpandedOverlay: false,
+                isFocused: true,
+                isLiveCard: false,
+                mediaKeepAlive: false,
+                isMapRendered: true,
+                collectionExpanded: false,
+                isCollapsing: false,
+                isHeroFrameMorphing: false,
+                collectionIsTransitioning: false,
+                cardDragOffset: 0
+            )
+        )
+        XCTAssertTrue(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
                 usesInlineLiveSlice: true,
                 usesExternalLiveHost: true,

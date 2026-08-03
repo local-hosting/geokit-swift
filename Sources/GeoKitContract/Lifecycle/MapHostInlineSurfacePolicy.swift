@@ -133,7 +133,12 @@ public enum MapHostInlineSurfacePolicy {
 
         // Collapsed stack/deck: paint live GeoKit in the focused card hole instead of an
         // endless static-poster spinner while the session map warms off-screen.
-        guard usesExternalLiveHost, isFocused, isLiveCard else { return false }
+        guard usesExternalLiveHost, isFocused else { return false }
+        // Once inline live has revealed, keep the surface mounted through brief live-owner
+        // hiccups (poster refresh / collapsed-warm debounce) so the card does not flip back
+        // to the static bitmap while ``isMapRendered`` stays latched.
+        if usesInlineLiveSlice, isMapRendered { return true }
+        guard isLiveCard else { return false }
         return true
     }
 }

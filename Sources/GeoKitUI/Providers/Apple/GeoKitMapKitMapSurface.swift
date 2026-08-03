@@ -176,6 +176,7 @@ struct GeoKitMapKitMapSurface: View {
         }
         .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
         .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !hideLiveMapPins)
+        .preference(key: GeoKitLiveSurfaceRevealedKey.self, value: showMap && liveDidRender)
         .preference(
             key: GeoKitMapRenderedKey.self,
             value: (showMap && liveDidRender) || showFrozenUnderlay
