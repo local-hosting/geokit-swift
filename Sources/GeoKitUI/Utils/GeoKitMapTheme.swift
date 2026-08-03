@@ -1,5 +1,6 @@
 #if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
 
+import GeoKitContract
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
@@ -20,6 +21,20 @@ public enum GeoKitMapTheme {
     static func emphasisFont(size: CGFloat) -> Font {
         .system(size: size, weight: .bold)
     }
+    public static func pinFillColor(for pin: MapPin) -> Color {
+        pin.isPrimary ? accent : secondary
+    }
+
+#if canImport(UIKit)
+    public static func pinFillCGColor(for pin: MapPin) -> CGColor {
+        UIColor(pinFillColor(for: pin)).cgColor
+    }
+#elseif canImport(AppKit)
+    public static func pinFillCGColor(for pin: MapPin) -> CGColor {
+        NSColor(pinFillColor(for: pin)).cgColor
+    }
+#endif
+
 }
 
 enum GeoKitPinIcon {

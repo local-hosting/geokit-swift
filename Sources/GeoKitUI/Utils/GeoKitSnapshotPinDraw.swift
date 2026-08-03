@@ -10,7 +10,6 @@ import AppKit
 #endif
 
 /// Draws peek snapshot pin markers onto a static map image (Mapbox overlay or MapKit composite).
-@MainActor
 public enum GeoKitSnapshotPinDraw {
     private static let dotDiameter: CGFloat = 14
     /// Matches ``GeoKitPlacePinView`` bottom-anchor lift for the collapsed dot fallback.
@@ -38,10 +37,20 @@ public enum GeoKitSnapshotPinDraw {
             let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
             let anchor = pointForCoordinate(coordinate)
             let selected = pin.id == selectedPinId
-            if renderPinImages, let image = renderPinImage(for: pin, coordinate: coordinate, selected: selected, zoom: pinZoom, scale: scale) {
-                drawPinImage(image, anchor: anchor)
+            if renderPinImages {
+                if let image = renderPinImageOnMainActor(
+                    for: pin,
+                    coordinate: coordinate,
+                    selected: selected,
+                    zoom: pinZoom,
+                    scale: scale
+                ) {
+                    drawPinImage(image, anchor: anchor)
+                } else {
+                    drawDot(in: context, pin: pin, anchor: anchor, scale: scale)
+                }
             } else {
-                drawDot(in: context, anchor: anchor, scale: scale)
+                drawDot(in: context, pin: pin, anchor: anchor, scale: scale)
             }
         }
     }
@@ -51,7 +60,8 @@ public enum GeoKitSnapshotPinDraw {
         pins: [MapPin],
         pointForCoordinate: (CLLocationCoordinate2D) -> CGPoint,
         selectedPinId: UUID?,
-        zoom: Double
+        zoom: Double,
+        renderPinImages: Bool = true
     ) -> GeoKitPlatformImage {
         guard !pins.isEmpty else { return baseImage }
         #if canImport(UIKit)
@@ -67,7 +77,8 @@ public enum GeoKitSnapshotPinDraw {
                 pointForCoordinate: pointForCoordinate,
                 selectedPinId: selectedPinId,
                 zoom: zoom,
-                scale: baseImage.geoKitScale
+                scale: baseImage.geoKitScale,
+                renderPinImages: renderPinImages
             )
         }
         #elseif canImport(AppKit)
@@ -83,7 +94,8 @@ public enum GeoKitSnapshotPinDraw {
                 pointForCoordinate: pointForCoordinate,
                 selectedPinId: selectedPinId,
                 zoom: zoom,
-                scale: scale
+                scale: scale,
+                renderPinImages: renderPinImages
             )
         }
         composed.unlockFocus()
@@ -91,6 +103,21 @@ public enum GeoKitSnapshotPinDraw {
         #endif
     }
 
+
+    private static func renderPinImageOnMainActor(
+        for pin: MapPin,
+        coordinate: CLLocationCoordinate2D,
+        selected: Bool,
+        zoom: CGFloat,
+        scale: CGFloat
+    ) -> GeoKitPlatformImage? {
+        guard Thread.isMainThread else { return nil }
+        return MainActor.assumeIsolated {
+            renderPinImage(for: pin, coordinate: coordinate, selected: selected, zoom: zoom, scale: scale)
+        }
+    }
+
+    @MainActor
     private static func renderPinImage(
         for pin: MapPin,
         coordinate: CLLocationCoordinate2D,
@@ -135,7 +162,11 @@ public enum GeoKitSnapshotPinDraw {
     }
     #endif
 
-    private static func drawDot(in context: CGContext, anchor: CGPoint, scale: CGFloat) {
+    private static func dotFillColor(for pin: MapPin) -> CGColor {
+        GeoKitMapTheme.pinFillCGColor(for: pin)
+    }
+
+    private static func drawDot(in context: CGContext, pin: MapPin, anchor: CGPoint, scale: CGFloat) {
         let scaledDiameter = dotDiameter * scale
         let lift = anchorLift * scale
         let center = CGPoint(x: anchor.x, y: anchor.y - lift)
@@ -145,7 +176,8 @@ public enum GeoKitSnapshotPinDraw {
             width: scaledDiameter,
             height: scaledDiameter
         )
-        context.setFillColor(CGColor(srgbRed: 69 / 255, green: 56 / 255, blue: 178 / 255, alpha: 1))
+        let fill = dotFillColor(for: pin)
+        context.setFillColor(fill)
         context.fillEllipse(in: rect)
         context.setStrokeColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
         context.setLineWidth(2 * scale)

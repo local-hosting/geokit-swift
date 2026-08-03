@@ -10,8 +10,8 @@ import UIKit
 /// Fetches a flat map image from the Mapbox Static Images API over HTTP.
 ///
 /// Back/fan cards use this path so they never run the GPU ``Snapshotter`` and therefore
-/// never contend with the live Metal map on the front card. Markers are intentionally
-/// omitted — only the live front card draws pins.
+/// never contend with the live Metal map on the front card. Venue pins are composited
+/// client-side after the HTTP fetch so collapsed posters match the live surface.
 enum GeoKitMapboxStaticImageService {
     private static let maxDimension = 1280
     /// Mapbox Static Images URL suffix — actual pixel size is this factor times width×height.
@@ -99,6 +99,7 @@ enum GeoKitMapboxStaticImageService {
             throw CaptureError.httpError(status)
         }
         // Decode + plate check off the main actor — MainActor warmers await this during settle.
+        let resolvedFrame = MapCameraFrameResolver.resolve(for: request)
         let image: UIImage = try await Task.detached(priority: .utility) {
             guard let decoded = UIImage(data: data) else {
                 throw CaptureError.imageDecoding
@@ -108,7 +109,21 @@ enum GeoKitMapboxStaticImageService {
             guard accepted else {
                 throw CaptureError.blankPlate
             }
-            return normalized
+            guard !request.pins.isEmpty else { return normalized }
+            return GeoKitSnapshotPinDraw.composite(
+                baseImage: normalized,
+                pins: request.pins,
+                pointForCoordinate: { coordinate in
+                    GeoKitMapboxStaticImagePinProjection.pointForCoordinate(
+                        coordinate,
+                        frame: resolvedFrame,
+                        imageSize: normalized.size
+                    )
+                },
+                selectedPinId: request.selectedPinId,
+                zoom: resolvedFrame.zoom,
+                renderPinImages: false
+            )
         }.value
         return image
     }
