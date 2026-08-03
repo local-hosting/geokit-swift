@@ -25,6 +25,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
     public var snapshotPriority: MapSnapshotPriority
     /// Host-owned token bumped when live pin coordinates change — forces map content refresh.
     public var livePinGeometryEpoch: Int
+    /// When true, the live GL surface owns pan/zoom — ignore declared-camera churn.
+    public var locksLiveViewport: Bool
 
     public init(
         id: String,
@@ -39,7 +41,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         cameraFrame: MapCameraFrame? = nil,
         selectedPinId: UUID? = nil,
         snapshotPriority: MapSnapshotPriority = .background,
-        livePinGeometryEpoch: Int = 0
+        livePinGeometryEpoch: Int = 0,
+        locksLiveViewport: Bool = false
     ) {
         self.id = id
         self.phase = phase
@@ -54,6 +57,7 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         self.selectedPinId = selectedPinId
         self.snapshotPriority = snapshotPriority
         self.livePinGeometryEpoch = livePinGeometryEpoch
+        self.locksLiveViewport = locksLiveViewport
     }
 
     /// Live maps accept pin taps in collapsed cards; expanded-only pan/zoom is enforced by the host shell.

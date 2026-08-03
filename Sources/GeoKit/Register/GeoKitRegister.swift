@@ -25,18 +25,18 @@ public enum GeoKitRegister {
         GeoKitRuntime.mapContent = { request in
             AnyView(GeoKitMapContent(request: request))
         }
-        fputs("[GeoKitRegister] mapContent registered\n", stderr)
+        geoKitLog("mapContent registered")
         #elseif os(macOS)
         GeoKitUIRegistration.activate()
         GeoKitRuntime.mapContent = { request in
             AnyView(GeoKitMapContent(request: request))
         }
-        fputs("[GeoKitRegister] mapContent registered (macOS)\n", stderr)
+        geoKitLog("mapContent registered (macOS)")
         #elseif canImport(SwiftUI)
         GeoKitRuntime.mapContent = { _ in
             AnyView(GeoKitUnavailableMapContent())
         }
-        fputs("[GeoKitRegister] mapContent placeholder registered\n", stderr)
+        geoKitLog("mapContent placeholder registered")
         #endif
         prepareProviderIfNeeded()
     }
@@ -46,11 +46,16 @@ public enum GeoKitRegister {
         guard !didPrepareProvider else { return }
         didPrepareProvider = true
         let provider = GeoKitMapProviderRegistry.defaultProvider
-        fputs("[GeoKitRegister] prepare provider=\(provider.rawValue)\n", stderr)
+        geoKitLog("prepare provider=\(provider.rawValue)")
         #if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
         GeoKitMapBootstrap.prepare(provider: provider)
         #endif
     }
+}
+
+private func geoKitLog(_ message: String) {
+    guard ProcessInfo.processInfo.environment["CF_GEOKIT_DEBUG"] == "1" else { return }
+    fputs("[GeoKitRegister] \(message)\n", stderr)
 }
 
 #if canImport(SwiftUI) && !os(iOS) && !os(visionOS) && !os(tvOS) && !os(macOS)

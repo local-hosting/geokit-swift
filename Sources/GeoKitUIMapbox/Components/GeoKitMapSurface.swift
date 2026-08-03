@@ -40,6 +40,10 @@ struct GeoKitMapSurface: View {
     /// was captured at), so there is no fly-to to cross and settle is satisfied the moment that camera is
     /// applied. The dark cover then lifts on the first paint, never revealing an uncentered light map.
     @State private var initialCameraSettled = false
+    /// Latched after the first live paint — avoids MapViewAnnotation churn during drag/reveal transitions.
+    @State private var livePinsMounted = false
+    /// Sticky after first reveal — avoids static cover pulsing when camera settle flaps.
+    @State private var liveRevealLatched = false
 
     /// Cover may lift only once the live surface has painted and reached its target camera (or mid-transition).
     private var liveSurfaceRevealed: Bool {
@@ -48,6 +52,10 @@ struct GeoKitMapSurface: View {
             cameraSettledAtTarget: initialCameraSettled,
             isTransitioning: isTransitioning
         )
+    }
+
+    private var effectiveLiveSurfaceRevealed: Bool {
+        liveRevealLatched || liveSurfaceRevealed
     }
 
     private func noteCameraSettledIfNeeded() {
@@ -136,6 +144,8 @@ struct GeoKitMapSurface: View {
         didApplyInitialCamera = false
         initialCameraSettled = false
         liveDidRender = false
+        livePinsMounted = false
+        liveRevealLatched = false
         syncRenderedPinsFromRequest()
     }
 
@@ -146,6 +156,21 @@ struct GeoKitMapSurface: View {
         if LiveMapRetargetPolicy.keepsLivePaintedOnRetarget(liveAlreadyPainted: liveDidRender) {
             initialCameraSettled = true
         }
+    }
+
+    /// Venues/geofence landed after a null-island warm — drop cached camera state and re-apply the card frame.
+    private func handlePinGeometryEpochChange() {
+        syncRenderedPinsFromRequest()
+        pinGeometryRevision &+= 1
+        if request.locksLiveViewport || LiveMapRetargetPolicy.keepsLivePaintedOnRetarget(liveAlreadyPainted: liveDidRender) {
+            initialCameraSettled = true
+            return
+        }
+        GeoKitLiveCameraCache.remove(for: request.id)
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        reportedCameraFrame = frame
+        didApplyInitialCamera = false
+        initialCameraSettled = false
     }
 
     private func handleCardIdentityChange() {
@@ -205,7 +230,7 @@ struct GeoKitMapSurface: View {
                             if request.showUserPuck {
                                 Puck2D().pulsing(.default)
                             }
-                            if !hideLiveMapPins {
+                            if !hideLiveMapPins, livePinsMounted {
                                 livePinAnnotations(zoom: pinZoom)
                             }
                         }
@@ -248,6 +273,7 @@ struct GeoKitMapSurface: View {
                             }
                             if !liveDidRender {
                                 liveDidRender = true
+                                livePinsMounted = true
                             }
                             // Read the live camera from the proxy: imperative setCamera doesn't emit
                             // onCameraChanged, so liveCameraState can still be nil at the first idle.
@@ -292,13 +318,15 @@ struct GeoKitMapSurface: View {
                 }
                 .opacity(
                     MapPinTransitionCoverPolicy.coversLiveSurface(
-                        livePainted: liveSurfaceRevealed
+                        livePainted: effectiveLiveSurfaceRevealed
                     ) ? 1 : 0
                 )
                 .allowsHitTesting(false)
                 .animation(
-                    .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
-                    value: liveSurfaceRevealed
+                    isTransitioning
+                        ? .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed))
+                        : nil,
+                    value: effectiveLiveSurfaceRevealed
                 )
             }
             .frame(width: size.width, height: size.height)
@@ -310,7 +338,7 @@ struct GeoKitMapSurface: View {
                 DispatchQueue.main.async { syncRenderedPinsFromRequest() }
             }
             .onChange(of: request.livePinGeometryEpoch) { _, _ in
-                DispatchQueue.main.async { syncRenderedPinsFromRequest() }
+                DispatchQueue.main.async { handlePinGeometryEpochChange() }
             }
             .onChange(of: pinCoordinateSignature) { _, _ in
                 DispatchQueue.main.async { pinGeometryRevision &+= 1 }
@@ -346,10 +374,15 @@ struct GeoKitMapSurface: View {
             .onDisappear {
                 mapReady = false
                 liveDidRender = false
+                livePinsMounted = false
+                liveRevealLatched = false
                 didApplyInitialCamera = false
                 initialCameraSettled = false
                 pinsLayoutSettling = false
                 lastSettledLayoutSize = .zero
+            }
+            .onChange(of: effectiveLiveSurfaceRevealed) { _, revealed in
+                if revealed { liveRevealLatched = true }
             }
             .onChange(of: showMap) { _, isShowing in
                 if isShowing {
@@ -371,9 +404,10 @@ struct GeoKitMapSurface: View {
             }
             .preference(key: GeoKitMapCameraFrameKey.self, value: reportedCameraFrame)
             .preference(key: GeoKitLiveRenderingKey.self, value: showMap && liveDidRender && !hideLiveMapPins)
+            .preference(key: GeoKitLiveSurfaceRevealedKey.self, value: showMap && effectiveLiveSurfaceRevealed)
             .preference(
                 key: GeoKitMapRenderedKey.self,
-                value: (showMap && liveSurfaceRevealed) || showFrozenUnderlay
+                value: (showMap && effectiveLiveSurfaceRevealed) || showFrozenUnderlay
             )
             .preference(key: GeoKitMapSnapshotCoversLiveKey.self, value: showMap && snapshotCoversLive)
             .onChange(of: isTransitioning) { wasTransitioning, transitioning in
@@ -411,9 +445,9 @@ struct GeoKitMapSurface: View {
                     onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
                     onInteractionBegan: onPinInteractionBegan,
                     selected: isSelected,
-                    visible: isSelected,
+                    visible: true,
                     allowCallout: true,
-                    showText: isSelected
+                    showText: true
                 )
             }
             .priority(isSelected ? 1 : 0)

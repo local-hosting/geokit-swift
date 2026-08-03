@@ -31,8 +31,11 @@ struct GeoKitMapboxMapContent: View {
                 seedSelectedPinIfNeeded()
                 trackedIdentity = LiveMapRequestIdentity(request: request)
             }
-            .onChange(of: transitionSnapshot) { _, _ in
+            .onChange(of: transitionSnapshot) { _, snapshot in
+                // Poster refresh while collapsed live runs must not swap the cover bitmap once seeded.
+                guard collapsedSnapshot == nil else { return }
                 seedTransitionSnapshotIfNeeded()
+                _ = snapshot
             }
             .onChange(of: request.id) { _, _ in
                 handleCardIdentityChange()
@@ -42,7 +45,13 @@ struct GeoKitMapboxMapContent: View {
             }
             .onChange(of: request.cameraFrame) { _, frame in
                 guard let frame else { return }
+                guard LiveMapViewportLockPolicy.shouldApplyDeclaredCameraRetarget(
+                    locksLiveViewport: request.locksLiveViewport
+                ) else { return }
                 applyCameraFrame(frame)
+            }
+            .onChange(of: request.livePinGeometryEpoch) { _, _ in
+                retargetForPinGeometryChange()
             }
             .onChange(of: request.selectedPinId) { _, pinId in
                 selectedPinId = pinId
@@ -77,6 +86,18 @@ struct GeoKitMapboxMapContent: View {
         if let transitionSnapshot {
             collapsedSnapshot = transitionSnapshot
         }
+    }
+
+    /// Venues/geofence landed after a null-island warm — follow the card's declared camera and pins.
+    private func retargetForPinGeometryChange() {
+        seedSelectedPinIfNeeded()
+        guard LiveMapViewportLockPolicy.shouldApplyDeclaredCameraRetarget(
+            locksLiveViewport: request.locksLiveViewport
+        ) else { return }
+        GeoKitLiveCameraCache.remove(for: request.id)
+        appliedCameraFrame = nil
+        liveCameraState = nil
+        applyCameraFrame(request.cameraFrame)
     }
 
     private func resetForCardChange() {

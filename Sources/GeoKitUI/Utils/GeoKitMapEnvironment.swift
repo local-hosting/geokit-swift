@@ -20,6 +20,16 @@ public struct GeoKitMapRenderedKey: PreferenceKey {
 }
 
 /// When true, the map owns pan/zoom gestures; host chrome should defer competing drag handlers.
+
+/// When true, the live map surface is visible (cover lifted, camera settled) — not merely a frozen underlay.
+public struct GeoKitLiveSurfaceRevealedKey: PreferenceKey {
+    public static var defaultValue = false
+
+    public static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
 public struct GeoKitMapInteractiveGesturesKey: PreferenceKey {
     public static var defaultValue = false
 
