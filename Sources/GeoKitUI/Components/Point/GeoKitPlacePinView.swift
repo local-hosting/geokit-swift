@@ -119,7 +119,7 @@ public struct GeoKitPlacePinView: View {
                 tap: tap,
                 showText: false
             ).onTapGesture {
-                onTap(pin, !selected, true)
+                onTap(pin, true, true)
             }
             .pinTouchShield(onInteractionBegan: onInteractionBegan)
         }
@@ -140,10 +140,7 @@ public struct GeoKitPlacePinView: View {
             .fixedSize(horizontal: true, vertical: true)
             .opacity(mapIsTransitioning ? 1.0 : opacity)
             .onTapGesture {
-                onTap(pin, !selected, false)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.23) {
-                    visible = !selected
-                }
+                onTap(pin, true, false)
             }
             .pinTouchShield(onInteractionBegan: onInteractionBegan)
             .onAppear {
@@ -226,33 +223,43 @@ public struct GeoKitPlacePinView: View {
 
         public var body: some View {
             if selected {
-                emphasizedPinCallout(
-                    isEmphasized: showText,
-                    showNameLabel: showText,
-                    skipIntroAnimation: skipIntroAnimation
-                )
+                VStack(spacing: 0) {
+                    selectedCalloutBubble
+                    markerDot
+                }
             } else {
-                unselectedDot
+                markerDot
             }
         }
 
-        private var unselectedDot: some View {
+        private var markerDot: some View {
             Circle()
                 .fill(color)
                 .frame(width: PinCalloutLayout.dotDiameter, height: PinCalloutLayout.dotDiameter)
                 .overlay(
                     Circle()
-                        .stroke(Color.white, lineWidth: 2)
+                        .stroke(Color.white, lineWidth: selected ? 3 : 2)
                 )
-                .shadow(color: color.opacity(0.3), radius: 2)
+                .shadow(color: color.opacity(selected ? 0.45 : 0.3), radius: selected ? 3 : 2)
                 .padding(PinCalloutLayout.dotTouchPadding)
+        }
+
+        @ViewBuilder
+        private var selectedCalloutBubble: some View {
+            emphasizedPinCallout(
+                isEmphasized: showText,
+                showNameLabel: showText,
+                skipIntroAnimation: skipIntroAnimation,
+                anchorsAboveDot: true
+            )
         }
 
         @ViewBuilder
         private func emphasizedPinCallout(
             isEmphasized: Bool,
             showNameLabel: Bool,
-            skipIntroAnimation: Bool = false
+            skipIntroAnimation: Bool = false,
+            anchorsAboveDot: Bool = false
         ) -> some View {
             HStack(spacing: PinCalloutLayout.rowSpacing) {
                 if isEmphasized {
@@ -277,10 +284,17 @@ public struct GeoKitPlacePinView: View {
                 }
 
                 if showNameLabel {
-                    Text(heading ?? "NA")
-                        .font(GeoKitMapTheme.emphasisFont(size: isEmphasized ? 12 : 10))
-                        .lineLimit(1)
-                        .padding(.trailing, PinCalloutLayout.textTrailingPadding)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(heading ?? "NA")
+                            .font(GeoKitMapTheme.emphasisFont(size: isEmphasized ? 12 : 10))
+                            .lineLimit(1)
+                        if isEmphasized, let subHeading, !subHeading.isEmpty, subHeading != " " {
+                            Text(subHeading)
+                                .font(GeoKitMapTheme.calloutSubheadingFont)
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.trailing, PinCalloutLayout.textTrailingPadding)
                 }
             }
             .opacity(showNameLabel ? 1 : 0)
@@ -301,7 +315,7 @@ public struct GeoKitPlacePinView: View {
                 borderWidth: PinCalloutLayout.borderWidth
             )
             .padding(.top, PinCalloutLayout.calloutShadowBleed)
-            .padding(.bottom, PinCalloutLayout.mapPointAnchorLift)
+            .padding(.bottom, anchorsAboveDot ? 0 : PinCalloutLayout.mapPointAnchorLift)
         }
     }
 }

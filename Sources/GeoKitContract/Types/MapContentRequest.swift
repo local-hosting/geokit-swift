@@ -56,8 +56,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         self.livePinGeometryEpoch = livePinGeometryEpoch
     }
 
-    /// Full-screen live maps only — collapsed cards and transition snapshots pass touches to host chrome.
+    /// Live maps accept pin taps in collapsed cards; expanded-only pan/zoom is enforced by the host shell.
     public var mapAcceptsUserInteraction: Bool {
-        isExpanded && phase == .live
+        phase == .live
     }
 }

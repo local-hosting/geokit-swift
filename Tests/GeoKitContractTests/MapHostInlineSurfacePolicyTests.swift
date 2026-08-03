@@ -316,4 +316,25 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
     }
 
 
+
+    func testCollapsedFocusedStackMountsInlineLiveWhenLiveOwner() {
+        XCTAssertTrue(
+            MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
+                usesInlineLiveSlice: true,
+                usesExternalLiveHost: true,
+                isExpanded: false,
+                isExpandedOverlay: false,
+                isFocused: true,
+                isLiveCard: true,
+                mediaKeepAlive: false,
+                isMapRendered: false,
+                collectionExpanded: false,
+                isCollapsing: false,
+                isHeroFrameMorphing: false,
+                collectionIsTransitioning: false,
+                cardDragOffset: 0
+            )
+        )
+    }
+
 }

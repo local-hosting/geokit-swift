@@ -102,8 +102,8 @@ struct GeoKitMapboxMapContent: View {
         selectedPinId = request.selectedPinId
     }
 
-    private func togglePinSelection(_ pin: MapPin) {
-        selectedPinId = selectedPinId == pin.id ? nil : pin.id
+    private func selectPin(_ pin: MapPin) {
+        selectedPinId = pin.id
     }
 
     private func applyCameraFrame(_ frame: MapCameraFrame?) {
@@ -140,7 +140,7 @@ struct GeoKitMapboxMapContent: View {
                 isMinusEnabled: $isMinusEnabled,
                 liveCameraState: $liveCameraState,
                 selectedPinId: selectedPinId,
-                onPinTap: { pin, _ in togglePinSelection(pin) },
+                onPinTap: { pin, _ in selectPin(pin) },
                 onPinInteractionBegan: {},
                 // Fall back to the bridged transition snapshot directly: `collapsedSnapshot` is only seeded in
                 // `onAppear`/`onChange`, which SwiftUI defers while `isTransitioning` is true. On the focused center slot

@@ -3,6 +3,7 @@
 import CoreLocation
 import Foundation
 import GeoKitContract
+import GeoKitUI
 import MapboxMaps
 import UIKit
 
@@ -102,11 +103,12 @@ enum GeoKitMapboxStaticImageService {
             guard let decoded = UIImage(data: data) else {
                 throw CaptureError.imageDecoding
             }
-            let accepted = GeoKitMapboxStaticImageValidator.hasVisibleMapContent(decoded)
+            let normalized = GeoKitMapSnapshotContentPolicy.normalizedDisplayBitmap(decoded)
+            let accepted = GeoKitMapboxStaticImageValidator.hasVisibleMapContent(normalized)
             guard accepted else {
                 throw CaptureError.blankPlate
             }
-            return decoded
+            return normalized
         }.value
         return image
     }

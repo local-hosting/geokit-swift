@@ -118,25 +118,22 @@ public enum MapHostInlineSurfacePolicy {
         isExpandLiveHandoff: Bool = false,
         cardDragOffset: CGFloat
     ) -> Bool {
-        // Video-style: never mount inline Mapbox Metal in-card.
-        // Collapsed stays static poster (swipe-safe). Expanded live paints from the root
-        // ``AXMapMediaHost`` only — mounting both inline + root remount-fights GeoKit.
         _ = usesInlineLiveSlice
-        _ = usesExternalLiveHost
-        _ = isExpanded
-        _ = isExpandedOverlay
-        _ = isFocused
-        _ = isVisiblePeek
-        _ = isLiveCard
         _ = mediaKeepAlive
         _ = isMapRendered
         _ = collectionExpanded
-        _ = isCollapsing
-        _ = isHeroFrameMorphing
         _ = collectionIsTransitioning
-        _ = isCollapseLiveHandoff
-        _ = isExpandLiveHandoff
         _ = cardDragOffset
-        return false
+        _ = isVisiblePeek
+
+        // Expanded hero and morph handoffs use the root host — never duplicate inline Metal.
+        if isExpandedOverlay || isExpanded { return false }
+        if isCollapsing || isCollapseLiveHandoff { return false }
+        if isExpandLiveHandoff || isHeroFrameMorphing { return false }
+
+        // Collapsed stack/deck: paint live GeoKit in the focused card hole instead of an
+        // endless static-poster spinner while the session map warms off-screen.
+        guard usesExternalLiveHost, isFocused, isLiveCard else { return false }
+        return true
     }
 }

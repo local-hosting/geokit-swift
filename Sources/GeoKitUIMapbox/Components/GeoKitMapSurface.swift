@@ -395,62 +395,31 @@ struct GeoKitMapSurface: View {
     }
 
 
-    /// Primary pins use SwiftUI view annotations so live coordinate updates stay visible; secondary pins stay on GPU circles.
+    /// Primary and secondary pins share SwiftUI view annotations so selection never swaps annotation kinds.
     @MapContentBuilder
     private func livePinAnnotations(zoom: CGFloat) -> some MapContent {
         let _ = pinGeometryRevision
-        let dot = GeoKitPinDotMetrics.unselected(zoom: zoom)
         ForEvery(renderedPins) { pin in
-            if pin.id == selectedPinId {
-                MapViewAnnotation(coordinate: pin.coordinate) {
-                    GeoKitPlacePinView(
-                        pin: pin,
-                        zoom: zoom,
-                        tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
-                        color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
-                        pinStyle: pin.isPrimary ? .primary : .secondary,
-                        onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
-                        onInteractionBegan: onPinInteractionBegan,
-                        selected: true,
-                        visible: true,
-                        allowCallout: true,
-                        showText: true
-                    )
-                }
-                .priority(1)
-                .allowOverlap(true)
-                .allowOverlapWithPuck(true)
-                .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
-            } else if pin.isPrimary {
-                MapViewAnnotation(coordinate: pin.coordinate) {
-                    GeoKitPlacePinView(
-                        pin: pin,
-                        zoom: zoom,
-                        tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
-                        color: GeoKitMapTheme.accent,
-                        pinStyle: .primary,
-                        onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
-                        onInteractionBegan: onPinInteractionBegan,
-                        selected: false,
-                        visible: true,
-                        allowCallout: false,
-                        showText: false
-                    )
-                }
-                .priority(1)
-                .allowOverlap(true)
-                .allowOverlapWithPuck(true)
-                .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
-            } else {
-                CircleAnnotation(centerCoordinate: pin.coordinate)
-                    .circleColor(StyleColor(UIColor(GeoKitMapTheme.secondary)))
-                    .circleRadius(Double(dot.diameter) / 2)
-                    .circleStrokeColor(StyleColor(UIColor.white))
-                    .circleStrokeWidth(Double(dot.strokeWidth))
-                    .onTapGesture {
-                        onPinTap(pin, true)
-                    }
+            let isSelected = pin.id == selectedPinId
+            MapViewAnnotation(coordinate: pin.coordinate) {
+                GeoKitPlacePinView(
+                    pin: pin,
+                    zoom: zoom,
+                    tap: GeoKitTap(id: pin.id, coordinate: pin.coordinate),
+                    color: pin.isPrimary ? GeoKitMapTheme.accent : GeoKitMapTheme.secondary,
+                    pinStyle: pin.isPrimary ? .primary : .secondary,
+                    onTap: { tapped, _, isCircleTap in onPinTap(tapped, isCircleTap) },
+                    onInteractionBegan: onPinInteractionBegan,
+                    selected: isSelected,
+                    visible: isSelected,
+                    allowCallout: true,
+                    showText: isSelected
+                )
             }
+            .priority(isSelected ? 1 : 0)
+            .allowOverlap(true)
+            .allowOverlapWithPuck(true)
+            .variableAnchors([ViewAnnotationAnchor.bottom].map { ViewAnnotationAnchorConfig(anchor: $0) })
         }
     }
 

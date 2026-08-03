@@ -88,8 +88,8 @@ struct GeoKitMapKitMapContent: View {
         selectedPinId = request.selectedPinId
     }
 
-    private func togglePinSelection(_ pin: GeoKitContract.MapPin) {
-        selectedPinId = selectedPinId == pin.id ? nil : pin.id
+    private func selectPin(_ pin: GeoKitContract.MapPin) {
+        selectedPinId = pin.id
     }
 
     private func seedPositionIfNeeded() {
@@ -126,7 +126,7 @@ struct GeoKitMapKitMapContent: View {
                 position: $position,
                 zoomLevel: $zoomLevel,
                 selectedPinId: selectedPinId,
-                onPinTap: { pin, _ in togglePinSelection(pin) },
+                onPinTap: { pin, _ in selectPin(pin) },
                 onPinInteractionBegan: {},
                 frozenSnapshot: collapsedSnapshot
             )

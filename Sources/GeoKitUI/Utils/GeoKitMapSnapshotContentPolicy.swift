@@ -5,6 +5,20 @@ import UIKit
 public enum GeoKitMapSnapshotContentPolicy {
     private static let grid = 12
 
+    /// Flatten wide-gamut / extended-range captures to standard sRGB for validation and UIKit display.
+    public static func normalizedDisplayBitmap(_ image: UIImage) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = true
+        if #available(iOS 17.0, visionOS 1.0, *) {
+            format.preferredRange = .standard
+        }
+        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+    }
+
     /// GeoKit GPU Snapshotter can return an empty Metal plate — reject flat captures with no tile signal.
     public static func hasVisibleMapContent(_ image: UIImage) -> Bool {
         guard let pixels = sampleGrid(from: image) else { return false }
@@ -38,6 +52,11 @@ public enum GeoKitMapSnapshotContentPolicy {
     }
 
     /// Mapbox Static Images API and offline cache — night styles are mostly dark; reject only uniform blank plates.
+    /// Static Images API / offline poster — same as ``acceptsPersistedMapBitmap``; avoids GPU ``hasVisibleMapContent`` on dark styles.
+    public static func acceptsPersistedMapPoster(_ image: UIImage) -> Bool {
+        acceptsPersistedMapBitmap(image)
+    }
+
     public static func acceptsPersistedMapBitmap(_ image: UIImage) -> Bool {
         guard let pixels = sampleGrid(from: image) else { return false }
 
@@ -95,8 +114,18 @@ public enum GeoKitMapSnapshotContentPolicy {
     }
 
     private static func sampleGrid(from image: UIImage) -> [UInt8]? {
-        guard let cgImage = image.cgImage else { return nil }
-        guard cgImage.width > 4, cgImage.height > 4 else { return nil }
+        let size = CGSize(width: grid, height: grid)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        if #available(iOS 17.0, visionOS 1.0, *) {
+            format.preferredRange = .standard
+        }
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        let normalized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        guard let cgImage = normalized.cgImage else { return nil }
 
         let bytesPerRow = grid * 4
         var pixels = [UInt8](repeating: 0, count: grid * grid * 4)
