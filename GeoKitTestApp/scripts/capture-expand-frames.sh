@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="$ROOT/GeoKitTestApp.xcodeproj"
 SCHEME="GeoKitTestApp"
-BUNDLE_ID="fm.accord.geokit-test"
+BUNDLE_ID="ca.corio.geokit-test"
 SIM_ID="${SIMULATOR_ID:-0F4AABDD-22FE-4EAE-9242-50E7329712C4}"
 DERIVED="${DERIVED_DATA_PATH:-/tmp/GeoKitTestApp-build}"
 FRAME_COUNT="${FRAME_COUNT:-24}"

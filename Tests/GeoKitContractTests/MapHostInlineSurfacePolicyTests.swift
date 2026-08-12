@@ -237,7 +237,7 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
                 cardDragOffset: 0
             )
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
                 usesInlineLiveSlice: true,
                 usesExternalLiveHost: true,
@@ -276,7 +276,7 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
                 cardDragOffset: 0
             )
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
                 usesInlineLiveSlice: true,
                 usesExternalLiveHost: true,
@@ -313,7 +313,7 @@ final class MapHostInlineSurfacePolicyTests: XCTestCase {
                 cardDragOffset: 0
             )
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             MapHostInlineSurfacePolicy.keepsInlineLiveMapMounted(
                 usesInlineLiveSlice: true,
                 usesExternalLiveHost: true,

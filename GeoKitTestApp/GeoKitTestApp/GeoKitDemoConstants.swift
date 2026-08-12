@@ -2,7 +2,7 @@ import Foundation
 
 /// Keep snapshot style in sync with `@corio-platforms/geokit/config/map-style` (`CORIO_MAPBOX_STYLE_URI`).
 enum GeoKitDemoConstants {
-    /// Global Accord animation speed (`AX.Animation.speed`). `2/3` ≈ 1.5× slower motion.
+    /// Global Corio animation speed (`CX.Animation.speed`). `2/3` ≈ 1.5× slower motion.
     static let animationSpeed: Double = 2.0 / 3.0
 
     /// Peek tiles and expand/collapse snapshots — light Corio style.

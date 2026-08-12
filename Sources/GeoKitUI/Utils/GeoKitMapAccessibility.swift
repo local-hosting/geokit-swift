@@ -4,7 +4,7 @@ import UIKit
 
 /// Suppresses Mapbox/MapKit UIKit surfaces from the accessibility tree.
 ///
-/// Host apps (Accord ``ax-map-live-surface``, ``ax-media-slot-shell``) own semantic probes.
+/// Host apps (Corio ``ax-map-live-surface``, ``ax-media-slot-shell``) own semantic probes.
 /// Platform map views can publish screen-space accessibility frames that lag SwiftUI card
 /// transforms during collection drag — XCTest then reads stale geometry for the live map.
 enum GeoKitPlatformMapAccessibilitySuppressor {

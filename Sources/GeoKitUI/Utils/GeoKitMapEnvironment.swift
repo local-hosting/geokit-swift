@@ -121,7 +121,7 @@ public extension EnvironmentValues {
         set { self[GeoKitMapIsTransitioningKey.self] = newValue }
     }
 
-    /// Scales live-map snapshot cross-fade (pair with host ``AX.Animation.speed`` when using Accord).
+    /// Scales live-map snapshot cross-fade (pair with host ``CX.Animation.speed`` when using Corio).
     var geokitAnimationSpeed: Double {
         get { self[GeoKitAnimationSpeedKey.self] }
         set { self[GeoKitAnimationSpeedKey.self] = newValue }
