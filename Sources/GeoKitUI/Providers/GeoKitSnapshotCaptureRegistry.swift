@@ -39,7 +39,31 @@ public enum GeoKitSnapshotCaptureRegistry {
         guard let handler = handlers[provider] else {
             throw CaptureError.noHandler(provider)
         }
-        return try await handler(resolved, size, priority)
+        let image = try await handler(resolved, size, priority)
+        if let image {
+            persistSnapshot(image: image, request: resolved, provider: provider)
+        }
+        return image
+    }
+
+    private static func persistSnapshot(
+        image: GeoKitPlatformImage,
+        request: MapContentRequest,
+        provider: MapProviderId
+    ) {
+        guard let cameraFrame = request.cameraFrame else { return }
+        try? GeoKitMapSnapshotDiskStore.shared.save(
+            mapId: request.id,
+            provider: provider,
+            image: image,
+            cameraFrame: cameraFrame,
+            selectedPinId: request.selectedPinId
+        )
+        MapLocalStore.shared.patch(
+            mapID: request.id,
+            cameraFrame: cameraFrame,
+            selectedPinId: .some(request.selectedPinId)
+        )
     }
 
     public static func resetForTesting() {

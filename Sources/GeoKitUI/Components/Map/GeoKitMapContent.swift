@@ -20,6 +20,10 @@ public struct GeoKitMapContent: View {
                 missingProviderFallback
             }
         }
+        .onAppear { MapOfflineContextLoader.loadIfNeeded(for: request) }
+        .onChange(of: request.offlineContext) { _, _ in
+            MapOfflineContextLoader.loadIfNeeded(for: request)
+        }
         .allowsHitTesting(request.mapAcceptsUserInteraction)
         .preference(
             key: GeoKitMapInteractiveGesturesKey.self,
@@ -54,6 +58,7 @@ public struct GeoKitMapContentWithLifecycle: View {
     let showUserPuck: Bool
     let mapProviderId: MapProviderId?
     let selectedPinId: UUID?
+    let offlineContext: MapOfflineContextLoad?
 
     public init(
         id: String,
@@ -66,7 +71,8 @@ public struct GeoKitMapContentWithLifecycle: View {
         pins: [MapPin] = [],
         showUserPuck: Bool = false,
         mapProviderId: MapProviderId? = nil,
-        selectedPinId: UUID? = nil
+        selectedPinId: UUID? = nil,
+        offlineContext: MapOfflineContextLoad? = nil
     ) {
         self.id = id
         self.policy = policy
@@ -79,6 +85,7 @@ public struct GeoKitMapContentWithLifecycle: View {
         self.showUserPuck = showUserPuck
         self.mapProviderId = mapProviderId
         self.selectedPinId = selectedPinId
+        self.offlineContext = offlineContext
     }
 
     public var body: some View {
@@ -94,7 +101,8 @@ public struct GeoKitMapContentWithLifecycle: View {
                 pins: pins,
                 showUserPuck: showUserPuck,
                 mapProviderId: mapProviderId,
-                selectedPinId: selectedPinId
+                selectedPinId: selectedPinId,
+                offlineContext: offlineContext
             )
         )
         .environment(\.geokitMapSurfaceReady, lifecycle.isSurfaceReady)

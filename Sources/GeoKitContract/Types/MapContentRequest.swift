@@ -25,6 +25,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
     public var snapshotPriority: MapSnapshotPriority
     /// Host-owned token bumped when live pin coordinates change — forces map content refresh.
     public var livePinGeometryEpoch: Int
+    /// Tier D — prefetch tiles for this area when the map context loads.
+    public var offlineContext: MapOfflineContextLoad?
 
     public init(
         id: String,
@@ -39,7 +41,8 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         cameraFrame: MapCameraFrame? = nil,
         selectedPinId: UUID? = nil,
         snapshotPriority: MapSnapshotPriority = .background,
-        livePinGeometryEpoch: Int = 0
+        livePinGeometryEpoch: Int = 0,
+        offlineContext: MapOfflineContextLoad? = nil
     ) {
         self.id = id
         self.phase = phase
@@ -54,6 +57,7 @@ public struct MapContentRequest: Sendable, Equatable, Identifiable {
         self.selectedPinId = selectedPinId
         self.snapshotPriority = snapshotPriority
         self.livePinGeometryEpoch = livePinGeometryEpoch
+        self.offlineContext = offlineContext
     }
 
     /// Full-screen live maps only — collapsed cards and transition snapshots pass touches to host chrome.

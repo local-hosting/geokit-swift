@@ -18,6 +18,9 @@ public enum GeoKitRuntime {
     /// Load GeoKit.framework via dlopen (implemented by host app).
     public static var loadFramework: (() -> Bool)?
 
+    /// Tier D host hook — override offline prefetch when map context loads.
+    public static var prefetchOfflineRegionOnContextLoad: (@MainActor (MapOfflinePrefetchRequest, MapContentRequest) -> Void)?
+
     @discardableResult
     public static func loadIfNeeded() -> Bool {
         #if canImport(SwiftUI)
@@ -37,6 +40,7 @@ public enum GeoKitRuntime {
         mapContent = nil
         #endif
         loadFramework = nil
+        prefetchOfflineRegionOnContextLoad = nil
         LiveMapSnapshotCoordinator.resetForTesting()
     }
 }

@@ -14,7 +14,8 @@ public enum MapContentRequestBuilder {
         mapProviderId: MapProviderId? = nil,
         cameraFrame: MapCameraFrame? = nil,
         selectedPinId: UUID? = nil,
-        snapshotPriority: MapSnapshotPriority? = nil
+        snapshotPriority: MapSnapshotPriority? = nil,
+        offlineContext: MapOfflineContextLoad? = nil
     ) -> MapContentRequest {
         MapContentRequest(
             id: id,
@@ -28,7 +29,8 @@ public enum MapContentRequestBuilder {
             mapProviderId: mapProviderId,
             cameraFrame: cameraFrame,
             selectedPinId: selectedPinId,
-            snapshotPriority: snapshotPriority ?? Self.snapshotPriority(for: policy)
+            snapshotPriority: snapshotPriority ?? Self.snapshotPriority(for: policy),
+            offlineContext: offlineContext
         )
     }
 }

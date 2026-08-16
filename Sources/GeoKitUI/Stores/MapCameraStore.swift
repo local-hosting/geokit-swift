@@ -4,23 +4,35 @@ import GeoKitContract
 /// Per-map camera persistence — one shared frame per card across Mapbox and MapKit.
 @MainActor
 public final class MapCameraStore: ObservableObject {
+    private let localStore: MapLocalStore
     private let defaults: UserDefaults
-    private let keyPrefix: String
+    private let legacyKeyPrefix: String
     private var cache: [String: MapCameraFrame] = [:]
     private var persistTask: Task<Void, Never>?
     private var dirtyIDs: Set<String> = []
 
-    public init(defaults: UserDefaults = .standard, keyPrefix: String = "geokit.map.camera.") {
+    public init(
+        localStore: MapLocalStore = .shared,
+        defaults: UserDefaults = .standard,
+        keyPrefix: String = "geokit.map.camera."
+    ) {
+        self.localStore = localStore
         self.defaults = defaults
-        self.keyPrefix = keyPrefix
+        self.legacyKeyPrefix = keyPrefix
     }
 
     public func frame(for mapID: String) -> MapCameraFrame? {
         if let cached = cache[mapID] { return cached }
-        guard let data = defaults.data(forKey: storageKey(mapID)),
+        if let camera = localStore.state(for: mapID)?.cameraFrame {
+            cache[mapID] = camera
+            return camera
+        }
+        guard let data = defaults.data(forKey: legacyStorageKey(mapID)),
               let frame = try? JSONDecoder().decode(MapCameraFrame.self, from: data)
         else { return nil }
         cache[mapID] = frame
+        localStore.patch(mapID: mapID, cameraFrame: frame)
+        defaults.removeObject(forKey: legacyStorageKey(mapID))
         return frame
     }
 
@@ -36,20 +48,24 @@ public final class MapCameraStore: ObservableObject {
     public func removeFrame(for mapID: String) {
         cache.removeValue(forKey: mapID)
         dirtyIDs.remove(mapID)
-        defaults.removeObject(forKey: storageKey(mapID))
+        defaults.removeObject(forKey: legacyStorageKey(mapID))
+        var state = localStore.state(for: mapID) ?? MapLocalState(mapId: mapID)
+        state.cameraFrame = nil
+        localStore.setState(state)
     }
 
     public func removeAll() {
         for mapID in cache.keys {
-            defaults.removeObject(forKey: storageKey(mapID))
+            defaults.removeObject(forKey: legacyStorageKey(mapID))
         }
         cache.removeAll()
         dirtyIDs.removeAll()
         persistTask?.cancel()
         persistTask = nil
+        localStore.removeAll()
     }
 
-    private func storageKey(_ mapID: String) -> String { keyPrefix + mapID }
+    private func legacyStorageKey(_ mapID: String) -> String { legacyKeyPrefix + mapID }
 
     private func schedulePersist() {
         persistTask?.cancel()
@@ -63,11 +79,9 @@ public final class MapCameraStore: ObservableObject {
     private func flushDirtyFrames() {
         let ids = dirtyIDs
         dirtyIDs.removeAll()
-        let encoder = JSONEncoder()
         for mapID in ids {
-            guard let frame = cache[mapID],
-                  let data = try? encoder.encode(frame) else { continue }
-            defaults.set(data, forKey: storageKey(mapID))
+            guard let frame = cache[mapID] else { continue }
+            localStore.patch(mapID: mapID, cameraFrame: frame)
         }
     }
 }
