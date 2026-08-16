@@ -1,7 +1,7 @@
 import Foundation
 
 /// Supported native map rendering backends for GeoKitUI.
-public enum MapProviderId: String, Sendable, Equatable, CaseIterable {
+public enum MapProviderId: String, Sendable, Equatable, Codable, CaseIterable {
     case mapbox
     case apple
 }

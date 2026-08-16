@@ -28,6 +28,14 @@ enum GeoKitMapboxBootstrap {
         LiveMapSnapshotCoordinator.canStartSnapshotCapture = {
             GeoKitMapboxLiveMapRegistry.canStartSnapshotCapture
         }
+        GeoKitRuntime.prefetchOfflineRegionOnContextLoad = { prefetchRequest, contentRequest in
+            guard let styleURI = StyleURI(rawValue: contentRequest.mapStyleURI) else { return }
+            _ = GeoKitMapboxOfflineRegionStore.shared.prefetch(
+                request: prefetchRequest,
+                styleURI: styleURI,
+                policy: contentRequest.offlineContext?.policy ?? .cacheFirst
+            )
+        }
         LiveMapSnapshotCoordinator.waitUntilSafeForSnapshot = {
             try await GeoKitMapboxLiveMapRegistry.waitUntilSafeForSnapshot()
         }
@@ -45,6 +53,7 @@ enum GeoKitMapboxBootstrap {
 
     static func resetForTesting() {
         didRegister = false
+        GeoKitRuntime.prefetchOfflineRegionOnContextLoad = nil
     }
 }
 

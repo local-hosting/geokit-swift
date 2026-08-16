@@ -95,3 +95,5 @@ See **`docs/platforms.md`** for the full matrix. Summary:
 - `Easing.easeInOutCubic` ↔ `easeInOutCubic`
 - `GeoKitRouteProgressGradient` ↔ `buildRouteProgressGradient`
 - `GeoKitMapViewportSettledCoordinator` / `GeoKitMapboxViewportSettled` ↔ `onMapViewportSettled`
+
+Offline maps contract: [`offline.md`](offline.md) (see also [geokit `offline.md`](../geokit/docs/offline.md)).
