@@ -107,6 +107,44 @@ public enum BoundsCalculator {
         return ViewportFit(center: center, zoom: max(0, min(22, sizeAdjustedZoom)))
     }
 
+
+    /// Port of Node `@geokit/bounds` `calculateFitBoundsViewport` (Web Mercator + padding).
+    public static func fitBoundsViewport(
+        bounds: Bounds,
+        mapSize: MapSize,
+        paddingFraction: Double = 0.06
+    ) -> ViewportFit? {
+        guard bounds.count == 4, mapSize.width > 0, mapSize.height > 0 else { return nil }
+
+        let minLon = bounds[0]
+        let minLat = bounds[1]
+        let maxLon = bounds[2]
+        let maxLat = bounds[3]
+        let latSpan = maxLat - minLat
+        let lonSpan = maxLon - minLon
+        let padLat = latSpan * paddingFraction
+        let padLon = lonSpan * paddingFraction
+        let padded: Bounds = [minLon - padLon, minLat - padLat, maxLon + padLon, maxLat + padLat]
+
+        guard let center = center(of: padded) else { return nil }
+
+        func latRad(_ lat: Double) -> Double {
+            let sin = Foundation.sin(lat * .pi / 180)
+            let clamped = min(max(sin, -0.9999), 0.9999)
+            return Foundation.log((1 + clamped) / (1 - clamped)) / 2
+        }
+
+        let worldSize = 512.0
+        let latFraction = (latRad(padded[3]) - latRad(padded[1])) / .pi
+        let lonFraction = (padded[2] - padded[0]) / 360
+        let latZoom = latFraction > 0 ? log2(mapSize.height / worldSize / latFraction) : 22
+        let lngZoom = lonFraction > 0 ? log2(mapSize.width / worldSize / lonFraction) : 22
+        let zoom = max(0, min(22, min(latZoom, lngZoom)))
+        let rounded = floor(zoom * 100) / 100
+
+        return ViewportFit(center: center, zoom: rounded)
+    }
+
     public static func isWithin(_ bounds: Bounds, coordinate: LatLon) -> Bool {
         guard bounds.count == 4 else { return false }
 

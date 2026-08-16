@@ -80,6 +80,31 @@ public enum H3 {
         return result == 1
     }
 
+    /// Roll a cell up/down to a target resolution (compact hex id out).
+    public static func normalizeToResolution(_ cellID: String, resolution: Int) throws -> String {
+        let trimmed = cellID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+
+        var cell = try validatedCell(trimmed)
+        var res = Int(getResolution(cell))
+
+        while res > resolution {
+            var parent: H3Index = 0
+            try check(cellToParent(cell, Int32(res - 1), &parent))
+            cell = parent
+            res -= 1
+        }
+
+        if res < resolution {
+            var center = LatLng(lat: 0, lng: 0)
+            try check(cellToLatLng(cell, &center))
+            let coordinate = latLon(center)
+            cell = try validatedCell(try coordinatesToCell(coordinate, resolution: resolution))
+        }
+
+        return cellString(cell)
+    }
+
     /// Average hexagon edge length at a resolution (meters).
     public static func edgeLength(resolution: Int) throws -> Double {
         let res = try resolutionValue(resolution)
