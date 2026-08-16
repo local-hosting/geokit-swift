@@ -74,3 +74,12 @@ CDN choropleth, MCP map tools, provider registry (Mapbox + Apple Maps), full Tur
 | `provider="mapbox"` on map element | `MapContentRequest.mapProviderId` per map |
 
 Apple Maps uses MapKit (`GeoKitMapKitMapContent`); Mapbox uses MapboxMaps (`GeoKitMapboxMapContent`). Default remains **mapbox** for backward compatibility.
+## Daylight parity helpers (v5 additions)
+
+- `Interpolation.alongPath` ↔ `interpolateAlongPath`
+- `Bearing.randomPointInCircle` / `randomPointInCircleKm` ↔ `randomPointInCircle`
+- `GeoKitColor`, `GeoKitPaletteCycler` ↔ `geokit` color utils
+- `Easing.easeInOutCubic` ↔ `easeInOutCubic`
+- `GeoKitRouteProgressGradient` ↔ `buildRouteProgressGradient`
+- `GeoKitMapViewportSettledCoordinator` / `GeoKitMapboxViewportSettled` ↔ `onMapViewportSettled`
+

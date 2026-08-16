@@ -109,6 +109,18 @@ public enum Bearing {
         )
     }
 
+    /// Uniform random point inside a circle (meters).
+    public static func randomPointInCircle(from center: LatLon, radiusMeters: Double) -> LatLon {
+        let bearing = Double.random(in: 0..<360)
+        let distance = sqrt(Double.random(in: 0...1)) * radiusMeters
+        return destinationMeters(from: center, distance: distance, bearingDegrees: bearing)
+    }
+
+    /// Uniform random point inside a circle (kilometers).
+    public static func randomPointInCircleKm(from center: LatLon, radiusKm: Double) -> LatLon {
+        randomPointInCircle(from: center, radiusMeters: radiusKm * 1000)
+    }
+
     private static func normalizeDegrees(_ degrees: Double) -> Double {
         var value = degrees.truncatingRemainder(dividingBy: GeoKitConstants.degreesInCircle)
         if value < 0 { value += GeoKitConstants.degreesInCircle }
