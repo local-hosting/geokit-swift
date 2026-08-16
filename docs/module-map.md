@@ -2,6 +2,7 @@
 
 | Node export | Swift target | Swift path | Parity tier |
 |-------------|--------------|------------|-------------|
+| `@geokit/core` | GeoKitCore | `Utils/` (barrel) | 1 |
 | `@geokit` / `utils/bounds` | GeoKitCore | `Utils/bounds/` | 1 |
 | `@geokit/bearing` | GeoKitCore | `Utils/bearing/` | 1 |
 | `@geokit/coordinates` | GeoKitCore | `Utils/coordinates/` | 1 |
@@ -17,5 +18,8 @@
 | `@geokit/ui` map lifecycle | GeoKitUI | `Utils/GeoKitMapLifecycle.swift`, `Components/Map/` | 2 |
 | `@geokit/ui` | GeoKitUI | `Components/`, `Utils/`, `Bootstrap/` | 2 |
 | `dlopen` registration | GeoKit | `Register/` | 2 |
+
+| `@geokit/turf` | GeoKitCore | `Utils/turf/` + siblings | 1.5 |
+| `@geokit/contract` | GeoKitContract | `Lifecycle/`, `Providers/` | 2 |
 
 See [`parity.md`](parity.md) for API-level fixture coverage.
