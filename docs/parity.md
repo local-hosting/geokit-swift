@@ -2,6 +2,8 @@
 
 # Node vs Swift GeoKit parity
 
+Provider parity checklist: [`providers.md`](providers.md).
+
 ## Tier 1 — shared fixtures (v3)
 
 | Module | Node export | Swift API | Fixture |
