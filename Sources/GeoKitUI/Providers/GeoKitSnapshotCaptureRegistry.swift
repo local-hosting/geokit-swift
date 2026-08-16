@@ -1,6 +1,7 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
+import CoreGraphics
 import GeoKitContract
-import UIKit
 
 @MainActor
 public enum GeoKitSnapshotCaptureRegistry {
@@ -19,7 +20,7 @@ public enum GeoKitSnapshotCaptureRegistry {
         MapContentRequest,
         CGSize,
         MapSnapshotPriority
-    ) async throws -> UIImage?
+    ) async throws -> GeoKitPlatformImage?
 
     private static var handlers: [MapProviderId: Handler] = [:]
 
@@ -31,12 +32,14 @@ public enum GeoKitSnapshotCaptureRegistry {
         request: MapContentRequest,
         size: CGSize,
         priority: MapSnapshotPriority = .background
-    ) async throws -> UIImage? {
-        let provider = request.mapProviderId ?? GeoKitMapProviderRegistry.defaultProvider
+    ) async throws -> GeoKitPlatformImage? {
+        let provider = MapProviderResolver.resolve(for: request)
+        var resolved = request
+        resolved.mapProviderId = provider
         guard let handler = handlers[provider] else {
             throw CaptureError.noHandler(provider)
         }
-        return try await handler(request, size, priority)
+        return try await handler(resolved, size, priority)
     }
 
     public static func resetForTesting() {

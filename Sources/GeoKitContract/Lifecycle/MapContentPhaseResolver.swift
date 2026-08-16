@@ -11,7 +11,7 @@ public struct MapLifecycleInput: Sendable, Equatable {
 }
 
 public enum MapContentPhaseResolver {
-    /// Resolve placeholder / snapshot / live phase from host stack policy and runtime readiness.
+    /// Resolve placeholder / snapshot / live phase from host composition policy and runtime readiness.
     public static func resolve(_ input: MapLifecycleInput) -> MapContentPhase {
         guard input.lifecycle.isSurfaceReady else { return .placeholder }
 

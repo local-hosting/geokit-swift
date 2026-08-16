@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import MapboxMaps
 
 /// Ensures Mapbox Standard import transit labels match Studio / static snapshot rendering on live GL.

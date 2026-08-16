@@ -1,9 +1,9 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import CoreLocation
 import GeoKitContract
 import MapKit
 import SwiftUI
-import UIKit
 
 /// Captures card peek snapshots for any registered map provider.
 public enum GeoKitCardSnapshotCapture {
@@ -11,7 +11,7 @@ public enum GeoKitCardSnapshotCapture {
         request: MapContentRequest,
         size: CGSize,
         priority: MapSnapshotPriority = .background
-    ) async throws -> UIImage? {
+    ) async throws -> GeoKitPlatformImage? {
         try await GeoKitSnapshotCaptureRegistry.capture(
             request: request,
             size: size,
@@ -19,7 +19,7 @@ public enum GeoKitCardSnapshotCapture {
         )
     }
 
-    static func captureApple(request: MapContentRequest, size: CGSize) async -> UIImage? {
+    static func captureApple(request: MapContentRequest, size: CGSize) async -> GeoKitPlatformImage? {
         let coordinates = request.pins.map {
             CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         }

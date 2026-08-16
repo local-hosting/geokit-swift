@@ -17,6 +17,27 @@ public enum MapSurfaceMountPolicy {
         canMount && mapReady
     }
 
+    /// Hero morph may briefly invalidate layout gates — keep a warm GL surface mounted.
+    public static func retainsWarmMountDuringTransitionGap(
+        isTransitioning: Bool,
+        liveAlreadyPainted: Bool
+    ) -> Bool {
+        isTransitioning && liveAlreadyPainted
+    }
+
+    public static func shouldShowLiveMap(
+        canMount: Bool,
+        mapReady: Bool,
+        isTransitioning: Bool,
+        liveAlreadyPainted: Bool
+    ) -> Bool {
+        shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
+            || retainsWarmMountDuringTransitionGap(
+                isTransitioning: isTransitioning,
+                liveAlreadyPainted: liveAlreadyPainted
+            )
+    }
+
     public static func shouldBeginSnapshotCapture(layoutSize: CGSize) -> Bool {
         isValidLayoutSize(layoutSize)
     }

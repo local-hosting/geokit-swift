@@ -19,6 +19,7 @@ final class HostMapRequestTests: XCTestCase {
         XCTAssertFalse(request.pins.isEmpty)
         XCTAssertEqual(request.mapProviderId, .apple)
         XCTAssertEqual(request.snapshotPriority, .top)
+        XCTAssertFalse(request.mapAcceptsUserInteraction)
     }
 
     func testCollapsedPeekHostCardUsesSnapshotWhenCached() {

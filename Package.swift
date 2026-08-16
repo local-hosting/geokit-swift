@@ -6,11 +6,13 @@ let package = Package(
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
+        .tvOS(.v17),
+        .visionOS(.v1),
     ],
     products: [
         .library(name: "GeoKitCore", targets: ["GeoKitCore"]),
         .library(name: "GeoKitContract", targets: ["GeoKitContract"]),
-        .library(name: "GeoKitUI", targets: ["GeoKitUI", "GeoKitContract"]),
+        .library(name: "GeoKitUI", targets: ["GeoKitUI"]),
         .library(name: "GeoKitUIMapbox", targets: ["GeoKitUIMapbox"]),
         .library(name: "GeoKit", type: .dynamic, targets: ["GeoKit"]),
     ],
@@ -22,13 +24,13 @@ let package = Package(
         // Uber H3 (v4.4.1) as a prebuilt binary so no C source target is compiled —
         // avoids the Xcode 26 explicit-clang-modules failure for SPM C targets.
         .binaryTarget(
-            name: "Ch3",
+            name: "GeoKitCh3",
             path: "Vendor/Ch3.xcframework"
         ),
         .target(
             name: "GeoKitCore",
             dependencies: [
-                "Ch3",
+                .target(name: "GeoKitCh3", condition: .when(platforms: [.iOS, .macOS])),
                 .product(name: "Turf", package: "turf-swift"),
             ]
         ),
@@ -37,13 +39,17 @@ let package = Package(
         ),
         .target(
             name: "GeoKitUI",
-            dependencies: ["GeoKitContract", "GeoKitCore"]
+            dependencies: [
+                .target(name: "GeoKitContract"),
+                .target(name: "GeoKitCore"),
+            ]
         ),
         .target(
             name: "GeoKitUIMapbox",
             dependencies: [
-                "GeoKitUI",
-                .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS])),
+                .target(name: "GeoKitContract"),
+                .target(name: "GeoKitUI"),
+                .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS, .visionOS])),
             ]
         ),
         .target(
@@ -52,7 +58,7 @@ let package = Package(
                 "GeoKitCore",
                 "GeoKitContract",
                 "GeoKitUI",
-                "GeoKitUIMapbox",
+                .target(name: "GeoKitUIMapbox", condition: .when(platforms: [.iOS, .visionOS])),
             ]
         ),
         .testTarget(
@@ -66,7 +72,17 @@ let package = Package(
         ),
         .testTarget(
             name: "GeoKitUITests",
-            dependencies: ["GeoKitUI", "GeoKitContract"]
+            dependencies: ["GeoKitUI", "GeoKitContract"],
+            resources: [.process("Fixtures")]
+        ),
+        .testTarget(
+            name: "GeoKitUIMapboxTests",
+            dependencies: [
+                "GeoKitContract",
+                "GeoKitUI",
+                "GeoKitUIMapbox",
+                .product(name: "MapboxMaps", package: "mapbox-maps-ios", condition: .when(platforms: [.iOS, .visionOS])),
+            ]
         ),
     ]
 )

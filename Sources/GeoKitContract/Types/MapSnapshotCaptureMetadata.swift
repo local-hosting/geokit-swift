@@ -8,6 +8,7 @@ public struct MapSnapshotCaptureMetadata: Sendable, Equatable {
     public var mapStyleURI: String
     public var pins: [MapPin]
     public var selectedPinId: UUID?
+    
 
     public init(
         cameraFrame: MapCameraFrame,

@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import MapboxMaps
 
 /// Loads the host Studio style without overriding import configuration baked in Mapbox Studio.

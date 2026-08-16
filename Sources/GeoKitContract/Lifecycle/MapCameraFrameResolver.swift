@@ -9,42 +9,47 @@ public enum MapCameraFrameResolver {
     /// Backward-compatible alias for expanded pitch.
     public static let defaultPitch: Double = expandedPitch
 
+    /// The camera is the camera: honor the request's real camera verbatim — no pitch flattening, no pin-anchor
+    /// substitution. The seed below is only for internal requests that never carried a camera; map cards
+    /// always declare one up front, so it never fabricates a card's view.
     public static func resolve(for request: MapContentRequest) -> MapCameraFrame {
-        let frame: MapCameraFrame
-        if let cameraFrame = storedFrameIfNearPins(request.cameraFrame, pins: request.pins) {
-            frame = cameraFrame
-        } else {
-            frame = initialFrame(
-                pins: request.pins,
-                preferredZoom: request.preferredZoom,
-                isExpanded: request.isExpanded
-            )
+        if let cameraFrame = request.cameraFrame {
+            return cameraFrame
         }
-        return frameWithStyleLabelPitch(frame)
+        return initialFrame(
+            pins: request.pins,
+            preferredZoom: request.preferredZoom,
+            isExpanded: request.isExpanded
+        )
     }
 
-    /// Mapbox Standard transit and POI symbol layers drop out under pitched cameras on live GL.
-    private static func frameWithStyleLabelPitch(_ frame: MapCameraFrame) -> MapCameraFrame {
-        var flattened = frame
-        flattened.pitch = collapsedPitch
-        return flattened
-    }
-
-    /// Rejects persisted/style-default cameras that drift far from the card's pin anchor.
-    public static func storedFrameIfNearPins(
+    /// A persisted camera only overrides a card's declared camera when it is a genuine refinement of the *same*
+    /// place — i.e. close to the declared center. A saved camera far from the declared coordinates is stale
+    /// (e.g. left over from a reused card id) and must not hijack the card's real lat/long on launch. The card
+    /// content is the source of truth; persistence only remembers the user's own pan/zoom around it.
+    public static func validStoredFrame(
         _ stored: MapCameraFrame?,
-        pins: [MapPin],
+        declared: MapCameraFrame,
         maxCenterDeltaDegrees: Double = 1.0
     ) -> MapCameraFrame? {
         guard let stored else { return nil }
-        guard !pins.isEmpty else { return stored }
-        let anchor = centerCoordinate(from: pins) ?? defaultCenter(from: pins)
-        let latDelta = abs(stored.centerLatitude - anchor.latitude)
-        let lonDelta = abs(stored.centerLongitude - anchor.longitude)
+        let latDelta = abs(stored.centerLatitude - declared.centerLatitude)
+        let lonDelta = abs(stored.centerLongitude - declared.centerLongitude)
         guard latDelta <= maxCenterDeltaDegrees, lonDelta <= maxCenterDeltaDegrees else {
             return nil
         }
         return stored
+    }
+
+    /// Whether the live camera has arrived at its target (the card's declared/persisted camera). Used to hold
+    /// the cold-load cover through the fly-to: the style's far-away default camera isn't approximately equal to
+    /// the target, so the cover stays up until the map settles on the real camera.
+    public static func isCameraSettledAtTarget(
+        _ current: MapCameraFrame?,
+        target: MapCameraFrame
+    ) -> Bool {
+        guard let current else { return false }
+        return current.isApproximatelyEqual(to: target)
     }
 
     public static func initialFrame(

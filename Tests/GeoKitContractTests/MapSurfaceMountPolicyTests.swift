@@ -27,4 +27,30 @@ final class MapSurfaceMountPolicyTests: XCTestCase {
         XCTAssertFalse(MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: CGSize(width: 100, height: 200)))
         XCTAssertTrue(MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: CGSize(width: 200, height: 200)))
     }
+
+    func testRetainsWarmMountDuringTransitionGap() {
+        XCTAssertTrue(
+            MapSurfaceMountPolicy.retainsWarmMountDuringTransitionGap(
+                isTransitioning: true,
+                liveAlreadyPainted: true
+            )
+        )
+        XCTAssertFalse(
+            MapSurfaceMountPolicy.retainsWarmMountDuringTransitionGap(
+                isTransitioning: false,
+                liveAlreadyPainted: true
+            )
+        )
+    }
+
+    func testShouldShowLiveMapRetainsWarmPaintDuringMorphGap() {
+        XCTAssertTrue(
+            MapSurfaceMountPolicy.shouldShowLiveMap(
+                canMount: false,
+                mapReady: true,
+                isTransitioning: true,
+                liveAlreadyPainted: true
+            )
+        )
+    }
 }

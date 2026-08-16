@@ -75,7 +75,18 @@ CDN choropleth, MCP map tools, provider registry (Mapbox + Apple Maps), full Tur
 | `GEOKIT_MAP_PROVIDER` / `MAP_PROVIDER` env | Same keys + `Info.plist` `GEOKIT_MAP_PROVIDER` |
 | `provider="mapbox"` on map element | `MapContentRequest.mapProviderId` per map |
 
-Apple Maps uses MapKit (`GeoKitMapKitMapContent`); Mapbox uses MapboxMaps (`GeoKitMapboxMapContent`). Default remains **mapbox** for backward compatibility.
+Apple Maps uses MapKit (`GeoKitMapKitMapContent`); Mapbox uses MapboxMaps (`GeoKitMapboxMapContent`). Default remains **mapbox** on iOS (including CarPlay) and visionOS; **apple** (MapKit) on tvOS where Mapbox is not linked.
+
+## Platform support (live maps)
+
+See **`docs/platforms.md`** for the full matrix. Summary:
+
+| Platform | MapKit | Mapbox |
+|----------|--------|--------|
+| iOS / iPad / CarPlay / Catalyst | Yes | Yes |
+| visionOS | Yes | Yes (Mapbox Maps SDK ≥ 11.2) |
+| tvOS | Yes (default) | No SDK — coerced to MapKit |
+
 ## Daylight parity helpers (v5 additions)
 
 - `Interpolation.alongPath` ↔ `interpolateAlongPath`
@@ -84,4 +95,3 @@ Apple Maps uses MapKit (`GeoKitMapKitMapContent`); Mapbox uses MapboxMaps (`GeoK
 - `Easing.easeInOutCubic` ↔ `easeInOutCubic`
 - `GeoKitRouteProgressGradient` ↔ `buildRouteProgressGradient`
 - `GeoKitMapViewportSettledCoordinator` / `GeoKitMapboxViewportSettled` ↔ `onMapViewportSettled`
-

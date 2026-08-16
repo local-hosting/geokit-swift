@@ -1,4 +1,3 @@
-#if canImport(UIKit) || canImport(AppKit)
 import CoreGraphics
 import Foundation
 import GeoKitContract
@@ -41,7 +40,6 @@ public final class GeoKitMapProviderSnapshotCache {
         }
     }
 
-    /// Peek snapshot is valid only when it matches the card's shared camera (same view on every provider).
     public func isSnapshotCurrent(
         for provider: MapProviderId,
         currentCamera: MapCameraFrame?,
@@ -92,4 +90,3 @@ public final class GeoKitMapProviderSnapshotCache {
         prefetchScheduled.remove(provider)
     }
 }
-#endif

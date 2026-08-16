@@ -1,6 +1,6 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
+import GeoKitContract
 import GeoKitUI
-import UIKit
 import XCTest
 
 @MainActor
@@ -18,8 +18,8 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
 
     func testStoresSnapshotsPerProviderIndependently() {
         let cache = GeoKitMapProviderSnapshotCache()
-        let mapboxImage = UIImage()
-        let appleImage = UIImage()
+        let mapboxImage = GeoKitPlatformImage()
+        let appleImage = GeoKitPlatformImage()
 
         cache.setSnapshot(mapboxImage, for: .mapbox, cameraFrame: cameraA)
         cache.setSnapshot(appleImage, for: .apple, cameraFrame: cameraA)
@@ -30,9 +30,9 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
 
     func testRemoveSnapshotForProviderDoesNotClearOtherProviders() {
         let cache = GeoKitMapProviderSnapshotCache()
-        let mapboxImage = UIImage()
+        let mapboxImage = GeoKitPlatformImage()
         cache.setSnapshot(mapboxImage, for: .mapbox, cameraFrame: cameraA)
-        cache.setSnapshot(UIImage(), for: .apple, cameraFrame: cameraA)
+        cache.setSnapshot(GeoKitPlatformImage(), for: .apple, cameraFrame: cameraA)
 
         cache.removeSnapshot(for: .apple)
 
@@ -42,7 +42,7 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
 
     func testSnapshotInvalidWhenSharedCameraMoves() {
         let cache = GeoKitMapProviderSnapshotCache()
-        cache.setSnapshot(UIImage(), for: .mapbox, cameraFrame: cameraA)
+        cache.setSnapshot(GeoKitPlatformImage(), for: .mapbox, cameraFrame: cameraA)
 
         XCTAssertTrue(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraA))
         XCTAssertFalse(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraB))
@@ -50,7 +50,7 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
 
     func testSnapshotStillValidWithinApproximateTolerance() {
         let cache = GeoKitMapProviderSnapshotCache()
-        cache.setSnapshot(UIImage(), for: .mapbox, cameraFrame: cameraA)
+        cache.setSnapshot(GeoKitPlatformImage(), for: .mapbox, cameraFrame: cameraA)
         let noisy = MapCameraFrame(
             centerLatitude: cameraA.centerLatitude + 0.000001,
             centerLongitude: cameraA.centerLongitude - 0.000001,
@@ -66,7 +66,7 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
         let cache = GeoKitMapProviderSnapshotCache()
         let pinA = UUID()
         let pinB = UUID()
-        cache.setSnapshot(UIImage(), for: .mapbox, cameraFrame: cameraA, selectedPinId: pinA)
+        cache.setSnapshot(GeoKitPlatformImage(), for: .mapbox, cameraFrame: cameraA, selectedPinId: pinA)
 
         XCTAssertTrue(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraA, selectedPinId: pinA))
         XCTAssertFalse(cache.isSnapshotCurrent(for: .mapbox, currentCamera: cameraA, selectedPinId: pinB))
@@ -75,7 +75,7 @@ final class GeoKitMapProviderSnapshotCacheTests: XCTestCase {
 
     func testSnapshotValidBeforeUserCameraIsStored() {
         let cache = GeoKitMapProviderSnapshotCache()
-        cache.setSnapshot(UIImage(), for: .apple, cameraFrame: cameraA)
+        cache.setSnapshot(GeoKitPlatformImage(), for: .apple, cameraFrame: cameraA)
 
         XCTAssertTrue(cache.isSnapshotCurrent(for: .apple, currentCamera: nil))
     }

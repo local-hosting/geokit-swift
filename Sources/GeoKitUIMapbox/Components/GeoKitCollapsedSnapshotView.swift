@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import CoreLocation
 import GeoKitContract
 import GeoKitUI
@@ -70,9 +71,16 @@ struct GeoKitCollapsedSnapshotView: View {
 
         refreshTask?.cancel()
         refreshTask = Task {
-            let styleURI = request.mapStyleURI
             let image = try? await MapSnapshotCaptureExecutor.captureWithRetry {
-                await GeoKitSnapshotService.capture(
+                if request.snapshotPriority == .background {
+                    return try await GeoKitCardSnapshotCaptureMapbox.capture(
+                        request: request,
+                        size: size,
+                        priority: .background
+                    )
+                }
+                let styleURI = request.mapStyleURI
+                return await GeoKitSnapshotService.capture(
                     viewport: resolvedViewport,
                     size: size,
                     styleURI: styleURI,

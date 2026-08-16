@@ -19,6 +19,16 @@ final class MapProviderResolverTests: XCTestCase {
         }
     }
 
+    func testResolveStyleURIInfersMapbox() {
+        let request = MapContentRequest(
+            id: "city-lights",
+            phase: .snapshot,
+            isExpanded: false,
+            mapStyleURI: "mapbox://styles/corio/demo"
+        )
+        XCTAssertEqual(MapProviderResolver.resolve(for: request), .mapbox)
+    }
+
     func testFromEnvironmentUsesExplicitKey() {
         let provider = MapProviderResolver.fromEnvironment(
             environment: ["GEOKIT_MAP_PROVIDER": "apple"],
