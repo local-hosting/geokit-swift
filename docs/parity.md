@@ -1,3 +1,5 @@
+> TypeScript entry: [`geokit/docs/parity.md`](../geokit/docs/parity.md)
+
 # Node vs Swift GeoKit parity
 
 ## Tier 1 — shared fixtures (v3)
@@ -42,6 +44,12 @@ Swift GeoKitCore depends on [turf-swift](https://github.com/mapbox/turf-swift) f
 | `MapStagePolicyResolver` | `MapStagePolicyResolver` (GeoKitContract) |
 | `whenStyleReady`, `delayForWebGLRelease` | `GeoKitMapLifecycle.waitForStyleReady`, `.delayForWebGLRelease` |
 | `STUCK_PLACEHOLDER_MS`, WebGL budget | `GeoKitMapLifecycleConstants` |
+
+## Fixture CI
+
+- Generate: `yarn --cwd ../geokit export:parity-fixtures`
+- Verify: `yarn --cwd ../geokit check:parity-fixtures`
+- Full: `yarn --cwd ../geokit verify:parity`
 
 ## Tier 3 — Node-only (out of scope)
 

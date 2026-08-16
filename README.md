@@ -92,7 +92,7 @@ swift test --filter GeoKitContractTests
 `Tests/GeoKitCoreTests/Fixtures/parity-fixtures.json` is the cross-platform contract. Regenerate from Node with:
 
 ```bash
-yarn --cwd ../geokit export:parity-fixtures
+yarn --cwd ../geokit verify:parity   # or export:parity-fixtures only
 ```
 
 ## Related

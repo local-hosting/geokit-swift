@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "description": "Shared parity fixtures — generated from @doppler-group/geokit",
+  "description": "Shared parity fixtures — generated from geokit",
   "coordinates": {
     "nyc": {
       "latitude": 40.7128,
