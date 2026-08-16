@@ -24,7 +24,7 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
         )
     }
 
-    func testSnapshotCoversLiveOnlyBeforeFirstPaint() {
+    func testSnapshotCoversLiveOnlyBeforeFirstPaintUnlessMorphFreeze() {
         XCTAssertTrue(
             MapPinTransitionCoverPolicy.snapshotCoversLive(
                 mapIsTransitioning: true,
@@ -37,6 +37,14 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 mapIsTransitioning: true,
                 pinsLayoutSettling: false,
                 livePainted: true
+            )
+        )
+        XCTAssertTrue(
+            MapPinTransitionCoverPolicy.snapshotCoversLive(
+                mapIsTransitioning: true,
+                pinsLayoutSettling: false,
+                livePainted: true,
+                hasMorphFreeze: true
             )
         )
         XCTAssertFalse(
@@ -51,6 +59,62 @@ final class MapPinTransitionCoverPolicyTests: XCTestCase {
                 mapIsTransitioning: false,
                 pinsLayoutSettling: false,
                 livePainted: false
+            )
+        )
+    }
+
+    func testLiveSurfaceCoverHeldUntilFirstLivePaintOrMorphFreeze() {
+        XCTAssertTrue(
+            MapPinTransitionCoverPolicy.coversLiveSurface(livePainted: false)
+        )
+        XCTAssertFalse(
+            MapPinTransitionCoverPolicy.coversLiveSurface(livePainted: true)
+        )
+        XCTAssertTrue(
+            MapPinTransitionCoverPolicy.coversLiveSurface(
+                livePainted: true,
+                hasMorphFreeze: true
+            )
+        )
+    }
+
+    func testLiveSurfaceStaysCoveredUntilPaintedAndCentered() {
+        XCTAssertFalse(
+            LiveMapRevealPolicy.revealsLiveSurface(
+                livePainted: true,
+                cameraSettledAtTarget: false,
+                isTransitioning: false
+            )
+        )
+        XCTAssertTrue(
+            LiveMapRevealPolicy.revealsLiveSurface(
+                livePainted: true,
+                cameraSettledAtTarget: true,
+                isTransitioning: false
+            )
+        )
+        XCTAssertFalse(
+            LiveMapRevealPolicy.revealsLiveSurface(
+                livePainted: false,
+                cameraSettledAtTarget: true,
+                isTransitioning: false
+            )
+        )
+        // Mid expand/collapse without latch: host-driven reveal (cold / no capture).
+        XCTAssertTrue(
+            LiveMapRevealPolicy.revealsLiveSurface(
+                livePainted: true,
+                cameraSettledAtTarget: false,
+                isTransitioning: true
+            )
+        )
+        // Warm morph with live-frame latch: keep cover until latch clears.
+        XCTAssertFalse(
+            LiveMapRevealPolicy.revealsLiveSurface(
+                livePainted: true,
+                cameraSettledAtTarget: false,
+                isTransitioning: true,
+                hasMorphFreeze: true
             )
         )
     }

@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import GeoKitContract
 import GeoKitUI
 import MapboxCommon
@@ -33,6 +34,11 @@ enum GeoKitMapboxBootstrap {
     }
 
     static func prepareMapbox() {
+        if MapboxOptions.accessToken.isEmpty,
+           let token = Bundle.main.object(forInfoDictionaryKey: "MBXAccessToken") as? String,
+           !token.isEmpty {
+            MapboxOptions.accessToken = token
+        }
         _ = GeoKitMapboxConfiguration.telemetryOptOut
         _ = GeoKitMapboxLogging.configureOnce
     }

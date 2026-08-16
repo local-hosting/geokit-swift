@@ -1,8 +1,5 @@
 import GeoKitContract
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Hosts may read this preference to skip rasterization (e.g. `drawingGroup`) while a live Mapbox surface is mounted.
 public struct GeoKitLiveRenderingKey: PreferenceKey {
@@ -95,9 +92,9 @@ private struct GeoKitCardTransitionFullTargetSizeKey: EnvironmentKey {
     static let defaultValue: CGSize = .zero
 }
 
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
 private struct GeoKitTransitionSnapshotKey: EnvironmentKey {
-    static let defaultValue: UIImage? = nil
+    static let defaultValue: GeoKitPlatformImage? = nil
 }
 #endif
 
@@ -138,9 +135,9 @@ public extension EnvironmentValues {
         set { self[GeoKitCardTransitionFullTargetSizeKey.self] = newValue }
     }
 
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
     /// Host-owned static snapshot (e.g. card fan capture) for live-map crossfade on expand/remount.
-    var geokitTransitionSnapshot: UIImage? {
+    var geokitTransitionSnapshot: GeoKitPlatformImage? {
         get { self[GeoKitTransitionSnapshotKey.self] }
         set { self[GeoKitTransitionSnapshotKey.self] = newValue }
     }

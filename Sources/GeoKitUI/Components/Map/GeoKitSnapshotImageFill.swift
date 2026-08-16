@@ -1,14 +1,14 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import SwiftUI
-import UIKit
 
 /// Aspect-fills a slot with a peek snapshot — always fills the container width-to-height.
 struct GeoKitSnapshotImageFill: View {
-    let image: UIImage
+    let image: GeoKitPlatformImage
     var alignment: Alignment = .center
 
     var body: some View {
-        Image(uiImage: image)
+        Image(geoKitImage: image)
             .resizable()
             .interpolation(.high)
             .aspectRatio(contentMode: .fill)

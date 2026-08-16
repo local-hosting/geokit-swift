@@ -89,13 +89,29 @@ final class GeoKitDemoCardSwitchUITests: XCTestCase {
         centerMediaReadyElement().waitForExistence(timeout: timeout)
     }
 
+    private let placeIDs = ["nyc-map", "louisville-map", "chicago-map", "austin-map", "seattle-map", "miami-map"]
+
     private func switchToPage(index: Int) {
+        guard placeIDs.indices.contains(index) else {
+            XCTFail("Unknown page index \(index)")
+            return
+        }
+        let select = app.buttons["geokit-test-app.select-\(placeIDs[index])"]
+        if select.waitForExistence(timeout: 5) {
+            select.tap()
+            return
+        }
+        let page = app.descendants(matching: .any).matching(identifier: "geokit-test-app.page-\(index)").firstMatch
+        if page.waitForExistence(timeout: 5), page.isHittable {
+            page.tap()
+            return
+        }
         let root = app.otherElements.matching(identifier: "geokit-test-app.root").element(boundBy: 0)
         XCTAssertTrue(root.waitForExistence(timeout: 10))
         let frame = root.frame
-        let pageCount = 6
+        let pageCount = placeIDs.count
         let tapX = frame.minX + (frame.width / CGFloat(pageCount)) * (CGFloat(index) + 0.5)
-        let tapY = frame.maxY - 36
+        let tapY = frame.maxY - 22
         app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
             .withOffset(CGVector(dx: tapX, dy: tapY))
             .tap()

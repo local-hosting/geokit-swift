@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import CoreLocation
 import GeoKitContract
 import MapKit
@@ -12,16 +13,18 @@ struct GeoKitMapKitMapSurface: View {
     let onPinTap: (GeoKitContract.MapPin, Bool) -> Void
     let onPinInteractionBegan: () -> Void
     var onPinInteractionEnded: (() -> Void)?
-    var frozenSnapshot: UIImage?
+    var frozenSnapshot: GeoKitPlatformImage?
 
     @Environment(\.geokitMapSurfaceReady) private var mapSurfaceReady
     @Environment(\.geokitMapIsTransitioning) private var isTransitioning
+    @Environment(\.geokitAnimationSpeed) private var animationSpeed
 
     @State private var mapReady = false
     @State private var liveDidRender = false
     @State private var reportedCameraFrame: MapCameraFrame?
     @State private var pinsLayoutSettling = false
     @State private var lastSettledLayoutSize: CGSize = .zero
+    @State private var trackedIdentity: LiveMapRequestIdentity?
 
     private var hideLiveMapPins: Bool {
         MapPinTransitionCoverPolicy.hideLiveMapPins(
@@ -57,6 +60,29 @@ struct GeoKitMapKitMapSurface: View {
         pinsLayoutSettling = false
     }
 
+    private func handleCardIdentityChange() {
+        let next = LiveMapRequestIdentity(request: request)
+        let action = LiveMapRetargetPolicy.cardChangeAction(previous: trackedIdentity, next: next)
+        switch action {
+        case .retargetCameraAndPins:
+            retargetForCardChange()
+        case .reloadStyle:
+            reloadForStyleChange()
+        }
+        trackedIdentity = next
+    }
+
+    private func retargetForCardChange() {
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        if reportedCameraFrame?.isApproximatelyEqual(to: frame) != true {
+            reportedCameraFrame = frame
+        }
+    }
+
+    private func reloadForStyleChange() {
+        liveDidRender = false
+    }
+
     var body: some View {
         GeometryReader { geo in
             mapBody(size: geo.size)
@@ -72,25 +98,48 @@ struct GeoKitMapKitMapSurface: View {
 
     @ViewBuilder
     private func mapBody(size: CGSize) -> some View {
-        let validSize = MapSurfaceMountPolicy.isValidLayoutSize(size)
         let canMount = MapSurfaceMountPolicy.canMountMap(surfaceReady: mapSurfaceReady, layoutSize: size)
-        let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(canMount: canMount, mapReady: mapReady)
-        // Tile snapshots omit pins — keep them under the live map during card transitions.
+        let showMap = MapSurfaceMountPolicy.shouldShowLiveMap(
+            canMount: canMount,
+            mapReady: mapReady,
+            isTransitioning: isTransitioning,
+            liveAlreadyPainted: liveDidRender
+        )
+        // Reported to the host so it can lift the in-card cover once the surface shows map content.
         let showFrozenUnderlay = isTransitioning && frozenSnapshot != nil && !liveDidRender
 
         ZStack {
+            // Backstop only — the snapshot cover below spans the pre-mount and unpainted windows.
             GeoKitMapTheme.placeholderBackground
-            if showFrozenUnderlay, let snapshot = frozenSnapshot {
-                Image(uiImage: snapshot)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size.width, height: size.height)
-                    .clipped()
-                    .allowsHitTesting(false)
-            }
             if showMap {
                 liveMap(size: size)
             }
+            // Mirror the Mapbox surface: keep the live map underneath and hold a cover above it until its
+            // first paint so a cold load can't flash the surface's blank base. The cover is the frozen
+            // snapshot when we have one (seamless continuity from the card image), the dark placeholder
+            // otherwise — the underlay alone can't mask an opaque live base that composites above it.
+            Group {
+                if let snapshot = frozenSnapshot {
+                    Image(geoKitImage: snapshot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                } else {
+                    GeoKitMapTheme.placeholderBackground
+                        .frame(width: size.width, height: size.height)
+                }
+            }
+            .opacity(
+                MapPinTransitionCoverPolicy.coversLiveSurface(
+                    livePainted: liveDidRender
+                ) ? 1 : 0
+            )
+            .allowsHitTesting(false)
+            .animation(
+                .easeOut(duration: GeoKitMapCrossFadeConstants.scaledDuration(animationSpeed: animationSpeed)),
+                value: liveDidRender
+            )
         }
         .frame(width: size.width, height: size.height)
         .onChange(of: size) { _, newSize in
@@ -105,6 +154,7 @@ struct GeoKitMapKitMapSurface: View {
             if MapSurfaceMountPolicy.isValidLayoutSize(size) {
                 lastSettledLayoutSize = size
             }
+            trackedIdentity = LiveMapRequestIdentity(request: request)
         }
         .onDisappear {
             mapReady = false
@@ -112,8 +162,15 @@ struct GeoKitMapKitMapSurface: View {
             pinsLayoutSettling = false
             lastSettledLayoutSize = .zero
         }
+        .onChange(of: request.id) { _, _ in
+            handleCardIdentityChange()
+        }
         .onChange(of: showMap) { _, isShowing in
             if !isShowing {
+                guard !MapSurfaceMountPolicy.retainsWarmMountDuringTransitionGap(
+                    isTransitioning: isTransitioning,
+                    liveAlreadyPainted: liveDidRender
+                ) else { return }
                 liveDidRender = false
             }
         }
@@ -161,6 +218,7 @@ struct GeoKitMapKitMapSurface: View {
                 liveDidRender = true
             }
             let nextFrame = GeoKitMapKitCamera.frame(from: context.camera)
+            GeoKitLiveCameraCache.note(nextFrame, for: request.id)
             if reportedCameraFrame?.isApproximatelyEqual(to: nextFrame) != true {
                 reportedCameraFrame = nextFrame
             }
@@ -174,6 +232,9 @@ struct GeoKitMapKitMapSurface: View {
         )
         .frame(width: size.width, height: size.height)
         .clipped()
+#if canImport(UIKit)
+        .geokitIsolatePlatformMapAccessibility()
+#endif
     }
 
     @MapContentBuilder

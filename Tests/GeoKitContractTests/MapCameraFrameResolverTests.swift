@@ -29,22 +29,19 @@ final class MapCameraFrameResolverTests: XCTestCase {
             cameraFrame: camera
         )
 
-        XCTAssertEqual(MapCameraFrameResolver.resolve(for: request), camera)
+        // The map is the map: the request camera is honored verbatim, including pitch and bearing.
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        XCTAssertEqual(frame.centerLatitude, camera.centerLatitude)
+        XCTAssertEqual(frame.centerLongitude, camera.centerLongitude)
+        XCTAssertEqual(frame.zoom, camera.zoom)
+        XCTAssertEqual(frame.bearing, camera.bearing)
+        XCTAssertEqual(frame.pitch, camera.pitch)
     }
 
 
-    func testRejectsStoredFrameFarFromPinAnchor() {
-        let montreal = MapCameraFrame(
-            centerLatitude: 45.4295,
-            centerLongitude: -73.5534,
-            zoom: 12,
-            bearing: 0,
-            pitch: MapCameraFrameResolver.defaultPitch
-        )
-        XCTAssertNil(MapCameraFrameResolver.storedFrameIfNearPins(montreal, pins: [pin]))
-    }
-
-    func testResolveIgnoresStaleStoredCameraOnRequest() {
+    func testResolveHonorsRequestCameraVerbatimEvenFarFromPins() {
+        // The map is the map: a camera far from the pins (e.g. the user panned away) is still the real
+        // camera and is returned as-is — never swapped for a pin-centered substitute.
         let montreal = MapCameraFrame(
             centerLatitude: 45.4295,
             centerLongitude: -73.5534,
@@ -61,8 +58,9 @@ final class MapCameraFrameResolverTests: XCTestCase {
             cameraFrame: montreal
         )
         let frame = MapCameraFrameResolver.resolve(for: request)
-        XCTAssertEqual(frame.centerLatitude, pin.latitude, accuracy: 0.0001)
-        XCTAssertEqual(frame.centerLongitude, pin.longitude, accuracy: 0.0001)
+        XCTAssertEqual(frame.centerLatitude, montreal.centerLatitude, accuracy: 0.0001)
+        XCTAssertEqual(frame.centerLongitude, montreal.centerLongitude, accuracy: 0.0001)
+        XCTAssertEqual(frame.pitch, montreal.pitch, accuracy: 0.0001)
     }
 
     func testFallsBackToPinCenterWhenCameraMissing() {
@@ -81,7 +79,55 @@ final class MapCameraFrameResolverTests: XCTestCase {
         XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
     }
 
-    func testExpandedInitialFrameUsesExpandedPitch() {
+    func testCentersOnPinBoundingBoxMidpoint() {
+        let second = MapPin(
+            id: UUID(uuidString: "B2B2B2B2-B2B2-B2B2-B2B2-B2B2B2B2B2B2")!,
+            latitude: 40.7628,
+            longitude: -73.9740,
+            pinHeading: "Midtown",
+            pinSubheading: "",
+            icon: "building.2",
+            isPrimary: false
+        )
+        let request = MapContentRequest(
+            id: "nyc",
+            phase: .live,
+            isExpanded: false,
+            preferredZoom: 15,
+            pins: [pin, second]
+        )
+
+        let frame = MapCameraFrameResolver.resolve(for: request)
+        XCTAssertEqual(frame.centerLatitude, (pin.latitude + second.latitude) / 2, accuracy: 0.0001)
+        XCTAssertEqual(frame.centerLongitude, (pin.longitude + second.longitude) / 2, accuracy: 0.0001)
+        XCTAssertEqual(frame.zoom, 15)
+    }
+
+    func testCameraSettledOnlyWhenLiveCameraMatchesTarget() {
+        let target = MapCameraFrame(
+            centerLatitude: pin.latitude,
+            centerLongitude: pin.longitude,
+            zoom: 15,
+            bearing: 0,
+            pitch: 0
+        )
+        let atDefault = MapCameraFrame(
+            centerLatitude: 0,
+            centerLongitude: 0,
+            zoom: 1,
+            bearing: 0,
+            pitch: 0
+        )
+
+        // Style default/world camera != target, so the cover holds through the fly-to.
+        XCTAssertFalse(MapCameraFrameResolver.isCameraSettledAtTarget(atDefault, target: target))
+        // Live camera has reached the target: settled.
+        XCTAssertTrue(MapCameraFrameResolver.isCameraSettledAtTarget(target, target: target))
+        // No camera reported yet: not settled.
+        XCTAssertFalse(MapCameraFrameResolver.isCameraSettledAtTarget(nil, target: target))
+    }
+
+    func testExpandedInitialFrameUsesCollapsedPitchForTransitLabels() {
         let request = MapContentRequest(
             id: "nyc",
             phase: .live,
@@ -90,6 +136,6 @@ final class MapCameraFrameResolverTests: XCTestCase {
             pins: [pin]
         )
         let frame = MapCameraFrameResolver.resolve(for: request)
-        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.expandedPitch)
+        XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
     }
 }

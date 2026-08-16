@@ -1,6 +1,11 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 public enum GeoKitMapTheme {
     public static let accent = Color(red: 69 / 255, green: 56 / 255, blue: 178 / 255)
@@ -19,9 +24,15 @@ public enum GeoKitMapTheme {
 
 enum GeoKitPinIcon {
     static func image(named name: String) -> Image {
+        #if canImport(UIKit)
         if UIImage(systemName: name) != nil {
             return Image(systemName: name)
         }
+        #elseif canImport(AppKit)
+        if NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil {
+            return Image(systemName: name)
+        }
+        #endif
         return Image(systemName: "mappin.circle.fill")
     }
 }

@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import CoreLocation
 import GeoKitContract
 import GeoKitUI
@@ -20,6 +21,7 @@ struct GeoKitMapboxMapContent: View {
     @State private var liveCameraState: CameraState?
     @State private var selectedPinId: UUID?
     @State private var appliedCameraFrame: MapCameraFrame?
+    @State private var trackedIdentity: LiveMapRequestIdentity?
 
     var body: some View {
         phaseContent
@@ -27,18 +29,25 @@ struct GeoKitMapboxMapContent: View {
                 seedTransitionSnapshotIfNeeded()
                 seedViewportIfNeeded()
                 seedSelectedPinIfNeeded()
+                trackedIdentity = LiveMapRequestIdentity(request: request)
             }
             .onChange(of: transitionSnapshot) { _, _ in
                 seedTransitionSnapshotIfNeeded()
             }
             .onChange(of: request.id) { _, _ in
-                resetForCardChange()
+                handleCardIdentityChange()
             }
             .onChange(of: request.mapProviderId) { _, _ in
                 resetForProviderChange()
             }
             .onChange(of: request.cameraFrame) { _, frame in
                 guard let frame else { return }
+                // Never jump the live map backward to a lagging store/request frame. The user may
+                // already be looking at a newer pan held in ``GeoKitLiveCameraCache``.
+                if let live = GeoKitLiveCameraCache.frame(for: request.id),
+                   !live.isApproximatelyEqual(to: frame) {
+                    return
+                }
                 applyCameraFrame(frame)
             }
             .onChange(of: request.selectedPinId) { _, pinId in
@@ -53,6 +62,29 @@ struct GeoKitMapboxMapContent: View {
         collapsedSnapshot = transitionSnapshot
     }
 
+    private func handleCardIdentityChange() {
+        let next = LiveMapRequestIdentity(request: request)
+        let action = LiveMapRetargetPolicy.cardChangeAction(previous: trackedIdentity, next: next)
+        switch action {
+        case .retargetCameraAndPins:
+            retargetForCardChange()
+        case .reloadStyle:
+            resetForCardChange()
+        }
+        trackedIdentity = next
+    }
+
+    /// Session-global surface: jump camera and swap pins without tearing down Mapbox.
+    private func retargetForCardChange() {
+        liveCameraState = nil
+        appliedCameraFrame = nil
+        seedSelectedPinIfNeeded()
+        applyCameraFrame(request.cameraFrame)
+        if let transitionSnapshot {
+            collapsedSnapshot = transitionSnapshot
+        }
+    }
+
     private func resetForCardChange() {
         appliedCameraFrame = nil
         collapsedSnapshot = nil
@@ -60,7 +92,6 @@ struct GeoKitMapboxMapContent: View {
         seedSelectedPinIfNeeded()
         applyCameraFrame(request.cameraFrame)
     }
-
 
     private func resetForProviderChange() {
         collapsedSnapshot = nil
@@ -117,7 +148,11 @@ struct GeoKitMapboxMapContent: View {
                 selectedPinId: selectedPinId,
                 onPinTap: { pin, _ in togglePinSelection(pin) },
                 onPinInteractionBegan: {},
-                frozenSnapshot: collapsedSnapshot
+                // Fall back to the bridged transition snapshot directly: `collapsedSnapshot` is only seeded in
+                // `onAppear`/`onChange`, which SwiftUI defers while `isTransitioning` is true. On the focused center slot
+                // handoff that leaves it nil for the live surface's first frames, so the base layer would paint gray
+                // ("image then vanishes"). The environment snapshot is available at construction, bridging that gap.
+                frozenSnapshot: collapsedSnapshot ?? transitionSnapshot
             )
         }
     }

@@ -1,3 +1,4 @@
+#if os(iOS) || os(macOS)
 import GeoKitCore
 import XCTest
 
@@ -56,3 +57,5 @@ final class H3Tests: XCTestCase {
         XCTAssertEqual(cellArea, fixture.expectedCellAreaM2, accuracy: fixture.cellAreaToleranceM2)
     }
 }
+
+#endif

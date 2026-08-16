@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 @_spi(Restricted) import MapboxMaps
 import GeoKitContract
 import GeoKitUI

@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
+
 import CoreLocation
 import Foundation
 import GeoKitContract
@@ -12,6 +13,8 @@ import UIKit
 /// omitted — only the live front card draws pins.
 enum GeoKitMapboxStaticImageService {
     private static let maxDimension = 1280
+    /// Mapbox Static Images URL suffix — actual pixel size is this factor times width×height.
+    private static let urlRetinaScale: CGFloat = 2
 
     enum CaptureError: Error, CustomStringConvertible {
         case invalidSize(CGSize)
@@ -20,6 +23,7 @@ enum GeoKitMapboxStaticImageService {
         case urlConstruction
         case httpError(Int)
         case imageDecoding
+        case blankPlate
 
         var description: String {
             switch self {
@@ -29,6 +33,7 @@ enum GeoKitMapboxStaticImageService {
             case .urlConstruction: "failed to construct Static Images API URL"
             case .httpError(let code): "Mapbox Static Images API returned HTTP \(code)"
             case .imageDecoding: "response data could not be decoded as UIImage"
+            case .blankPlate: "Mapbox Static Images API returned a uniform blank plate"
             }
         }
     }
@@ -45,14 +50,25 @@ enum GeoKitMapboxStaticImageService {
             throw CaptureError.invalidStyleURI(request.mapStyleURI)
         }
 
-        let frame = MapCameraFrameResolver.resolve(for: request)
+        let frame = MapboxStaticImageCameraLimits.clamped(
+            forStaticImages: MapCameraFrameResolver.resolve(for: request)
+        )
         let center = CLLocationCoordinate2D(latitude: frame.centerLatitude, longitude: frame.centerLongitude)
         let zoom = frame.zoom
         let bearing = frame.bearing
         let pitch = frame.pitch
 
-        let width = min(max(Int(size.width.rounded()), 1), maxDimension)
-        let height = min(max(Int(size.height.rounded()), 1), maxDimension)
+        let displayScale = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.screen.nativeScale ?? UIScreen.main.scale
+        let width = min(
+            max(Int(ceil(size.width * displayScale / urlRetinaScale)), 1),
+            maxDimension
+        )
+        let height = min(
+            max(Int(ceil(size.height * displayScale / urlRetinaScale)), 1),
+            maxDimension
+        )
 
         let camera = String(
             format: "%.6f,%.6f,%.2f,%.2f,%.2f",
@@ -71,15 +87,29 @@ enum GeoKitMapboxStaticImageService {
         guard let url = components.url else {
             throw CaptureError.urlConstruction
         }
+        let styleId = style.styleId
+        let requestId = request.id
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        // Never reuse a cached blank plate — Mapbox can 200 a uniform gray for a miss, and
+        // URLSession would then serve that forever for the same camera URL (~15ms "retries").
+        var urlRequest = URLRequest(url: url)
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard (200..<300).contains(status) else {
             throw CaptureError.httpError(status)
         }
-        guard let image = UIImage(data: data) else {
-            throw CaptureError.imageDecoding
-        }
+        // Decode + plate check off the main actor — MainActor warmers await this during settle.
+        let image: UIImage = try await Task.detached(priority: .utility) {
+            guard let decoded = UIImage(data: data) else {
+                throw CaptureError.imageDecoding
+            }
+            let accepted = GeoKitMapboxStaticImageValidator.hasVisibleMapContent(decoded)
+            guard accepted else {
+                throw CaptureError.blankPlate
+            }
+            return decoded
+        }.value
         return image
     }
 

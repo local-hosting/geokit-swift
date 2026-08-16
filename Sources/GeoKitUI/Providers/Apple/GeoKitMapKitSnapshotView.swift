@@ -1,4 +1,5 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS) || os(tvOS) || os(macOS)
+
 import CoreLocation
 import GeoKitContract
 import MapKit
@@ -7,7 +8,7 @@ import SwiftUI
 struct GeoKitMapKitSnapshotView: View {
     let request: MapContentRequest
     @Binding var position: MapCameraPosition
-    @Binding var snapshot: UIImage?
+    @Binding var snapshot: GeoKitPlatformImage?
     @State private var lastCacheKey: String?
     @State private var refreshTask: Task<Void, Never>?
     @State private var captureAttemptsExhausted = false
@@ -18,7 +19,7 @@ struct GeoKitMapKitSnapshotView: View {
             ZStack {
                 GeoKitMapTheme.placeholderBackground
                 if let image = snapshot {
-                    Image(uiImage: image)
+                    Image(geoKitImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: size.width, height: size.height)
@@ -136,7 +137,7 @@ enum GeoKitMapKitSnapshotService {
         request: MapContentRequest,
         size: CGSize,
         mapStyle: AppleMapsProviderConfig.MapStyle
-    ) async -> UIImage? {
+    ) async -> GeoKitPlatformImage? {
         guard MapSurfaceMountPolicy.shouldBeginSnapshotCapture(layoutSize: size) else { return nil }
         guard let mapCamera = mkMapCamera(from: position, request: request) else { return nil }
 
@@ -144,7 +145,9 @@ enum GeoKitMapKitSnapshotService {
             let options = MKMapSnapshotter.Options()
             options.camera = mapCamera
             options.size = size
+            #if canImport(UIKit)
             options.scale = UITraitCollection.current.displayScale
+            #endif
             options.mapType = mapStyle.snapshotMapType
 
             let snapshotter = MKMapSnapshotter(options: options)
