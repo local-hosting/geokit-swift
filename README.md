@@ -1,6 +1,6 @@
 # GeoKit (Swift)
 
-Swift counterpart to [`@corio-platforms/geokit`](https://github.com/corio-platforms/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
+Swift counterpart to [`@doppler-group/geokit`](https://github.com/doppler-group/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
 
 ## Targets
 

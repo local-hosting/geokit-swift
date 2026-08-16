@@ -1,7 +1,7 @@
 import Ch3
 import Foundation
 
-/// H3 helpers shaped like Node `@corio-platforms/geokit` `/h3`.
+/// H3 helpers shaped like Node `@doppler-group/geokit` `/h3`.
 ///
 /// Backed directly by Uber's H3 C library (vendored as the `Ch3` binary
 /// framework) so no C source target is compiled into the build graph.
