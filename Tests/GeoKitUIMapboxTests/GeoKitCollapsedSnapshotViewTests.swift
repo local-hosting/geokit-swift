@@ -143,7 +143,7 @@ private final class GeoKitViewTestWindowHost {
 
 @MainActor
 private enum GeoKitViewTestFixtures {
-    static let demoStyleURI = "mapbox://styles/corio/cm1gmmsh900xd01nw38jtafz7"
+    static let demoStyleURI = "mapbox://styles/mapbox/streets-v12"
 
     static func snapshotRequest() -> MapContentRequest {
         MapContentRequest(

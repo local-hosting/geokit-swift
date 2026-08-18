@@ -97,7 +97,7 @@ yarn --cwd ../geokit verify:parity   # or export:parity-fixtures only
 
 ## Related
 
-- Node geokit: `../geokit` (corio monorepo nested repo)
+- Node geokit: `../geokit` (sibling package in the doppler monorepo)
 - Plan: Swift GeoKit package migration phases (Places stack-first shell → map content → offline)
 
 ## Map provider switching
