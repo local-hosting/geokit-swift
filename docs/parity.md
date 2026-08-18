@@ -55,7 +55,7 @@ Swift GeoKitCore depends on [turf-swift](https://github.com/mapbox/turf-swift) f
 
 ## Tier 3 — Node-only (out of scope)
 
-CDN choropleth, MCP map tools, provider registry (Mapbox + Apple Maps), full Turf suite (union/difference/simplify/clustering).
+Choropleth datasets, host layer loaders, MCP map tools, full provider registry surface, extended Turf suite (union/difference/simplify/clustering). Host apps own those integrations outside geokit cores.
 
 ## Known differences
 

@@ -22,4 +22,6 @@
 | `@geokit/turf` | GeoKitCore | `Utils/turf/` + siblings | 1.5 |
 | `@geokit/contract` | GeoKitContract | `Lifecycle/`, `Providers/` | 2 |
 
+| Host geo layers | *(not in geokit)* | *(not in geokit-swift)* | Host app |
+
 See [`parity.md`](parity.md) for API-level fixture coverage.

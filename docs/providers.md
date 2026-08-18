@@ -12,7 +12,6 @@ See also [`geokit/docs/providers.md`](../geokit/docs/providers.md) (canonical cr
 | Mapbox runtime | `mapbox-provider.ts` | `GeoKitUIMapbox/` |
 | Apple runtime | — | `GeoKitUI/Providers/Apple/` |
 
-Globe CDN (JWT, cell layers, DMA shapes) is **not** in either package — use `@doppler-group/globe-static`.
 
 ## Provider switching
 
@@ -106,6 +105,15 @@ Scope: **Places / card map shell** (`GeoKitMapContent`, lifecycle, pins). Not th
 | `GeoKitRouteProgressGradient` | ✅ | ✅ | Expression builder; map wiring TBD |
 | `GeoKitMapViewportSettledCoordinator` | ✅ | ✅ | Generic coordinator |
 | `GeoKitMapboxViewportSettled.observe` | ✅ | ➖ | Mapbox Maps SDK only |
+
+---
+
+
+## Out of scope (both cores)
+
+DMA JWT, H3 cell layer catalogs, MCP map tools — host apps, not geokit cores.
+
+Geo math (`interpolateAlongPath`, H3, distance, etc.) is provider-agnostic in `geokit` / `GeoKitCore`.
 
 ---
 
