@@ -1,14 +1,14 @@
 import Foundation
 
-/// Keep snapshot style in sync with `@doppler-group/geokit/config/map-style` (`CORIO_MAPBOX_STYLE_URI`).
+/// Demo Mapbox style URI — override via host app config in production.
 enum GeoKitDemoConstants {
     /// Global Accord animation speed (`AX.Animation.speed`). `2/3` ≈ 1.5× slower motion.
     static let animationSpeed: Double = 2.0 / 3.0
 
-    /// Peek tiles and expand/collapse snapshots — light Corio style.
-    static let snapshotMapStyleURI = "mapbox://styles/corio/cm1gmmsh900xd01nw38jtafz7"
+    /// Peek tiles and expand/collapse snapshots — demo Mapbox style.
+    static let snapshotMapStyleURI = "mapbox://styles/mapbox/streets-v12"
 
-    /// Live GPU map — same Corio style as snapshots so crossfade is seamless.
+    /// Live GPU map — same style as snapshots so crossfade is seamless.
     static let liveMapStyleURI = snapshotMapStyleURI
 
     /// Registry bootstrap default (snapshots + Mapbox init).

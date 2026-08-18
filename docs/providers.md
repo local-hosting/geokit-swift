@@ -111,7 +111,7 @@ Scope: **Places / card map shell** (`GeoKitMapContent`, lifecycle, pins). Not th
 
 ## Out of scope (both cores)
 
-DMA JWT, H3 cell layer catalogs, MCP map tools — host apps, not geokit cores.
+Application data, auth, and integration tooling — host apps, not geokit cores.
 
 Geo math (`interpolateAlongPath`, H3, distance, etc.) is provider-agnostic in `geokit` / `GeoKitCore`.
 

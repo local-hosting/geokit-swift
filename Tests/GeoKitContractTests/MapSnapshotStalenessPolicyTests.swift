@@ -18,7 +18,7 @@ final class MapSnapshotStalenessPolicyTests: XCTestCase {
             id: "city-lights",
             phase: .snapshot,
             isExpanded: false,
-            mapStyleURI: "mapbox://styles/corio/test",
+            mapStyleURI: "mapbox://styles/mapbox/streets-v12",
             preferredZoom: 12,
             pins: [pin],
             selectedPinId: selectedPinId

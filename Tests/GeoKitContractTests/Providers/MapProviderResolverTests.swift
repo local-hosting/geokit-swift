@@ -24,7 +24,7 @@ final class MapProviderResolverTests: XCTestCase {
             id: "city-lights",
             phase: .snapshot,
             isExpanded: false,
-            mapStyleURI: "mapbox://styles/corio/demo"
+            mapStyleURI: "mapbox://styles/mapbox/streets-v12"
         )
         XCTAssertEqual(MapProviderResolver.resolve(for: request), .mapbox)
     }

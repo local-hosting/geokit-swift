@@ -8,7 +8,7 @@ import XCTest
 
 @MainActor
 final class GeoKitStaticSnapshotIntegrationTests: XCTestCase {
-    private let demoStyleURI = "mapbox://styles/corio/cm1gmmsh900xd01nw38jtafz7"
+    private let demoStyleURI = "mapbox://styles/mapbox/streets-v12"
     private let demoToken = "REDACTED_MAPBOX_TOKEN"
 
     override func setUp() {
