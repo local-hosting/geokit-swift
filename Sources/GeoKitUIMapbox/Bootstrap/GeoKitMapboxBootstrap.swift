@@ -34,7 +34,8 @@ enum GeoKitMapboxBootstrap {
             _ = GeoKitMapboxOfflineRegionStore.shared.prefetch(
                 request: prefetchRequest,
                 styleURI: styleURI,
-                policy: contentRequest.offlineContext?.policy ?? .cacheFirst
+                policy: contentRequest.offlineContext?.policy ?? .cacheFirst,
+                completion: { _ in }
             )
         }
         LiveMapSnapshotCoordinator.waitUntilSafeForSnapshot = {
