@@ -3,6 +3,7 @@
 import GeoKitContract
 import GeoKitUI
 import MapboxCommon
+import MapboxMaps
 import SwiftUI
 
 @MainActor
