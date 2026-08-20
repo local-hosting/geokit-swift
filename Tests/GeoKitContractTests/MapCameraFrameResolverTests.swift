@@ -138,4 +138,68 @@ final class MapCameraFrameResolverTests: XCTestCase {
         let frame = MapCameraFrameResolver.resolve(for: request)
         XCTAssertEqual(frame.pitch, MapCameraFrameResolver.collapsedPitch)
     }
+    func testIsNullIsland() {
+        let nullIsland = MapCameraFrame(centerLatitude: 0, centerLongitude: 0, zoom: 12, bearing: 0, pitch: 0)
+        let nyc = MapCameraFrame(centerLatitude: 40.7128, centerLongitude: -74.006, zoom: 12, bearing: 0, pitch: 0)
+        XCTAssertTrue(MapCameraFrameResolver.isNullIsland(nullIsland))
+        XCTAssertFalse(MapCameraFrameResolver.isNullIsland(nyc))
+    }
+
+    func testShouldDiscardStaleLiveCacheWhenPinsExist() {
+        let live = MapCameraFrame(centerLatitude: 0, centerLongitude: 0, zoom: 15, bearing: 0, pitch: 0)
+        let declared = MapCameraFrame(centerLatitude: 40.7527, centerLongitude: -73.9772, zoom: 15, bearing: 0, pitch: 0)
+        XCTAssertTrue(
+            MapCameraFrameResolver.shouldDiscardStaleLiveCache(live: live, declared: declared, pins: [pin])
+        )
+        XCTAssertFalse(
+            MapCameraFrameResolver.shouldDiscardStaleLiveCache(live: live, declared: declared, pins: [])
+        )
+    }
+
+    @MainActor
+    func testResolveForCardSessionDiscardsNullIslandLiveCacheWhenPinsExist() {
+        defer { GeoKitLiveCameraCache.remove(for: "nyc") }
+        GeoKitLiveCameraCache.note(
+            MapCameraFrame(centerLatitude: 0, centerLongitude: 0, zoom: 15, bearing: 0, pitch: 0),
+            for: "nyc"
+        )
+        let declared = MapCameraFrame(
+            centerLatitude: pin.latitude,
+            centerLongitude: pin.longitude,
+            zoom: 15,
+            bearing: 0,
+            pitch: 0
+        )
+        let frame = MapCameraFrameResolver.resolveForCardSession(
+            mapID: "nyc",
+            declared: declared,
+            pins: [pin],
+            isMapRendered: false
+        )
+        XCTAssertFalse(MapCameraFrameResolver.isNullIsland(frame))
+        XCTAssertEqual(frame.centerLatitude, pin.latitude, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testResolveForCardSessionUsesLiveCacheWhenMapRendered() {
+        defer { GeoKitLiveCameraCache.remove(for: "nyc") }
+        let livePan = MapCameraFrame(centerLatitude: 45.5, centerLongitude: -73.6, zoom: 14, bearing: 5, pitch: 10)
+        GeoKitLiveCameraCache.note(livePan, for: "nyc")
+        let declared = MapCameraFrame(
+            centerLatitude: pin.latitude,
+            centerLongitude: pin.longitude,
+            zoom: 12,
+            bearing: 0,
+            pitch: 0
+        )
+        let frame = MapCameraFrameResolver.resolveForCardSession(
+            mapID: "nyc",
+            declared: declared,
+            pins: [pin],
+            isMapRendered: true
+        )
+        XCTAssertEqual(frame.centerLatitude, livePan.centerLatitude, accuracy: 0.0001)
+        XCTAssertEqual(frame.bearing, livePan.bearing, accuracy: 0.01)
+    }
+
 }

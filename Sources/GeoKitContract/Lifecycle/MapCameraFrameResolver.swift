@@ -41,6 +41,54 @@ public enum MapCameraFrameResolver {
         return stored
     }
 
+    /// Epsilon for treating a camera center as null island (0°, 0°) — matches Tier 1 fixture lat/lon tolerance.
+    public static let nullIslandToleranceDegrees: Double = 0.0001
+
+    /// Whether the camera center is at (or effectively at) null island.
+    public static func isNullIsland(_ frame: MapCameraFrame) -> Bool {
+        abs(frame.centerLatitude) < nullIslandToleranceDegrees
+            && abs(frame.centerLongitude) < nullIslandToleranceDegrees
+    }
+
+    /// When locker hydration warms the live surface at null island before venue pins land, drop the stale
+    /// session cache once pins exist so the card's declared camera wins. User pans are never exactly 0,0.
+    public static func shouldDiscardStaleLiveCache(
+        live: MapCameraFrame,
+        declared: MapCameraFrame,
+        pins: [MapPin]
+    ) -> Bool {
+        guard !pins.isEmpty else { return false }
+        return isNullIsland(live) && !isNullIsland(declared)
+    }
+
+    /// Resolves the camera for a map card session — live cache, persisted store, and declared camera.
+    ///
+    /// When ``isMapRendered`` is true, the live session camera is authoritative (never passed through
+    /// ``validStoredFrame``, which would reject user pans far from declared). Persisted store frames still
+    /// use the gate so a stale reused card id cannot hijack launch.
+    @MainActor
+    public static func resolveForCardSession(
+        mapID: String,
+        declared: MapCameraFrame,
+        pins: [MapPin],
+        isMapRendered: Bool,
+        storedFrame: MapCameraFrame? = nil
+    ) -> MapCameraFrame {
+        if isMapRendered {
+            return GeoKitLiveCameraCache.frame(for: mapID)
+                ?? storedFrame
+                ?? declared
+        }
+        if let live = GeoKitLiveCameraCache.frame(for: mapID),
+           !shouldDiscardStaleLiveCache(live: live, declared: declared, pins: pins) {
+            return live
+        }
+        if GeoKitLiveCameraCache.frame(for: mapID) != nil {
+            GeoKitLiveCameraCache.remove(for: mapID)
+        }
+        return validStoredFrame(storedFrame, declared: declared) ?? declared
+    }
+
     /// Whether the live camera has arrived at its target (the card's declared/persisted camera). Used to hold
     /// the cold-load cover through the fly-to: the style's far-away default camera isn't approximately equal to
     /// the target, so the cover stays up until the map settles on the real camera.
