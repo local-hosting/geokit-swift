@@ -153,7 +153,7 @@ public final class GeoKitMapboxOfflineRegionStore {
         cancelPrefetch(mapId: mapId)
         progressByMapId.removeValue(forKey: mapId)
         progressDefaults.removeObject(forKey: progressKeyPrefix + mapId)
-        tileStore.removeTileRegion(forId: mapId) { result in
+        tileStore.removeRegion(forId: mapId) { result in
             switch result {
             case .success:
                 completion?(.success(()))
@@ -177,7 +177,7 @@ public final class GeoKitMapboxOfflineRegionStore {
         return TileRegionLoadOptions(
             geometry: geometry,
             descriptors: [descriptor],
-            metadata: ["mapId": .string(request.mapId)],
+            metadata: ["mapId": request.mapId],
             acceptExpired: true
         )
     }
