@@ -20,7 +20,7 @@ Provider parity checklist: [`providers.md`](providers.md).
 
 ## Tier 1.5 — Turf-backed geometry (v4)
 
-Swift GeoKitCore depends on [turf-swift](https://github.com/mapbox/turf-swift) for measurement and containment. Fixtures live under `turf.*` in `parity-fixtures.json` (version 4).
+Swift GeoKitCore depends on [turf-swift](https:/github.com/mapbox/geokit/core/turf-swift) for measurement and containment. Fixtures live under `turf.*` in `parity-fixtures.json` (version 4).
 
 | Module | Node export | Swift API | Turf primitive |
 |--------|-----------|-----------|----------------|
@@ -61,7 +61,7 @@ MCP map tools, full provider registry surface, extended Turf suite (union/differ
 
 - `getCenter` on Node uses Turf for feature collections; Swift uses axis-aligned bbox center.
 - `fitViewport(mapSize:)` is Swift-only size-aware zoom.
-- Node bearing/geohash helpers are curried; Swift uses named parameters.
+- Node bearing/geokit/core/geohash helpers are curried; Swift uses named parameters.
 - GeoJSON repair omits Turf-backed sliver/area filters; ring close + dedupe parity is covered.
 - Point buffers use Turf Swift circle (`vertices + 1` ring); Node `@turf/buffer` on points produces a denser ring.
 - Line/polygon buffers require Node geokit until turf-swift adds turf-buffer.

@@ -18,10 +18,10 @@ See also [`geokit/docs/providers.md`](../geokit/docs/providers.md) (canonical cr
 ```swift
 import GeoKitContract
 
-// Global default (before map content mounts)
+/ Global default (before map content mounts)
 GeoKitMapProviderRegistry.configure(provider: .apple, apple: .init(mapStyle: .standard))
 
-// Per-map override
+/ Per-map override
 MapContentRequest(
     id: "card-1",
     phase: .live,

@@ -1,15 +1,15 @@
 # GeoKit (Swift)
 
-Swift counterpart to [`@doppler/geokit`](https://github.com/doppler/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
+Swift counterpart to [`@twinfile/geokit`](https:/github.com/twinfile/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
 
 ## Targets
 
 | Target | Role | Node equivalent |
 |--------|------|-----------------|
-| **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@geokit` root / `utils/*` |
+| **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@twinfile/geokit/core`, `@twinfile/geokit/h3` |
 | **GeoKitContract** | `GeoKitRuntime`, `MapContentRequest` — linked by host before dlopen | app wiring + `types/` |
 | **GeoKitUIMapbox** | Mapbox provider, snapshots, live surface | optional Mapbox dep |
-| **GeoKitUI** | SwiftUI map surface, markers, snapshots, theme | `@geokit/ui` |
+| **GeoKitUI** | SwiftUI map surface, markers, snapshots, theme | `@twinfile/geokit/ui` |
 | **GeoKit** | `dlopen` entry + `GeoKitRegister` | side-effect registration |
 | **GeoKitTestApp** | Standalone iOS demo (`GeoKitTestApp/GeoKitTestApp.xcodeproj`) | geokit Vite demo |
 
@@ -76,7 +76,7 @@ Apps that link map UI directly (no `dlopen`) can depend on **GeoKitUI** + **GeoK
 
 ## H3
 
-H3 indexing uses the [`SwiftyH3`](https://github.com/pawelmajcher/SwiftyH3) package (wraps Uber's H3 C library). `GeoKitCore`'s `H3` enum is a thin adapter over it. Bump the version range in `Package.swift` when updating.
+H3 indexing uses the [`SwiftyH3`](https:/github.com/pawelmajcher/SwiftyH3) package (wraps Uber's H3 C library). `GeoKitCore`'s `H3` enum is a thin adapter over it. Bump the version range in `Package.swift` when updating.
 
 ## Development
 
@@ -92,25 +92,25 @@ swift test --filter GeoKitContractTests
 `Tests/GeoKitCoreTests/Fixtures/parity-fixtures.json` is the cross-platform contract. Regenerate from Node with:
 
 ```bash
-yarn --cwd ../geokit verify:parity   # or export:parity-fixtures only
+yarn --cwd ../geokit/src/geokit/core verify:parity   # or export:parity-fixtures only
 ```
 
 ## Related
 
-- Node geokit: `../geokit` (sibling package in the doppler monorepo)
+- Node geokit: [`../geokit`](../geokit) (sibling in the Twinfile workspace)
 - Plan: Swift GeoKit package migration phases (Places stack-first shell → map content → offline)
 
 ## Map provider switching
 
-Mirrors `@geokit/ui` provider selection:
+Mirrors `@twinfile/geokit/ui` provider selection:
 
 ```swift
 import GeoKitContract
 
-// Global default (before registerMapContent)
+/ Global default (before registerMapContent)
 GeoKitMapProviderRegistry.configure(provider: .apple, apple: .init(mapStyle: .standard))
 
-// Per-map override
+/ Per-map override
 MapContentRequest(
     id: "card-1",
     phase: .live,

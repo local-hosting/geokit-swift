@@ -1,6 +1,6 @@
 import Foundation
 
-/// Shared lifecycle constants aligned with Node `@geokit/ui` map-freeze and placeholder helpers.
+/// Shared lifecycle constants aligned with Node `@twinfile/geokit/ui` map-freeze and placeholder helpers.
 public enum GeoKitMapLifecycleConstants {
     public static let stuckPlaceholderMs: TimeInterval = 10
     public static let webGLContextsPerMap = 2

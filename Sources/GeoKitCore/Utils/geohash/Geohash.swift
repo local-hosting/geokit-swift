@@ -13,7 +13,7 @@ public struct GeohashNeighbors: Equatable, Sendable {
     public var array: [String] { [n, ne, e, se, s, sw, w, nw] }
 }
 
-/// Geohash helpers shaped like Node `@doppler/geokit` `/geohash`.
+/// Geohash helpers shaped like Node `@twinfile/geokit` `/geohash`.
 public enum Geohash {
     private static let base32 = Array("0123456789bcdefghjkmnpqrstuvwxyz")
     private static let validPattern = try! NSRegularExpression(pattern: "^[0-9b-hjkmnp-z]+$")
