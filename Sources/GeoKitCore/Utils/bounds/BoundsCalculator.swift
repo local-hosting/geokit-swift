@@ -22,19 +22,7 @@ public enum BoundsCalculator {
 
     /// Center of a bounds box as `[lat, lon]`, matching Node geokit `getCenter` for axis-aligned boxes.
     public static func center(of bounds: Bounds) -> LatLon? {
-        guard bounds.count == 4 else { return nil }
-
-        let minLon = bounds[0]
-        let minLat = bounds[1]
-        let maxLon = bounds[2]
-        let maxLat = bounds[3]
-
-        guard [minLon, minLat, maxLon, maxLat].allSatisfy(\.isFinite) else { return nil }
-
-        return LatLon(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
+        BoundsGeo.getCenter(from: bounds)
     }
 
     /// Port of Node `@twinfile/geokit/core/bounds` `calculateZoomFromBounds`.
