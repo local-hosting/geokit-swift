@@ -472,7 +472,7 @@
           "radiusMeters": 1000,
           "steps": 64,
           "expectedRingCount": 65,
-          "expectedAreaM2": 3141277.244485269,
+          "expectedAreaM2": 3136557.14888516,
           "areaToleranceM2": 50000
         }
       },
@@ -851,7 +851,7 @@
         "radiusMeters": 1000,
         "steps": 64,
         "expectedRingCount": 65,
-        "expectedAreaM2": 3141277.244485269,
+        "expectedAreaM2": 3136557.14888516,
         "areaToleranceM2": 50000
       }
     },

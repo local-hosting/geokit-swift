@@ -1,7 +1,7 @@
 import Foundation
 import GeoKitContract
 
-/// UI lifecycle helpers aligned with Node `@geokit/ui` map-freeze and placeholder timing.
+/// UI lifecycle helpers aligned with Node `@twinfile/geokit/ui` map-freeze and placeholder timing.
 public enum GeoKitMapLifecycle {
     public static func delayForWebGLRelease(
         delay: Duration = .milliseconds(Int(GeoKitMapLifecycleConstants.defaultWebGLReleaseDelayMs * 1000))

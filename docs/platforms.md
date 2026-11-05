@@ -38,6 +38,6 @@ Uber H3 (`Ch3.xcframework` (SPM target `GeoKitCh3`)) links on **iOS and macOS** 
 
 ## References
 
-- [Mapbox — Work with visionOS](https://docs.mapbox.com/ios/maps/guides/work-with-visionos/)
-- [Mapbox Navigation — CarPlay](https://docs.mapbox.com/ios/navigation/guides/system-integration/carplay/) (Navigation SDK; Maps SDK uses same iOS slice)
+- [Mapbox — Work with visionOS](https:/docs.mapbox.com/ios/maps/guides/work-with-visionos/)
+- [Mapbox Navigation — CarPlay](https:/docs.mapbox.com/ios/navigation/guides/system-integration/carplay/) (Navigation SDK; Maps SDK uses same iOS slice)
 - Provider switching: `docs/parity.md` § Map provider switching
