@@ -1,4 +1,4 @@
-> TypeScript entry: [`geokit/docs/parity.md`](../geokit/docs/parity.md)
+> TypeScript entry: [`geokit/docs/parity.md`](../geokit/docs/parity.md) — **API cheat sheet** (imports, Tier 1 / 1.5 examples, Turf rules).
 
 # Node vs Swift GeoKit parity
 
@@ -20,7 +20,7 @@ Provider parity checklist: [`providers.md`](providers.md).
 
 ## Tier 1.5 — Turf-backed geometry (v4)
 
-Swift GeoKitCore depends on [turf-swift](https:/github.com/mapbox/geokit/core/turf-swift) for measurement and containment. Fixtures live under `turf.*` in `parity-fixtures.json` (version 4).
+Swift GeoKitCore depends on [turf-swift](https://github.com/mapbox/turf-swift) for measurement and containment. Fixtures live under `turf.*` in `parity-fixtures.json` (version 4).
 
 | Module | Node export | Swift API | Turf primitive |
 |--------|-----------|-----------|----------------|
@@ -49,9 +49,8 @@ Swift GeoKitCore depends on [turf-swift](https:/github.com/mapbox/geokit/core/tu
 
 ## Fixture CI
 
-- Generate: `yarn --cwd ../geokit export:parity-fixtures`
-- Verify: `yarn --cwd ../geokit check:parity-fixtures`
-- Full: `yarn --cwd ../geokit verify:parity`
+- Full: `bash ../geokit/src/core/scripts/verify-parity.sh` (from Twinfile root: `bash geokit/src/core/scripts/verify-parity.sh`)
+- Export / check only: see [geokit `parity.md`](../geokit/docs/parity.md#fixture-contract)
 
 ## Tier 3 — Node-only (out of scope)
 
@@ -59,7 +58,7 @@ MCP map tools, full provider registry surface, extended Turf suite (union/differ
 
 ## Known differences
 
-- `getCenter` on Node uses Turf for feature collections; Swift uses axis-aligned bbox center.
+- `getCenter` on bounds and coordinate sets uses Turf bbox center on both sides (`BoundsGeo.getCenter` ↔ Node `getCenter` / `@turf/center`).
 - `fitViewport(mapSize:)` is Swift-only size-aware zoom.
 - Node bearing/geokit/core/geohash helpers are curried; Swift uses named parameters.
 - GeoJSON repair omits Turf-backed sliver/area filters; ring close + dedupe parity is covered.

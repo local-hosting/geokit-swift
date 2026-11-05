@@ -46,4 +46,48 @@ public enum BoundsGeo {
         let polygon = GeoJSONPolygon(coordinates: [ring])
         return GeoJSONValidation.isValidPolygon(polygon) ? polygon : nil
     }
+
+    /// Turf-backed center — mirrors Node `getCenter` (`@turf/center` on bbox / multipoint / features).
+    public static func getCenter(from bounds: Bounds) -> LatLon? {
+        guard let polygon = bboxToPolygonGeometry(bounds),
+              let turfPolygon = TurfBridge.turfPolygon(from: polygon),
+              let center = turfPolygon.center else {
+            return nil
+        }
+        return TurfBridge.latLon(center)
+    }
+
+    public static func getCenter(from coordinates: [LatLon]) -> LatLon? {
+        guard !coordinates.isEmpty else { return nil }
+        if coordinates.count == 1 {
+            return coordinates[0]
+        }
+        guard let bounds = getBounds(from: coordinates) else { return nil }
+        return getCenter(from: bounds)
+    }
+
+    public static func getCenter(from features: [GeoJSONFeature]) -> LatLon? {
+        let geometries = features.compactMap(\.geometry)
+        return getCenter(fromGeometries: geometries)
+    }
+
+    public static func getCenter(from collection: GeoJSONFeatureCollection) -> LatLon? {
+        getCenter(from: collection.features)
+    }
+
+    public static func getCenter(from geometry: GeoJSONGeometry) -> LatLon? {
+        getCenter(fromGeometries: [geometry])
+    }
+
+    private static func getCenter(fromGeometries geometries: [GeoJSONGeometry]) -> LatLon? {
+        var turfCoordinates: [LocationCoordinate2D] = []
+        for geometry in geometries {
+            turfCoordinates.append(contentsOf: TurfBridge.allCoordinates(from: geometry))
+        }
+        guard !turfCoordinates.isEmpty,
+              let boundingBox = Turf.BoundingBox(from: turfCoordinates) else {
+            return nil
+        }
+        return getCenter(from: TurfBridge.bounds(from: boundingBox))
+    }
 }

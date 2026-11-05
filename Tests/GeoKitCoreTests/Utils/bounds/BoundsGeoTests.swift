@@ -18,4 +18,27 @@ final class BoundsGeoTests: XCTestCase {
             XCTAssertEqual(actual, expected, accuracy: 0.0001)
         }
     }
+
+    func testGetCenterFromBoundsMatchesFixture() throws {
+        let fixtures = try ParityFixtures.load()
+        let center = BoundsGeo.getCenter(from: fixtures.bounds.centerFromBounds.bounds)
+        XCTAssertNotNil(center)
+        XCTAssertEqual(center!.latitude, fixtures.bounds.centerFromBounds.center.latitude, accuracy: 0.0001)
+        XCTAssertEqual(center!.longitude, fixtures.bounds.centerFromBounds.center.longitude, accuracy: 0.0001)
+    }
+
+    func testGetCenterFromCoordinatesUsesTurfBBoxCenter() throws {
+        let fixtures = try ParityFixtures.load()
+        let points = fixtures.bounds.nycPair.points.map(\.latLon)
+        guard let bounds = BoundsCalculator.fromCoordinates(points) else {
+            XCTFail("expected bounds")
+            return
+        }
+        let fromCoords = BoundsGeo.getCenter(from: points)
+        let fromBounds = BoundsGeo.getCenter(from: bounds)
+        XCTAssertNotNil(fromCoords)
+        XCTAssertNotNil(fromBounds)
+        XCTAssertEqual(fromCoords!.latitude, fromBounds!.latitude, accuracy: 0.0001)
+        XCTAssertEqual(fromCoords!.longitude, fromBounds!.longitude, accuracy: 0.0001)
+    }
 }
