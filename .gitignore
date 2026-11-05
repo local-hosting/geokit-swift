@@ -12,3 +12,6 @@ build/
 /GeoKitTestApp/.derivedData
 /GeoKitTestApp/.logs
 /.logs
+
+# Cursor local agent config (rules, mcp, hooks) — not versioned
+.cursor/
