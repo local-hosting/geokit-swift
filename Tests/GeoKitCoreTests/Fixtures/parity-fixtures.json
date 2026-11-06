@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "description": "Shared parity fixtures — generated from geokit",
   "coordinates": {
     "nyc": {
@@ -925,6 +925,66 @@
           40.71
         ]
       }
+    }
+  },
+  "offline": {
+    "defaults": {
+      "webMaxPrefetchZoom": 15,
+      "webMaxTileCount": 8000,
+      "nativeMapboxMaxPrefetchZoom": 17,
+      "liveMapCoverageThreshold": 0.8,
+      "snapshotFallbackCoverageThreshold": 0.5
+    },
+    "webZoomClamp": {
+      "bounds": {
+        "south": 40.7,
+        "west": -74.1,
+        "north": 40.8,
+        "east": -73.9
+      },
+      "inputMinZoom": 10,
+      "inputMaxZoom": 20,
+      "expectedMaxZoom": 15
+    },
+    "tileCount": {
+      "bounds": {
+        "south": 40.7,
+        "west": -74.1,
+        "north": 40.8,
+        "east": -73.9
+      },
+      "minZoom": 10,
+      "maxZoom": 11,
+      "expected": 6,
+      "enumerated": 6
+    },
+    "sparseCoverage": {
+      "tilesCached": 10,
+      "tilesRequired": 100,
+      "policy": "snapshotFallback",
+      "recommendsLiveMap": false,
+      "recommendsSnapshotFallback": true,
+      "status": "idle"
+    },
+    "liveCoverage": {
+      "tilesCached": 90,
+      "tilesRequired": 100,
+      "policy": "cacheFirst",
+      "recommendsLiveMap": true,
+      "recommendsSnapshotFallback": false,
+      "status": "partial"
+    },
+    "oversizedPrefetch": {
+      "bounds": {
+        "south": 40.7,
+        "west": -74.1,
+        "north": 40.8,
+        "east": -73.9
+      },
+      "minZoom": 10,
+      "maxZoom": 12,
+      "maxTileCount": 1,
+      "expectedError": "estimatedTileCountExceedsBudget"
     }
   },
   "validation": {

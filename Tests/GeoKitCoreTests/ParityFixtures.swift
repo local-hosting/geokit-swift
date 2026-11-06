@@ -1,4 +1,5 @@
 import Foundation
+import GeoKitContract
 import GeoKitCore
 
 struct ParityFixtures: Decodable {
@@ -342,6 +343,66 @@ struct ParityFixtures: Decodable {
         let expected: Bool
     }
 
+    struct OfflineBoundsFixture: Decodable {
+        let south: Double
+        let west: Double
+        let north: Double
+        let east: Double
+
+        var bounds: MapOfflineBounds {
+            MapOfflineBounds(south: south, west: west, north: north, east: east)
+        }
+    }
+
+    struct OfflineDefaultsFixture: Decodable {
+        let webMaxPrefetchZoom: Int
+        let webMaxTileCount: Int
+        let nativeMapboxMaxPrefetchZoom: Int
+        let liveMapCoverageThreshold: Double
+        let snapshotFallbackCoverageThreshold: Double
+    }
+
+    struct OfflineZoomClampFixture: Decodable {
+        let bounds: OfflineBoundsFixture
+        let inputMinZoom: Int
+        let inputMaxZoom: Int
+        let expectedMaxZoom: Int
+    }
+
+    struct OfflineTileCountFixture: Decodable {
+        let bounds: OfflineBoundsFixture
+        let minZoom: Int
+        let maxZoom: Int
+        let expected: Int
+        let enumerated: Int
+    }
+
+    struct OfflineCoverageFixture: Decodable {
+        let tilesCached: Int
+        let tilesRequired: Int
+        let policy: String
+        let recommendsLiveMap: Bool
+        let recommendsSnapshotFallback: Bool
+        let status: String
+    }
+
+    struct OfflineOversizedFixture: Decodable {
+        let bounds: OfflineBoundsFixture
+        let minZoom: Int
+        let maxZoom: Int
+        let maxTileCount: Int
+        let expectedError: String
+    }
+
+    struct OfflineSection: Decodable {
+        let defaults: OfflineDefaultsFixture
+        let webZoomClamp: OfflineZoomClampFixture
+        let tileCount: OfflineTileCountFixture
+        let sparseCoverage: OfflineCoverageFixture
+        let liveCoverage: OfflineCoverageFixture
+        let oversizedPrefetch: OfflineOversizedFixture
+    }
+
     let coordinates: [String: CoordinateFixture]
     let bounds: BoundsSection
     let distance: DistanceSection
@@ -351,6 +412,7 @@ struct ParityFixtures: Decodable {
     let geohash: GeohashSection
     let geojson: GeoJSONSection
     let turf: TurfSection
+    let offline: OfflineSection
 
     struct BoundsSection: Decodable {
         let nycPair: BoundsPairFixture

@@ -14,6 +14,10 @@ bash geokit/src/core/scripts/verify-parity.sh
 
 Or from `geokit/`: `yarn verify:parity`. Export / drift-check details: [geokit `parity.md` — Fixture contract](../geokit/docs/parity.md#fixture-contract).
 
+## Tier 2 — offline policy fixtures
+
+`offline` in `parity-fixtures.json` locks zoom clamp, tile count, coverage thresholds, and the oversized-prefetch error. `GeoKitCoreTests` checks `MapOfflinePolicyResolver` against those numbers. Lifecycle timing stays a conceptual mirror.
+
 ## Tier 2 — map UI lifecycle
 
 | Node (`@twinfile/geokit/ui`, contract) | Swift |
