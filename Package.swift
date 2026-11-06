@@ -63,7 +63,7 @@ let package = Package(
         ),
         .testTarget(
             name: "GeoKitCoreTests",
-            dependencies: ["GeoKitCore"],
+            dependencies: ["GeoKitCore", "GeoKitContract"],
             resources: [.process("Fixtures")]
         ),
         .testTarget(
