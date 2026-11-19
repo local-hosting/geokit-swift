@@ -26,6 +26,10 @@ public enum BoundsCalculator {
     }
 
     /// Port of Node `@local-hosting/geokit/core/bounds` `calculateZoomFromBounds`.
+    public static func calculateZoomFromBounds(_ bounds: Bounds) -> Double {
+        zoom(from: bounds)
+    }
+
     public static func zoom(from bounds: Bounds) -> Double {
         guard bounds.count == 4 else { return 10 }
 
@@ -61,6 +65,10 @@ public enum BoundsCalculator {
     }
 
     /// Port of Node `@local-hosting/geokit/core/bounds` `calculateCenterAndZoom`.
+    public static func calculateCenterAndZoom(from bounds: Bounds) -> CenterAndZoom? {
+        centerAndZoom(from: bounds)
+    }
+
     public static func centerAndZoom(from bounds: Bounds) -> CenterAndZoom? {
         guard bounds.count == 4, let center = center(of: bounds) else { return nil }
         return CenterAndZoom(
@@ -131,6 +139,10 @@ public enum BoundsCalculator {
         let rounded = floor(zoom * 100) / 100
 
         return ViewportFit(center: center, zoom: rounded)
+    }
+
+    public static func isWithinBounds(_ bounds: Bounds, coordinate: LatLon) -> Bool {
+        isWithin(bounds, coordinate: coordinate)
     }
 
     public static func isWithin(_ bounds: Bounds, coordinate: LatLon) -> Bool {

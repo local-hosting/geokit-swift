@@ -6,8 +6,8 @@ Quick path reference (Swift target → `Sources/`):
 
 | Swift target | Folder |
 |--------------|--------|
-| GeoKitCore | `GeoKitCore/Utils/{bounds,bearing,coordinates,distance,geohash,geojson,h3,turf,…}/`, `Types/`, `Constants/` |
-| GeoKitContract | `GeoKitContract/{Types,Lifecycle,Policy,Runtime,Providers}/` |
+| GeoKitCore | `GeoKitCore/Utils/{bounds,bearing,coordinates,distance,geohash,geojson,h3,turf,…}/`, `Types/`, `Constants/` — Node export names also live in mirrored files (`CalculateZoom.swift`, `Encode.swift`, `AlongPath.swift`, …) |
+| GeoKitContract | `GeoKitContract/{Types,Lifecycle,Policy,Runtime,Providers}/` + `Offline.swift` (same exports as `contract/offline.ts`) |
 | GeoKitUI | `GeoKitUI/{Components,Bootstrap,Utils,Policy,Stores}/` |
 | GeoKitUIMapbox | `GeoKitUIMapbox/` |
 | GeoKit | `GeoKit/Register/` |

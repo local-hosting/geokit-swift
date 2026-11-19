@@ -21,6 +21,65 @@ public struct MapOfflineTileCoordinate: Sendable, Equatable, Codable {
 }
 
 public enum MapOfflinePolicyResolver {
+    public static func validateOfflineBounds(_ bounds: MapOfflineBounds) throws {
+        try validate(bounds: bounds)
+    }
+
+    public static func defaultOfflineBudget(for platform: MapOfflinePlatform) -> MapOfflineStorageBudget {
+        defaultBudget(for: platform)
+    }
+
+    public static func normalizeOfflineZoomRange(
+        _ range: MapOfflineZoomRange,
+        platform: MapOfflinePlatform
+    ) -> MapOfflineZoomRange {
+        normalizeZoomRange(range, platform: platform)
+    }
+
+    public static func estimateOfflineTileCount(
+        bounds: MapOfflineBounds,
+        zoomRange: MapOfflineZoomRange
+    ) -> Int {
+        estimateTileCount(bounds: bounds, zoomRange: zoomRange)
+    }
+
+    public static func offlineRegionStatus(fractionComplete: Double) -> MapOfflineRegionStatus {
+        regionStatus(fractionComplete: fractionComplete)
+    }
+
+    public static func resolveOfflineCoverage(
+        tilesCached: Int,
+        tilesRequired: Int,
+        policy: MapOfflinePolicy
+    ) -> MapOfflineCoverage {
+        coverage(tilesCached: tilesCached, tilesRequired: tilesRequired, policy: policy)
+    }
+
+    public static func validateOfflinePrefetchRequest(
+        _ request: MapOfflinePrefetchRequest,
+        platform: MapOfflinePlatform
+    ) throws -> MapOfflinePrefetchRequest {
+        try validate(request: request, platform: platform)
+    }
+
+    public static func enumerateOfflineTileCoordinates(
+        bounds: MapOfflineBounds,
+        zoomRange: MapOfflineZoomRange
+    ) -> [MapOfflineTileCoordinate] {
+        enumerateTileCoordinates(bounds: bounds, zoomRange: zoomRange)
+    }
+
+    public static func defaultOfflineZoomRangeForMap(
+        centerZoom: Double,
+        platform: MapOfflinePlatform = .web
+    ) -> MapOfflineZoomRange {
+        defaultZoomRange(for: centerZoom, platform: platform)
+    }
+
+    public static func resolveOfflineBoundsFromPins(_ pins: [MapPin], padding: Double = 0.01) -> MapOfflineBounds? {
+        boundsFromPins(pins, padding: padding)
+    }
+
     public static func validate(bounds: MapOfflineBounds) throws {
         guard bounds.south < bounds.north,
               bounds.west < bounds.east,
