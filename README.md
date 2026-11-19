@@ -95,11 +95,11 @@ swift test --filter GeoKitContractTests
 bash ../geokit/src/core/scripts/verify-parity.sh
 ```
 
-From the Twinfile repo root: `bash geokit/src/core/scripts/verify-parity.sh`. See [`geokit/docs/parity.md`](../geokit/docs/parity.md).
+From the `local-hosting` repo root: `bash geokit/src/core/scripts/verify-parity.sh`. See [`geokit/docs/parity.md`](../geokit/docs/parity.md).
 
 ## Related
 
-- Node geokit: [`../geokit`](../geokit) (sibling in the Twinfile workspace)
+- Node geokit: [`../geokit`](../geokit) (sibling in the local-hosting workspace)
 - Plan: Swift GeoKit package migration phases (Places stack-first shell → map content → offline)
 
 ## Map provider switching

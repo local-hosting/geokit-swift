@@ -18,6 +18,10 @@ public enum Geohash {
     private static let base32 = Array("0123456789bcdefghjkmnpqrstuvwxyz")
     private static let validPattern = try! NSRegularExpression(pattern: "^[0-9b-hjkmnp-z]+$")
 
+    public static func encodeGeohash(_ coordinate: LatLon, precision: Int = 10) -> String {
+        encode(coordinate, precision: precision)
+    }
+
     public static func encode(_ coordinate: LatLon, precision: Int = 10) -> String {
         let lat = coordinate.latitude
         let lon = coordinate.longitude

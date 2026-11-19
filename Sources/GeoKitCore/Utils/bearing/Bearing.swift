@@ -1,6 +1,11 @@
 import Foundation
 
 public enum Bearing {
+    /// Same as Node `bearing(from)(to)`.
+    public static func bearing(from: LatLon, to: LatLon) -> Double {
+        initial(from: from, to: to)
+    }
+
     /// Initial bearing (forward azimuth) in degrees from north, range `[0, 360)`.
     public static func initial(from: LatLon, to: LatLon) -> Double {
         if from == to { return 0 }
@@ -14,6 +19,11 @@ public enum Bearing {
         let bearingRad = atan2(y, x)
         let bearingDeg = bearingRad * GeoKitConstants.radiansToDegrees
         return normalizeDegrees(bearingDeg)
+    }
+
+    /// Same as Node `finalBearing(from)(to)`.
+    public static func finalBearing(from: LatLon, to: LatLon) -> Double {
+        final(from: from, to: to)
     }
 
     /// Final bearing at the destination point.

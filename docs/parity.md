@@ -6,7 +6,7 @@ Provider checklist: [`providers.md`](providers.md).
 
 ## Fixture CI
 
-From Twinfile repo root:
+From the local-hosting repo root:
 
 ```bash
 bash geokit/src/core/scripts/verify-parity.sh
@@ -34,7 +34,7 @@ Or from `geokit/`: `yarn verify:parity`. Export / drift-check details: [geokit `
 - **`Buffer.bufferLine` / `bufferPolygon`** — throw `BufferError.unsupportedGeometry` (use Node `@local-hosting/geokit/core/turf` or point buffers only).
 - **Point buffer rings** — Turf Swift circle (`vertices + 1`); Node `bufferPoint` is turf-free spherical (fixture tolerances cover drift).
 - **GeoJSON repair** — ring close + dedupe parity; no Turf sliver/area filters from Node.
-- **API shape** — named Swift static methods vs curried TypeScript helpers.
+- **API shape** — Swift also exposes **Node export names** (`calculateCenterAndZoom`, `encodeGeohash`, `validateOfflinePrefetchRequest`, `interpolateAlongPath`, …) via top-level functions and files mirroring `geokit/src/core/src/utils/*` (e.g. `bounds/CalculateZoom.swift`, `contract/Offline.swift`). Abbreviated enum helpers (`BoundsCalculator.centerAndZoom`, `Interpolation.alongPath`) remain for idiomatic Swift.
 
 ## Map provider switching
 

@@ -2,6 +2,11 @@ import Foundation
 import Turf
 
 public enum Interpolation {
+    /// Same as Node `interpolateAlongPath`.
+    public static func interpolateAlongPath(fraction: Double, coordinates: [LatLon]) -> LatLon? {
+        alongPath(fraction: fraction, coordinates: coordinates)
+    }
+
     /// Interpolate a point at a fraction along a polyline path.
     public static func alongPath(fraction: Double, coordinates: [LatLon]) -> LatLon? {
         guard !coordinates.isEmpty else { return nil }
