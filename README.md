@@ -1,15 +1,15 @@
 # GeoKit (Swift)
 
-Swift counterpart to [`@twinfile/geokit`](https:/github.com/twinfile/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
+Swift counterpart to [`@local-hosting/geokit`](https://github.com/local-hosting/geokit) — geo math in **GeoKitCore**, map UI in **GeoKitUI**, runtime contract in **GeoKitContract**, dynamic registration in **GeoKit**.
 
 ## Targets
 
 | Target | Role | Node equivalent |
 |--------|------|-----------------|
-| **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@twinfile/geokit/core`, `@twinfile/geokit/h3` |
+| **GeoKitCore** | Bounds, distance, bearing, coordinates, H3 — no Mapbox | `@local-hosting/geokit/core`, `@local-hosting/geokit/h3` |
 | **GeoKitContract** | `GeoKitRuntime`, `MapContentRequest` — linked by host before dlopen | app wiring + `types/` |
 | **GeoKitUIMapbox** | Mapbox provider, snapshots, live surface | optional Mapbox dep |
-| **GeoKitUI** | SwiftUI map surface, markers, snapshots, theme | `@twinfile/geokit/ui` |
+| **GeoKitUI** | SwiftUI map surface, markers, snapshots, theme | `@local-hosting/geokit/ui` |
 | **GeoKit** | `dlopen` entry + `GeoKitRegister` | side-effect registration |
 | **GeoKitTestApp** | Standalone iOS demo (`GeoKitTestApp/GeoKitTestApp.xcodeproj`) | geokit Vite demo |
 
@@ -104,7 +104,7 @@ From the Twinfile repo root: `bash geokit/src/core/scripts/verify-parity.sh`. Se
 
 ## Map provider switching
 
-Mirrors `@twinfile/geokit/ui` provider selection:
+Mirrors `@local-hosting/geokit/ui` provider selection:
 
 ```swift
 import GeoKitContract
