@@ -24,7 +24,7 @@ public struct AppleMapsProviderConfig: Sendable, Equatable {
     }
 }
 
-/// Global map provider configuration — mirrors `@twinfile/geokit/ui` `configure({ maptiler, mapbox })`.
+/// Global map provider configuration — mirrors `@local-hosting/geokit/ui` `configure({ maptiler, mapbox })`.
 public enum GeoKitMapProviderRegistry {
     nonisolated(unsafe) private static var configuredProvider: MapProviderId?
     nonisolated(unsafe) private static var mapboxConfig = MapboxProviderConfig()

@@ -20,7 +20,7 @@ Or from `geokit/`: `yarn verify:parity`. Export / drift-check details: [geokit `
 
 ## Tier 2 — map UI lifecycle
 
-| Node (`@twinfile/geokit/ui`, contract) | Swift |
+| Node (`@local-hosting/geokit/ui`, contract) | Swift |
 |------|-------|
 | `ensureMapReady` / bootstrap phases | `GeoKitMapBootstrap.prepareMapbox()` |
 | placeholder / snapshot / live | `MapContentPhase`, `MapContentPhaseResolver`, `GeoKitMapContentWithLifecycle` |
@@ -31,7 +31,7 @@ Or from `geokit/`: `yarn verify:parity`. Export / drift-check details: [geokit `
 ## Swift-specific behavior
 
 - **`fitViewport(mapSize:)`** — size-aware zoom on `BoundsCalculator` (no Node equivalent).
-- **`Buffer.bufferLine` / `bufferPolygon`** — throw `BufferError.unsupportedGeometry` (use Node `@twinfile/geokit/core/turf` or point buffers only).
+- **`Buffer.bufferLine` / `bufferPolygon`** — throw `BufferError.unsupportedGeometry` (use Node `@local-hosting/geokit/core/turf` or point buffers only).
 - **Point buffer rings** — Turf Swift circle (`vertices + 1`); Node `bufferPoint` is turf-free spherical (fixture tolerances cover drift).
 - **GeoJSON repair** — ring close + dedupe parity; no Turf sliver/area filters from Node.
 - **API shape** — named Swift static methods vs curried TypeScript helpers.

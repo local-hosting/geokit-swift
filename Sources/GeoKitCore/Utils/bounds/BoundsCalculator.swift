@@ -25,7 +25,7 @@ public enum BoundsCalculator {
         BoundsGeo.getCenter(from: bounds)
     }
 
-    /// Port of Node `@twinfile/geokit/core/bounds` `calculateZoomFromBounds`.
+    /// Port of Node `@local-hosting/geokit/core/bounds` `calculateZoomFromBounds`.
     public static func zoom(from bounds: Bounds) -> Double {
         guard bounds.count == 4 else { return 10 }
 
@@ -60,7 +60,7 @@ public enum BoundsCalculator {
         return 18
     }
 
-    /// Port of Node `@twinfile/geokit/core/bounds` `calculateCenterAndZoom`.
+    /// Port of Node `@local-hosting/geokit/core/bounds` `calculateCenterAndZoom`.
     public static func centerAndZoom(from bounds: Bounds) -> CenterAndZoom? {
         guard bounds.count == 4, let center = center(of: bounds) else { return nil }
         return CenterAndZoom(
@@ -96,7 +96,7 @@ public enum BoundsCalculator {
     }
 
 
-    /// Port of Node `@twinfile/geokit/core/bounds` `calculateFitBoundsViewport` (Web Mercator + padding).
+    /// Port of Node `@local-hosting/geokit/core/bounds` `calculateFitBoundsViewport` (Web Mercator + padding).
     public static func fitBoundsViewport(
         bounds: Bounds,
         mapSize: MapSize,
