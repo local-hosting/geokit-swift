@@ -16,7 +16,7 @@ xcodebuild -project GeoKitTestApp.xcodeproj -scheme GeoKitTestApp \
   -disableAutomaticPackageResolution build
 ```
 
-Mapbox token: `GeoKitTestApp/Info.plist` (`MBXAccessToken`).
+Mapbox token (local only): set `MAPBOX_TOKEN` in the environment, or add `MBXAccessToken` in a **local** `Info.plist` overlay / Xcode scheme (do not commit tokens). Same keys as `geokit/.env` (`MAPBOX_TOKEN`).
 
 ## UI tests
 
