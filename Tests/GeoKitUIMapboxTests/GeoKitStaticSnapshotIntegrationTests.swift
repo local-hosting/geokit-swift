@@ -9,11 +9,21 @@ import XCTest
 @MainActor
 final class GeoKitStaticSnapshotIntegrationTests: XCTestCase {
     private let demoStyleURI = "mapbox://styles/mapbox/streets-v12"
-    private let demoToken = "REDACTED_MAPBOX_TOKEN"
 
-    override func setUp() {
-        super.setUp()
+    private var demoToken: String {
+        let fromEnv = ProcessInfo.processInfo.environment["MAPBOX_TOKEN"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !fromEnv.isEmpty { return fromEnv }
+        return (Bundle.main.object(forInfoDictionaryKey: "MBXAccessToken") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         GeoKitUIMapboxRegistration.activate()
+        guard !demoToken.isEmpty else {
+            throw XCTSkip("Set MAPBOX_TOKEN in the environment or MBXAccessToken in the test host Info.plist")
+        }
         MapboxOptions.accessToken = demoToken
     }
 
